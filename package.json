@@ -10,6 +10,10 @@
     "db:studio": "pnpm --filter @dflow/db db:studio",
     "db:seed": "pnpm --filter @dflow/db db:seed"
   },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "devDependencies": {
     "concurrently": "^9.1.2",
     "typescript": "^5.8.3"
