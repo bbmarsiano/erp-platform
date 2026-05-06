@@ -1,0 +1,10 @@
+node_modules/
+.pnpm-store
+.env
+dist/
+.turbo/
+build/
+*.local
+.DS_Store
+prisma/generated/
+pnpm-lock.yaml
