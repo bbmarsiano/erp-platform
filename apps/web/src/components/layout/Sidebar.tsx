@@ -1,19 +1,24 @@
 import { useMemo, useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { moduleRegistry } from '../../lib/moduleRegistry'
 import { useAuthStore } from '../../store/auth.store'
 import { Button } from '../ui/Button'
 
 const staticNav = [
-  { label: 'Dashboard', path: '/', icon: 'LayoutDashboard' },
+  { label: 'Dashboard', path: '/dashboard', icon: 'LayoutDashboard' },
   { label: 'Settings', path: '/settings', icon: 'Settings' }
 ]
 
 export const Sidebar = () => {
+  const navigate = useNavigate()
   const moduleGroups = useMemo(() => moduleRegistry.getNavItems(), [])
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <aside
@@ -52,7 +57,7 @@ export const Sidebar = () => {
 
       <div style={{ marginTop: 'auto', fontSize: 12, color: '#4b5563' }}>
         <div>{user?.email ?? 'anonymous@local'}</div>
-        <Button onClick={logout} style={{ marginTop: 8, width: '100%' }}>
+        <Button onClick={handleLogout} style={{ marginTop: 8, width: '100%' }}>
           Logout
         </Button>
       </div>

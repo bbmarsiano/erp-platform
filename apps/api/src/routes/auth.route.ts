@@ -96,7 +96,10 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
 
       const accessToken = fastify.jwt.sign(payload, { expiresIn: '15m' })
-      const refreshToken = fastify.jwt.sign({ id: user.id, type: 'refresh' }, { expiresIn: '7d' })
+      const refreshToken = fastify.jwt.sign(
+        { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId, type: 'refresh' } as any,
+        { expiresIn: '7d' }
+      )
 
       // Audit log
       await prisma.auditLog.create({
