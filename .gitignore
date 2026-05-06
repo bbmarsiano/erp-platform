@@ -7,4 +7,3 @@ build/
 *.local
 .DS_Store
 prisma/generated/
-pnpm-lock.yaml
