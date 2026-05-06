@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
-export const AppShell = ({ children }: PropsWithChildren) => (
+const AppShell = ({ children }: PropsWithChildren) => (
   <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
     <Sidebar />
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -11,3 +11,5 @@ export const AppShell = ({ children }: PropsWithChildren) => (
     </div>
   </div>
 )
+
+export default AppShell

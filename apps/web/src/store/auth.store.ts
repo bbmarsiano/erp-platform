@@ -1,50 +1,66 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { api } from '../lib/api'
 
-type AuthUser = {
+interface AuthUser {
   id: string
   email: string
+  firstName?: string
+  lastName?: string
   role: string
   tenantId: string
 }
 
-type AuthState = {
+interface AuthState {
   user: AuthUser | null
   accessToken: string | null
-  refreshTokenValue: string | null
+  refreshToken: string | null
   isAuthenticated: boolean
-  login: (payload: { accessToken: string; refreshToken: string; user?: AuthUser }) => void
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
-  refreshToken: (token: string) => void
+  setTokens: (accessToken: string, refreshToken: string) => void
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  accessToken: null,
-  refreshTokenValue: null,
-  isAuthenticated: false,
-  login: ({ accessToken, refreshToken, user }) => {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', refreshToken)
-
-    set({
-      accessToken,
-      refreshTokenValue: refreshToken,
-      user: user ?? null,
-      isAuthenticated: true
-    })
-  },
-  logout: () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    set({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
       user: null,
       accessToken: null,
-      refreshTokenValue: null,
-      isAuthenticated: false
-    })
-  },
-  refreshToken: (token) => {
-    localStorage.setItem('accessToken', token)
-    set({ accessToken: token, isAuthenticated: true })
-  }
-}))
+      refreshToken: null,
+      isAuthenticated: false,
+
+      login: async (email: string, password: string) => {
+        const response = await api.post('/api/auth/login', { email, password })
+        const { accessToken, refreshToken, user } = response.data.data
+        set({
+          user,
+          accessToken,
+          refreshToken,
+          isAuthenticated: true
+        })
+      },
+
+      logout: () => {
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false
+        })
+      },
+
+      setTokens: (accessToken, refreshToken) => {
+        set({ accessToken, refreshToken })
+      }
+    }),
+    {
+      name: 'dflow-auth',
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated
+      })
+    }
+  )
+)

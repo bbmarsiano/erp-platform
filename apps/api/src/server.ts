@@ -14,8 +14,10 @@ dotenv.config({ path: '../../.env' })
 const buildServer = async (): Promise<FastifyInstance> => {
   const app = Fastify({ logger: true })
   await app.register(sensible)
-  await app.register(helmet)
   await app.register(corsPlugin)
+  await app.register(helmet, {
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+  })
   await app.register(jwtPlugin)
   await app.register(swaggerPlugin)
   await app.register(moduleLoaderPlugin)

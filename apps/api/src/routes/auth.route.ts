@@ -1,8 +1,6 @@
-import { createErrorResponse, createSuccessResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
-import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 
 const loginSchema = z.object({
@@ -18,22 +16,9 @@ const logoutSchema = z.object({
   refreshToken: z.string().min(10).optional()
 })
 
-type LoginResponse = {
-  accessToken: string
-  refreshToken: string
-  user: {
-    id: string
-    email: string
-    role: string
-    tenantId: string
-  }
-}
-
 const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
-  const jwtSecret = process.env.JWT_SECRET ?? 'change-me'
-  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET ?? 'change-me-too'
-
-  fastify.post<{ Body: z.infer<typeof loginSchema> }>(
+  // POST /api/auth/login
+  fastify.post(
     '/auth/login',
     {
       schema: {
@@ -73,20 +58,36 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         }
       }
     },
-    async (request: FastifyRequest<{ Body: z.infer<typeof loginSchema> }>, reply: FastifyReply) => {
-      const parsed = loginSchema.safeParse(request.body)
-      if (!parsed.success) {
-        return reply.status(400).send(createErrorResponse('Invalid payload', 'VALIDATION_ERROR', 400))
-      }
+    async (request, reply) => {
+      const { email, password } = request.body as { email: string; password: string }
 
+      // Find user
       const user = await prisma.user.findUnique({
-        where: { email: parsed.data.email }
+        where: { email },
+        include: { tenant: true }
       })
 
-      if (!user || !(await bcrypt.compare(parsed.data.password, user.hashedPassword))) {
-        return reply.status(401).send(createErrorResponse('Invalid credentials', 'INVALID_CREDENTIALS', 401))
+      if (!user || !user.isActive) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Invalid credentials',
+          code: 'INVALID_CREDENTIALS',
+          statusCode: 401
+        })
       }
 
+      // Verify password
+      const validPassword = await bcrypt.compare(password, user.hashedPassword)
+      if (!validPassword) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Invalid credentials',
+          code: 'INVALID_CREDENTIALS',
+          statusCode: 401
+        })
+      }
+
+      // Sign tokens
       const payload = {
         id: user.id,
         email: user.email,
@@ -94,25 +95,41 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         tenantId: user.tenantId
       }
 
-      const accessToken = jwt.sign(payload, jwtSecret, { expiresIn: '15m' })
-      const refreshToken = jwt.sign(payload, jwtRefreshSecret, { expiresIn: '7d' })
+      const accessToken = fastify.jwt.sign(payload, { expiresIn: '15m' })
+      const refreshToken = fastify.jwt.sign({ id: user.id, type: 'refresh' }, { expiresIn: '7d' })
 
-      return reply.send(
-        createSuccessResponse<LoginResponse>({
+      // Audit log
+      await prisma.auditLog.create({
+        data: {
+          tenantId: user.tenantId,
+          userId: user.id,
+          action: 'LOGIN',
+          entity: 'User',
+          entityId: user.id,
+          payload: { email: user.email }
+        }
+      })
+
+      return reply.send({
+        success: true,
+        data: {
           accessToken,
           refreshToken,
           user: {
             id: user.id,
             email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
             role: user.role,
             tenantId: user.tenantId
           }
-        })
-      )
+        }
+      })
     }
   )
 
-  fastify.post<{ Body: z.infer<typeof refreshSchema> }>(
+  // POST /api/auth/refresh
+  fastify.post(
     '/auth/refresh',
     {
       schema: {
@@ -141,37 +158,40 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         }
       }
     },
-    async (request: FastifyRequest<{ Body: z.infer<typeof refreshSchema> }>, reply: FastifyReply) => {
-      const parsed = refreshSchema.safeParse(request.body)
-      if (!parsed.success) {
-        return reply.status(400).send(createErrorResponse('Invalid payload', 'VALIDATION_ERROR', 400))
-      }
+    async (request, reply) => {
+      const { refreshToken } = request.body as { refreshToken: string }
 
       try {
-        const payload = jwt.verify(parsed.data.refreshToken, jwtRefreshSecret) as {
-          id: string
-          email: string
-          role: string
-          tenantId: string
-        }
-        const accessToken = jwt.sign({
-          id: payload.id,
-          email: payload.email,
-          role: payload.role,
-          tenantId: payload.tenantId
-        }, jwtSecret, { expiresIn: '15m' })
+        const decoded = fastify.jwt.verify(refreshToken) as { id: string; type: string }
 
-        return reply.send(
-          createSuccessResponse<{ accessToken: string }>({
-            accessToken
-          })
+        if (decoded.type !== 'refresh') {
+          return reply
+            .status(401)
+            .send({ success: false, error: 'Invalid token', code: 'INVALID_TOKEN', statusCode: 401 })
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: decoded.id } })
+        if (!user || !user.isActive) {
+          return reply
+            .status(401)
+            .send({ success: false, error: 'User not found', code: 'USER_NOT_FOUND', statusCode: 401 })
+        }
+
+        const accessToken = fastify.jwt.sign(
+          { id: user.id, email: user.email, role: user.role, tenantId: user.tenantId },
+          { expiresIn: '15m' }
         )
+
+        return reply.send({ success: true, data: { accessToken } })
       } catch {
-        return reply.status(401).send(createErrorResponse('Invalid refresh token', 'TOKEN_INVALID', 401))
+        return reply
+          .status(401)
+          .send({ success: false, error: 'Invalid token', code: 'INVALID_TOKEN', statusCode: 401 })
       }
     }
   )
 
+  // POST /api/auth/logout
   fastify.post(
     '/auth/logout',
     {
@@ -189,11 +209,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         }
       }
     },
-    async () => {
-      return {
-        success: true,
-        message: 'Logged out successfully'
-      }
+    async (_request, reply) => {
+      return reply.send({ success: true, message: 'Logged out successfully' })
     }
   )
 }
