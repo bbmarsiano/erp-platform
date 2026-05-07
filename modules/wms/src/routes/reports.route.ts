@@ -85,17 +85,26 @@ const reportsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         description: 'Връща продукти под минимално количество'
       }
     },
-    async (request) => {
-      const stock = await prisma.stockItem.findMany({
-        where: { tenantId: request.user.tenantId },
+    async (request, reply) => {
+      // Returns products where current stock < minStock, including products with zero stock rows.
+      const products = await prisma.product.findMany({
+        where: { tenantId: request.user.tenantId, isActive: true },
         include: {
-          product: true,
-          location: true
+          stockItems: {
+            where: { location: { warehouse: { isActive: true } } }
+          }
         }
       })
 
-      const data = stock.filter((item) => item.quantity <= item.product.minStock)
-      return createSuccessResponse(data)
+      const lowStock = products
+        .map((p) => {
+          const totalQty = p.stockItems.reduce((sum, s) => sum + s.quantity, 0)
+          return { ...p, currentStock: totalQty, stockItems: undefined }
+        })
+        .filter((p) => p.currentStock < p.minStock)
+        .sort((a, b) => a.currentStock - b.currentStock)
+
+      return reply.send({ success: true, data: lowStock })
     }
   )
 }
