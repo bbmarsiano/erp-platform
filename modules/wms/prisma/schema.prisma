@@ -1,0 +1,2 @@
+// WMS module schema definitions are merged into packages/db/prisma/schema.prisma.
+// This file is kept for module-local ownership/reference.
