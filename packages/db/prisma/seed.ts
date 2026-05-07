@@ -86,6 +86,39 @@ async function main() {
   console.log('   Admin: admin@dflowerp.com / admin123')
   console.log('   License: DEMO-0000-0000-0000')
   console.log('✅ WMS seed completed — warehouse + locations + products')
+
+  const supplier1 = await prisma.supplier.upsert({
+    where: { tenantId_code: { tenantId: tenant.id, code: 'SUP-001' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      code: 'SUP-001',
+      name: 'Главен доставчик АД',
+      contactName: 'Иван Иванов',
+      email: 'ivan@supplier.bg',
+      phone: '+359 888 123456',
+      address: 'София, бул. Витоша 1',
+      taxNumber: 'BG123456789',
+      isActive: true
+    }
+  })
+
+  const supplier2 = await prisma.supplier.upsert({
+    where: { tenantId_code: { tenantId: tenant.id, code: 'SUP-002' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      code: 'SUP-002',
+      name: 'Вторичен доставчик ЕООД',
+      contactName: 'Мария Петрова',
+      email: 'maria@supplier2.bg',
+      phone: '+359 877 654321',
+      address: 'Пловдив, ул. Марица 5',
+      isActive: true
+    }
+  })
+
+  console.log('✅ SCM seed completed — 2 suppliers', supplier1.code, supplier2.code)
 }
 
 main()

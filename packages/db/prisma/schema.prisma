@@ -24,6 +24,9 @@ model Tenant {
   stockMovements StockMovement[]
   goodsReceipts GoodsReceipt[]
   goodsIssues   GoodsIssue[]
+  suppliers     Supplier[]
+  purchaseOrders PurchaseOrder[]
+  deliveries    Delivery[]
 }
 
 model User {
@@ -87,6 +90,8 @@ model Warehouse {
   locations Location[]
   receipts  GoodsReceipt[]
   issues    GoodsIssue[]
+  purchaseOrders PurchaseOrder[]
+  deliveries Delivery[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -105,6 +110,7 @@ model Location {
   stockItems   StockItem[]
   receiptLines GoodsReceiptLine[]
   issueLines   GoodsIssueLine[]
+  deliveryLines DeliveryLine[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -135,6 +141,8 @@ model Product {
   movements   StockMovement[]
   receiptLines GoodsReceiptLine[]
   issueLines   GoodsIssueLine[]
+  purchaseOrderLines PurchaseOrderLine[]
+  deliveryLines DeliveryLine[]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -180,6 +188,101 @@ enum MovementType {
   OUT
   TRANSFER
   ADJUSTMENT
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  code           String
+  name           String
+  contactName    String?
+  email          String?
+  phone          String?
+  address        String?
+  taxNumber      String?
+  isActive       Boolean         @default(true)
+  purchaseOrders PurchaseOrder[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([tenantId, code])
+}
+
+model PurchaseOrder {
+  id           String              @id @default(cuid())
+  tenantId     String
+  tenant       Tenant              @relation(fields: [tenantId], references: [id])
+  orderNo      String
+  supplierId   String
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  warehouseId  String
+  warehouse    Warehouse           @relation(fields: [warehouseId], references: [id])
+  status       PurchaseOrderStatus @default(DRAFT)
+  expectedDate DateTime?
+  note         String?
+  lines        PurchaseOrderLine[]
+  deliveries   Delivery[]
+  createdBy    String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([tenantId, orderNo])
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Float
+  receivedQty     Float         @default(0)
+  unitPrice       Float?
+  unit            String?
+}
+
+model Delivery {
+  id              String         @id @default(cuid())
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  deliveryNo      String
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  warehouseId     String
+  warehouse       Warehouse      @relation(fields: [warehouseId], references: [id])
+  supplierName    String?
+  status          DocumentStatus @default(DRAFT)
+  deliveryDate    DateTime?
+  note            String?
+  goodsReceiptId  String?
+  lines           DeliveryLine[]
+  createdBy       String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([tenantId, deliveryNo])
+}
+
+model DeliveryLine {
+  id         String   @id @default(cuid())
+  deliveryId String
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  quantity   Float
+  lotNumber  String?
+  expiryDate DateTime?
 }
 
 model GoodsReceipt {

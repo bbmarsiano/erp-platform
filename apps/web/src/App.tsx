@@ -5,6 +5,7 @@ import NotFound from './pages/NotFound'
 import { useAuthStore } from './store/auth.store'
 import AppShell from './components/layout/AppShell'
 import WmsRouter from './modules/wms/WmsRouter'
+import ScmRouter from './modules/scm/ScmRouter'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -33,6 +34,16 @@ export default function App() {
             <PrivateRoute>
               <AppShell>
                 <WmsRouter />
+              </AppShell>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/scm/*"
+          element={
+            <PrivateRoute>
+              <AppShell>
+                <ScmRouter />
               </AppShell>
             </PrivateRoute>
           }
