@@ -65,6 +65,43 @@ const issuesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     }
   )
 
+  fastify.post(
+    '/issues/:id/lines',
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ['WMS'],
+        summary: 'Добавяне ред към експедиция',
+        description: 'Добавя ред към чернова на изписване'
+      }
+    },
+    async (request, reply) => {
+      const params = request.params as { id: string }
+      const body = request.body as { productId: string; locationId: string; quantity: number; lotNumber?: string }
+
+      const issue = await prisma.goodsIssue.findFirst({
+        where: { id: params.id, tenantId: request.user.tenantId }
+      })
+      if (!issue) {
+        return reply.status(404).send(createErrorResponse('Issue not found', 'ISSUE_NOT_FOUND', 404))
+      }
+      if (issue.status !== 'DRAFT') {
+        return reply.status(400).send(createErrorResponse('Only draft issues can be edited', 'INVALID_STATUS', 400))
+      }
+
+      const line = await prisma.goodsIssueLine.create({
+        data: {
+          issueId: issue.id,
+          productId: body.productId,
+          locationId: body.locationId,
+          quantity: body.quantity,
+          lotNumber: body.lotNumber
+        }
+      })
+      return createSuccessResponse(line)
+    }
+  )
+
   fastify.get(
     '/issues/:id',
     {
@@ -169,37 +206,81 @@ const issuesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           }
 
           for (const line of issue.lines) {
-            const stockItem = await tx.stockItem.findUnique({
-              where: {
-                productId_locationId_lotNumber: {
+            if (line.lotNumber) {
+              const stockItem = await tx.stockItem.findUnique({
+                where: {
+                  productId_locationId_lotNumber: {
+                    productId: line.productId,
+                    locationId: line.locationId,
+                    lotNumber: line.lotNumber
+                  }
+                }
+              })
+              if (!stockItem || stockItem.quantity < line.quantity) {
+                throw new Error('INSUFFICIENT_STOCK')
+              }
+
+              await tx.stockItem.update({
+                where: { id: stockItem.id },
+                data: { quantity: { decrement: line.quantity } }
+              })
+
+              await tx.stockMovement.create({
+                data: {
+                  tenantId: request.user.tenantId,
+                  productId: line.productId,
+                  movementType: 'OUT',
+                  quantity: line.quantity,
+                  fromLocationId: line.locationId,
+                  referenceType: 'ISSUE',
+                  referenceId: issue.id,
+                  lotNumber: line.lotNumber,
+                  createdBy: request.user.id
+                }
+              })
+            } else {
+              // If lot is not specified, consume from available lots in this location (simple FIFO-ish by lotNumber)
+              let remaining = line.quantity
+              const stockItems = await tx.stockItem.findMany({
+                where: {
+                  tenantId: request.user.tenantId,
                   productId: line.productId,
                   locationId: line.locationId,
-                  lotNumber: line.lotNumber ?? null
-                }
+                  quantity: { gt: 0 }
+                },
+                orderBy: [{ lotNumber: 'asc' }, { updatedAt: 'asc' }]
+              })
+
+              const totalAvailable = stockItems.reduce((acc, s) => acc + s.quantity, 0)
+              if (totalAvailable < remaining) {
+                throw new Error('INSUFFICIENT_STOCK')
               }
-            })
-            if (!stockItem || stockItem.quantity < line.quantity) {
-              throw new Error('INSUFFICIENT_STOCK')
+
+              for (const s of stockItems) {
+                if (remaining <= 0) break
+                const takeQty = Math.min(remaining, s.quantity)
+                remaining -= takeQty
+
+                await tx.stockItem.update({
+                  where: { id: s.id },
+                  data: { quantity: { decrement: takeQty } }
+                })
+
+                await tx.stockMovement.create({
+                  data: {
+                    tenantId: request.user.tenantId,
+                    productId: line.productId,
+                    movementType: 'OUT',
+                    quantity: takeQty,
+                    fromLocationId: line.locationId,
+                    referenceType: 'ISSUE',
+                    referenceId: issue.id,
+                    lotNumber: s.lotNumber,
+                    createdBy: request.user.id
+                  }
+                })
+              }
             }
-
-            await tx.stockItem.update({
-              where: { id: stockItem.id },
-              data: { quantity: { decrement: line.quantity } }
-            })
-
-            await tx.stockMovement.create({
-              data: {
-                tenantId: request.user.tenantId,
-                productId: line.productId,
-                movementType: 'OUT',
-                quantity: line.quantity,
-                fromLocationId: line.locationId,
-                referenceType: 'ISSUE',
-                referenceId: issue.id,
-                lotNumber: line.lotNumber,
-                createdBy: request.user.id
-              }
-            })
           }
 
           return tx.goodsIssue.update({

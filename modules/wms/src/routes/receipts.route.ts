@@ -65,6 +65,44 @@ const receiptsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     }
   )
 
+  fastify.post(
+    '/receipts/:id/lines',
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ['WMS'],
+        summary: 'Добавяне ред към приемане',
+        description: 'Добавя ред към чернова на приемане'
+      }
+    },
+    async (request, reply) => {
+      const params = request.params as { id: string }
+      const body = request.body as { productId: string; locationId: string; quantity: number; lotNumber?: string; expiryDate?: string }
+
+      const receipt = await prisma.goodsReceipt.findFirst({
+        where: { id: params.id, tenantId: request.user.tenantId }
+      })
+      if (!receipt) {
+        return reply.status(404).send(createErrorResponse('Receipt not found', 'RECEIPT_NOT_FOUND', 404))
+      }
+      if (receipt.status !== 'DRAFT') {
+        return reply.status(400).send(createErrorResponse('Only draft receipts can be edited', 'INVALID_STATUS', 400))
+      }
+
+      const line = await prisma.goodsReceiptLine.create({
+        data: {
+          receiptId: receipt.id,
+          productId: body.productId,
+          locationId: body.locationId,
+          quantity: body.quantity,
+          lotNumber: body.lotNumber,
+          expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined
+        }
+      })
+      return createSuccessResponse(line)
+    }
+  )
+
   fastify.get(
     '/receipts/:id',
     {
@@ -177,27 +215,53 @@ const receiptsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           }
 
           for (const line of receipt.lines) {
-            await tx.stockItem.upsert({
-              where: {
-                productId_locationId_lotNumber: {
+            if (line.lotNumber) {
+              await tx.stockItem.upsert({
+                where: {
+                  productId_locationId_lotNumber: {
+                    productId: line.productId,
+                    locationId: line.locationId,
+                    lotNumber: line.lotNumber
+                  }
+                },
+                update: {
+                  quantity: { increment: line.quantity },
+                  expiryDate: line.expiryDate
+                },
+                create: {
+                  tenantId: request.user.tenantId,
                   productId: line.productId,
                   locationId: line.locationId,
-                  lotNumber: line.lotNumber ?? null
+                  quantity: line.quantity,
+                  lotNumber: line.lotNumber,
+                  expiryDate: line.expiryDate
                 }
-              },
-              update: {
-                quantity: { increment: line.quantity },
-                expiryDate: line.expiryDate
-              },
-              create: {
-                tenantId: request.user.tenantId,
-                productId: line.productId,
-                locationId: line.locationId,
-                quantity: line.quantity,
-                lotNumber: line.lotNumber,
-                expiryDate: line.expiryDate
+              })
+            } else {
+              const existing = await tx.stockItem.findFirst({
+                where: { tenantId: request.user.tenantId, productId: line.productId, locationId: line.locationId, lotNumber: null }
+              })
+              if (existing) {
+                await tx.stockItem.update({
+                  where: { id: existing.id },
+                  data: {
+                    quantity: { increment: line.quantity },
+                    expiryDate: line.expiryDate
+                  }
+                })
+              } else {
+                await tx.stockItem.create({
+                  data: {
+                    tenantId: request.user.tenantId,
+                    productId: line.productId,
+                    locationId: line.locationId,
+                    quantity: line.quantity,
+                    lotNumber: null,
+                    expiryDate: line.expiryDate
+                  }
+                })
               }
-            })
+            }
 
             await tx.stockMovement.create({
               data: {

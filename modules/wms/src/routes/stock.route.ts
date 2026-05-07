@@ -7,6 +7,34 @@ import { listStock } from '../services/stock.service'
 
 const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get(
+    '/stock/products',
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ['WMS'],
+        summary: 'Списък артикули',
+        description: 'Списък с активни артикули за текущия наемател',
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: { type: 'array', items: { type: 'object', additionalProperties: true } }
+            }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const products = await prisma.product.findMany({
+        where: { tenantId: request.user.tenantId, isActive: true },
+        orderBy: { code: 'asc' }
+      })
+      return reply.send({ success: true, data: products })
+    }
+  )
+
+  fastify.get(
     '/stock',
     {
       preHandler: [authenticate],
@@ -73,25 +101,51 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        const stockItem = await tx.stockItem.upsert({
-          where: {
-            productId_locationId_lotNumber: {
-              productId: body.productId,
-              locationId: body.locationId,
-              lotNumber: body.lotNumber ?? null
-            }
-          },
-          update: {
-            quantity: { increment: body.quantityDelta }
-          },
-          create: {
-            tenantId: request.user.tenantId,
-            productId: body.productId,
-            locationId: body.locationId,
-            quantity: body.quantityDelta,
-            lotNumber: body.lotNumber
-          }
-        })
+        const stockItem = body.lotNumber
+          ? await tx.stockItem.upsert({
+              where: {
+                productId_locationId_lotNumber: {
+                  productId: body.productId,
+                  locationId: body.locationId,
+                  lotNumber: body.lotNumber
+                }
+              },
+              update: {
+                quantity: { increment: body.quantityDelta }
+              },
+              create: {
+                tenantId: request.user.tenantId,
+                productId: body.productId,
+                locationId: body.locationId,
+                quantity: body.quantityDelta,
+                lotNumber: body.lotNumber
+              }
+            })
+          : await (async () => {
+              const existing = await tx.stockItem.findFirst({
+                where: {
+                  tenantId: request.user.tenantId,
+                  productId: body.productId,
+                  locationId: body.locationId,
+                  lotNumber: null
+                }
+              })
+              if (existing) {
+                return tx.stockItem.update({
+                  where: { id: existing.id },
+                  data: { quantity: { increment: body.quantityDelta } }
+                })
+              }
+              return tx.stockItem.create({
+                data: {
+                  tenantId: request.user.tenantId,
+                  productId: body.productId,
+                  locationId: body.locationId,
+                  quantity: body.quantityDelta,
+                  lotNumber: null
+                }
+              })
+            })()
 
         const movement = await tx.stockMovement.create({
           data: {
