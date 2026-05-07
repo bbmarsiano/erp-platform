@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLowStock, useReceipts, useStockSummary, useWarehouses } from '../hooks/useWms'
 
 function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
@@ -19,10 +20,12 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
 }
 
 export default function WmsDashboard() {
+  const navigate = useNavigate()
   const warehouses = useWarehouses()
   const stockSummary = useStockSummary()
   const lowStock = useLowStock()
   const receipts = useReceipts()
+  const lowStockData = (lowStock.data ?? []) as Array<{ id: string }>
 
   const totals = useMemo(() => {
     const ws = (warehouses.data ?? []) as Array<{ id: string }>
@@ -54,18 +57,25 @@ export default function WmsDashboard() {
         <StatCard title="Артикули под минимум" value={lowStock.isLoading ? '...' : totals.lowStockCount} />
       </div>
 
-      {totals.lowStockCount > 0 ? (
+      {lowStockData && lowStockData.length > 0 ? (
         <div
+          onClick={() => navigate('/wms/stock')}
           style={{
-            marginTop: 14,
-            background: '#fff7ed',
-            border: '1px solid #fed7aa',
-            borderRadius: 10,
-            padding: 14,
-            color: '#9a3412'
+            marginTop: '20px',
+            padding: '14px 18px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            color: '#991b1b',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          Има артикули под минимална наличност. Прегледайте справката „Ниски наличности“ в секция „Склад“.
+          ⚠️ {lowStockData.length} артикул(а) под минималната наличност.
+          <span style={{ textDecoration: 'underline', fontWeight: 500 }}>Виж наличности →</span>
         </div>
       ) : null}
     </div>
