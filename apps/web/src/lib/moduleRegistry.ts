@@ -27,3 +27,7 @@ class ModuleRegistry {
 }
 
 export const moduleRegistry = new ModuleRegistry()
+
+export const registerModule = (manifest: ModuleManifest) => {
+  moduleRegistry.registerModule(manifest)
+}

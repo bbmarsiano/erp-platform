@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import { useAuthStore } from './store/auth.store'
 import AppShell from './components/layout/AppShell'
+import WmsRouter from './modules/wms/WmsRouter'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -22,6 +23,16 @@ export default function App() {
             <PrivateRoute>
               <AppShell>
                 <Dashboard />
+              </AppShell>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/wms/*"
+          element={
+            <PrivateRoute>
+              <AppShell>
+                <WmsRouter />
               </AppShell>
             </PrivateRoute>
           }
