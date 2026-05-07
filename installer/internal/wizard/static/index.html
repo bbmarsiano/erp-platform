@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DFlowERP — Инсталация</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5;
+         display: flex; align-items: center; justify-content: center;
+         min-height: 100vh; }
+  .card { background: white; border-radius: 16px; padding: 40px;
+          width: 480px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .logo { font-size: 24px; font-weight: 700; color: #111;
+          margin-bottom: 8px; }
+  .subtitle { color: #666; font-size: 14px; margin-bottom: 32px; }
+  .step { display: none; }
+  .step.active { display: block; }
+  .step-indicator { display: flex; gap: 8px; margin-bottom: 28px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%;
+         background: #ddd; transition: background .2s; }
+  .dot.active { background: #111; }
+  label { display: block; font-size: 13px; font-weight: 500;
+          margin-bottom: 6px; color: #333; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+          border-radius: 8px; font-size: 14px; margin-bottom: 16px;
+          outline: none; }
+  input:focus { border-color: #111; }
+  .btn { width: 100%; padding: 12px; background: #111; color: white;
+         border: none; border-radius: 8px; font-size: 14px;
+         font-weight: 500; cursor: pointer; margin-top: 8px; }
+  .btn:disabled { background: #999; cursor: not-allowed; }
+  .btn-secondary { background: white; color: #111;
+                   border: 1px solid #ddd; margin-top: 0; }
+  .success { text-align: center; padding: 20px 0; }
+  .success .icon { font-size: 48px; margin-bottom: 16px; }
+  .success h2 { font-size: 20px; margin-bottom: 8px; }
+  .success p { color: #666; font-size: 14px; margin-bottom: 24px; }
+  .error { color: #dc2626; font-size: 13px; margin-top: 8px; }
+  .progress-bar { height: 4px; background: #f0f0f0; border-radius: 2px;
+                  margin-bottom: 24px; }
+  .progress-fill { height: 100%; background: #111; border-radius: 2px;
+                   transition: width .3s; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">DFlowERP</div>
+  <div class="subtitle">Настройка на системата</div>
+
+  <div class="step-indicator">
+    <div class="dot active" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress" style="width:33%"></div>
+  </div>
+
+  <div class="step active" id="step-1">
+    <h3 style="margin-bottom:20px;font-size:16px">Информация за фирмата</h3>
+    <label>Наименование на фирмата</label>
+    <input type="text" id="companyName" placeholder="Примерна ЕООД">
+    <label>Администраторски имейл</label>
+    <input type="email" id="adminEmail" placeholder="admin@firma.bg">
+    <button class="btn" onclick="goStep(2)">Продължи →</button>
+  </div>
+
+  <div class="step" id="step-2">
+    <h3 style="margin-bottom:20px;font-size:16px">Сигурност и конфигурация</h3>
+    <label>Парола за администратор</label>
+    <input type="password" id="adminPass" placeholder="Минимум 8 символа">
+    <label>Потвърди паролата</label>
+    <input type="password" id="adminPass2" placeholder="Повтори паролата">
+    <label>Порт на приложението</label>
+    <input type="number" id="port" value="3001" min="1024" max="65535">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="goStep(1)" style="flex:1">← Назад</button>
+      <button class="btn" onclick="goStep(3)" style="flex:2">Продължи →</button>
+    </div>
+  </div>
+
+  <div class="step" id="step-3">
+    <h3 style="margin-bottom:20px;font-size:16px">Преглед и финализиране</h3>
+    <div id="review" style="background:#f9f9f9;border-radius:8px;
+         padding:16px;margin-bottom:20px;font-size:13px;line-height:1.8"></div>
+    <button class="btn" id="installBtn" onclick="complete()">
+      Инсталирай DFlowERP
+    </button>
+    <div class="error" id="error-msg"></div>
+  </div>
+
+  <div class="step" id="step-4">
+    <div class="success">
+      <div class="icon">✅</div>
+      <h2>Инсталацията е завършена!</h2>
+      <p>DFlowERP е инсталиран успешно и работи на вашия сървър.</p>
+      <button class="btn" id="openBtn" onclick="openERP()">
+        Отвори DFlowERP
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+let erpUrl = '';
+
+function goStep(n) {
+  if (n === 2) {
+    if (!document.getElementById('companyName').value.trim()) {
+      alert('Моля въведете наименование на фирмата'); return;
+    }
+    if (!document.getElementById('adminEmail').value.includes('@')) {
+      alert('Моля въведете валиден имейл'); return;
+    }
+  }
+  if (n === 3) {
+    const p1 = document.getElementById('adminPass').value;
+    const p2 = document.getElementById('adminPass2').value;
+    if (p1.length < 8) { alert('Паролата трябва да е минимум 8 символа'); return; }
+    if (p1 !== p2) { alert('Паролите не съвпадат'); return; }
+    document.getElementById('review').innerHTML = `
+      <b>Фирма:</b> ${document.getElementById('companyName').value}<br>
+      <b>Администратор:</b> ${document.getElementById('adminEmail').value}<br>
+      <b>Порт:</b> ${document.getElementById('port').value}<br>
+      <b>База данни:</b> dflow_erp (PostgreSQL)
+    `;
+  }
+
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-' + n).classList.add('active');
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i < n);
+  });
+  const pct = { 1: 33, 2: 66, 3: 90, 4: 100 }[n] || 33;
+  document.getElementById('progress').style.width = pct + '%';
+}
+
+async function complete() {
+  const btn = document.getElementById('installBtn');
+  btn.disabled = true;
+  btn.textContent = 'Инсталиране...';
+  document.getElementById('error-msg').textContent = '';
+
+  try {
+    const resp = await fetch('/api/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        companyName: document.getElementById('companyName').value,
+        adminEmail:  document.getElementById('adminEmail').value,
+        adminPass:   document.getElementById('adminPass').value,
+        port: parseInt(document.getElementById('port').value),
+      })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    erpUrl = data.url;
+    goStep(4);
+  } catch (e) {
+    document.getElementById('error-msg').textContent = 'Грешка: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Инсталирай DFlowERP';
+  }
+}
+
+function openERP() {
+  window.location.href = erpUrl || 'http://localhost:3001';
+}
+</script>
+</body>
+</html>
+
