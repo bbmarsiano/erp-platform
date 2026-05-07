@@ -141,6 +141,23 @@ async function main() {
     }
   })
   console.log('✅ MES seed completed — BOM for PROD-001')
+
+  const dispatchLocation = await prisma.location.findFirstOrThrow({
+    where: { warehouseId: warehouse.id, code: 'DISP' }
+  })
+  await prisma.cashRegister.upsert({
+    where: { tenantId_code: { tenantId: tenant.id, code: 'CASH-01' } },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      code: 'CASH-01',
+      name: 'Каса 1 — Основна',
+      warehouseId: warehouse.id,
+      locationId: dispatchLocation.id,
+      isActive: true
+    }
+  })
+  console.log('✅ POS seed completed — cash register CASH-01')
 }
 
 main()
