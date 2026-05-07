@@ -34,11 +34,27 @@ const receiptsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
     },
     async (request) => {
-      const body = request.body as { receiptNo: string; warehouseId: string; supplierName?: string; note?: string }
+      const body = request.body as { warehouseId: string; supplierName?: string; note?: string }
+
+      // Auto-generate receiptNo: format REC-YYYYMMDD-XXXX (sequential per tenant)
+      const today = new Date()
+      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
+
+      // Count existing receipts today for this tenant to get sequence
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const count = await prisma.goodsReceipt.count({
+        where: {
+          tenantId: request.user.tenantId,
+          createdAt: { gte: todayStart }
+        }
+      })
+      const seq = String(count + 1).padStart(4, '0')
+      const receiptNo = `REC-${dateStr}-${seq}`
+
       const created = await prisma.goodsReceipt.create({
         data: {
           tenantId: request.user.tenantId,
-          receiptNo: body.receiptNo,
+          receiptNo,
           warehouseId: body.warehouseId,
           supplierName: body.supplierName,
           note: body.note,

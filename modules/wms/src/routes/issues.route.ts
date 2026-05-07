@@ -34,11 +34,27 @@ const issuesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
     },
     async (request) => {
-      const body = request.body as { issueNo: string; warehouseId: string; destination?: string; note?: string }
+      const body = request.body as { warehouseId: string; destination?: string; note?: string }
+
+      // Auto-generate issueNo: format ISS-YYYYMMDD-XXXX (sequential per tenant)
+      const today = new Date()
+      const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
+
+      // Count existing issues today for this tenant to get sequence
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const count = await prisma.goodsIssue.count({
+        where: {
+          tenantId: request.user.tenantId,
+          createdAt: { gte: todayStart }
+        }
+      })
+      const seq = String(count + 1).padStart(4, '0')
+      const issueNo = `ISS-${dateStr}-${seq}`
+
       const created = await prisma.goodsIssue.create({
         data: {
           tenantId: request.user.tenantId,
-          issueNo: body.issueNo,
+          issueNo,
           warehouseId: body.warehouseId,
           destination: body.destination,
           note: body.note,
