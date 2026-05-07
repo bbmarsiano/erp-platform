@@ -6,6 +6,11 @@ const paymentMap: Record<string, { label: string; bg: string; color: string }> =
   CARD: { label: 'Карта', bg: '#dbeafe', color: '#1e40af' },
   MIXED: { label: 'Смесено', bg: '#e9d5ff', color: '#6b21a8' }
 }
+const saleStatusMap: Record<string, { label: string; bg: string; color: string }> = {
+  COMPLETED: { label: 'Завършена', bg: '#dcfce7', color: '#166534' },
+  REFUNDED: { label: 'Върната', bg: '#fef9c3', color: '#854d0e' },
+  CANCELLED: { label: 'Анулирана', bg: '#fee2e2', color: '#991b1b' }
+}
 
 export default function Sales() {
   const navigate = useNavigate()
@@ -37,7 +42,20 @@ export default function Sales() {
                   </span>
                 </td>
                 <td style={{ padding: 10 }}>{s.totalAmount.toFixed(2)} лв.</td>
-                <td style={{ padding: 10 }}>{s.status}</td>
+                <td style={{ padding: 10 }}>
+                  <span
+                    style={{
+                      padding: '2px 10px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      background: saleStatusMap[s.status]?.bg ?? '#f3f4f6',
+                      color: saleStatusMap[s.status]?.color ?? '#374151'
+                    }}
+                  >
+                    {saleStatusMap[s.status]?.label ?? s.status}
+                  </span>
+                </td>
                 <td style={{ padding: 10 }}>{new Date(s.createdAt).toLocaleString('bg-BG')}</td>
               </tr>
             ))}

@@ -1,6 +1,12 @@
 import { Link, useParams } from 'react-router-dom'
 import { useSale } from '../hooks/usePos'
 
+const paymentLabels: Record<string, string> = {
+  CASH: 'Кеш',
+  CARD: 'Карта',
+  MIXED: 'Смесено'
+}
+
 export default function SaleDetail() {
   const { id = '' } = useParams()
   const saleQuery = useSale(id)
@@ -13,7 +19,7 @@ export default function SaleDetail() {
       </div>
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
         <div>Каса: {sale?.cashRegister?.name ?? '-'}</div>
-        <div>Метод: {sale?.paymentMethod ?? '-'}</div>
+        <div>Метод: {sale?.paymentMethod ? paymentLabels[sale.paymentMethod] ?? sale.paymentMethod : '-'}</div>
         <div>Дата: {sale?.createdAt ? new Date(sale.createdAt).toLocaleString('bg-BG') : '-'}</div>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
           <thead>
