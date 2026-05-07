@@ -3,7 +3,6 @@ import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 import { listMovements } from '../services/movement.service'
-import { listStock } from '../services/stock.service'
 
 const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get(
@@ -50,11 +49,50 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         productId?: string
         lowStock?: string
       }
-      const data = await listStock(request.user.tenantId, {
-        warehouseId: query.warehouseId,
-        productId: query.productId,
-        lowStock: query.lowStock === 'true'
+      const products = await prisma.product.findMany({
+        where: {
+          tenantId: request.user.tenantId,
+          isActive: true,
+          ...(query.productId ? { id: query.productId } : {})
+        },
+        include: {
+          stockItems: {
+            include: {
+              location: {
+                include: {
+                  warehouse: { select: { id: true, code: true, name: true } }
+                }
+              }
+            },
+            where: query.warehouseId ? { location: { warehouseId: query.warehouseId } } : undefined
+          }
+        },
+        orderBy: { code: 'asc' }
       })
+
+      const rows = products.flatMap((p) => {
+        if (p.stockItems.length === 0) {
+          return [
+            {
+              id: `${p.id}-zero`,
+              productId: p.id,
+              product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock },
+              location: null,
+              quantity: 0,
+              reservedQty: 0,
+              lotNumber: null
+            }
+          ]
+        }
+        return p.stockItems.map((si) => ({
+          ...si,
+          product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock }
+        }))
+      })
+
+      const data =
+        query.lowStock === 'true' ? rows.filter((row) => row.quantity < row.product.minStock) : rows
+
       return createSuccessResponse(data)
     }
   )

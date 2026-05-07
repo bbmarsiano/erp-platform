@@ -65,8 +65,8 @@ export default function Stock() {
                     >
                       <td style={{ padding: '12px', fontSize: 14, fontWeight: 500 }}>{item.product?.name}</td>
                       <td style={{ padding: '12px', fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }}>{item.product?.code}</td>
-                      <td style={{ padding: '12px', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {item.location?.code} — {item.location?.warehouse?.name}
+                      <td style={{ padding: '12px', fontSize: 13, color: item.location ? 'inherit' : '#9ca3af' }}>
+                        {item.location ? `${item.location.code} — ${item.location.warehouse?.name}` : '—'}
                       </td>
                       <td
                         style={{
