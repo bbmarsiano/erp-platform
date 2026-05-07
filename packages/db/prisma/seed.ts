@@ -158,6 +158,23 @@ async function main() {
     }
   })
   console.log('✅ POS seed completed — cash register CASH-01')
+
+  await prisma.backupPolicy.upsert({
+    where: { id: 'default-backup-policy' },
+    update: {},
+    create: {
+      id: 'default-backup-policy',
+      tenantId: tenant.id,
+      name: 'Ежедневно архивиране',
+      schedule: '0 2 * * *',
+      retentionDays: 30,
+      targetType: 'LOCAL',
+      targetPath: '/backups/dflow',
+      isActive: true,
+      isEncrypted: true
+    }
+  })
+  console.log('✅ Backup seed completed — daily backup policy')
 }
 
 main()

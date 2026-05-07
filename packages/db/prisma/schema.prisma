@@ -31,6 +31,8 @@ model Tenant {
   workOrders    WorkOrder[]
   cashRegisters CashRegister[]
   sales         Sale[]
+  backupPolicies BackupPolicy[]
+  backupJobs    BackupJob[]
 }
 
 model User {
@@ -422,6 +424,54 @@ enum SaleStatus {
   COMPLETED
   REFUNDED
   CANCELLED
+}
+
+model BackupPolicy {
+  id            String       @id @default(cuid())
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  name          String
+  schedule      String
+  retentionDays Int          @default(30)
+  targetType    BackupTarget @default(LOCAL)
+  targetPath    String?
+  isActive      Boolean      @default(true)
+  isEncrypted   Boolean      @default(true)
+  jobs          BackupJob[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum BackupTarget {
+  LOCAL
+  NETWORK
+  S3
+}
+
+model BackupJob {
+  id          String          @id @default(cuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  policyId    String?
+  policy      BackupPolicy?   @relation(fields: [policyId], references: [id])
+  status      BackupJobStatus @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  sizeBytes   BigInt?
+  filePath    String?
+  checksum    String?
+  errorMsg    String?
+  note        String?
+  isVerified  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+}
+
+enum BackupJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  VERIFIED
 }
 
 model SaleLine {

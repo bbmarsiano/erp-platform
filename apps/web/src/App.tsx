@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
+import BackupRouter from './modules/backup/BackupRouter'
 import PosRouter from './modules/pos/PosRouter'
 import NotFound from './pages/NotFound'
 import { useAuthStore } from './store/auth.store'
@@ -66,6 +67,16 @@ export default function App() {
             <PrivateRoute>
               <AppShell>
                 <PosRouter />
+              </AppShell>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/backup/*"
+          element={
+            <PrivateRoute>
+              <AppShell>
+                <BackupRouter />
               </AppShell>
             </PrivateRoute>
           }
