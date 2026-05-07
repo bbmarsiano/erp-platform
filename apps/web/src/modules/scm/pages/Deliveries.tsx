@@ -4,6 +4,12 @@ import { Button } from '../../../components/ui/Button'
 import { WarehouseSelector } from '../../wms/components/WarehouseSelector'
 import { useCreateDelivery, useDeliveries, usePurchaseOrders } from '../hooks/useScm'
 
+const deliveryStatusMap: Record<string, { label: string; bg: string; color: string }> = {
+  DRAFT: { label: 'Чернова', bg: '#fef9c3', color: '#854d0e' },
+  CONFIRMED: { label: 'Потвърдена', bg: '#dcfce7', color: '#166534' },
+  CANCELLED: { label: 'Анулирана', bg: '#fee2e2', color: '#991b1b' }
+}
+
 export default function Deliveries() {
   const navigate = useNavigate()
   const deliveries = useDeliveries()
@@ -80,7 +86,20 @@ export default function Deliveries() {
                 <td style={{ padding: 10 }}>{d.purchaseOrder?.orderNo ?? '—'}</td>
                 <td style={{ padding: 10 }}>{d.supplierName ?? '—'}</td>
                 <td style={{ padding: 10 }}>{d.warehouse?.name ?? '—'}</td>
-                <td style={{ padding: 10 }}>{d.status}</td>
+                <td style={{ padding: 10 }}>
+                  <span
+                    style={{
+                      padding: '2px 10px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      background: (deliveryStatusMap[d.status] ?? { bg: '#f3f4f6' }).bg,
+                      color: (deliveryStatusMap[d.status] ?? { color: '#374151' }).color
+                    }}
+                  >
+                    {(deliveryStatusMap[d.status] ?? { label: d.status }).label}
+                  </span>
+                </td>
                 <td style={{ padding: 10 }}>{d.createdAt ? new Date(d.createdAt).toLocaleString('bg-BG') : '—'}</td>
               </tr>
             ))}

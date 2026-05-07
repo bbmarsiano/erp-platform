@@ -4,12 +4,12 @@ import { Button } from '../../../components/ui/Button'
 import { WarehouseSelector } from '../../wms/components/WarehouseSelector'
 import { useCreatePurchaseOrder, usePurchaseOrders, useSuppliers } from '../hooks/useScm'
 
-const statusLabel: Record<string, string> = {
-  DRAFT: 'Чернова',
-  SENT: 'Изпратена',
-  PARTIALLY_RECEIVED: 'Частично получена',
-  RECEIVED: 'Получена',
-  CANCELLED: 'Анулирана'
+const poStatusMap: Record<string, { label: string; bg: string; color: string }> = {
+  DRAFT: { label: 'Чернова', bg: '#fef9c3', color: '#854d0e' },
+  SENT: { label: 'Изпратена', bg: '#dbeafe', color: '#1e40af' },
+  PARTIALLY_RECEIVED: { label: 'Частично получена', bg: '#fed7aa', color: '#9a3412' },
+  RECEIVED: { label: 'Получена', bg: '#dcfce7', color: '#166534' },
+  CANCELLED: { label: 'Анулирана', bg: '#fee2e2', color: '#991b1b' }
 }
 
 export default function PurchaseOrders() {
@@ -79,7 +79,20 @@ export default function PurchaseOrders() {
                 <td style={{ padding: 10, fontFamily: 'monospace' }}>{o.orderNo}</td>
                 <td style={{ padding: 10 }}>{o.supplier?.name}</td>
                 <td style={{ padding: 10 }}>{o.warehouse?.name}</td>
-                <td style={{ padding: 10 }}>{statusLabel[o.status] ?? o.status}</td>
+                <td style={{ padding: 10 }}>
+                  <span
+                    style={{
+                      padding: '2px 10px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      background: (poStatusMap[o.status] ?? { bg: '#f3f4f6' }).bg,
+                      color: (poStatusMap[o.status] ?? { color: '#374151' }).color
+                    }}
+                  >
+                    {(poStatusMap[o.status] ?? { label: o.status }).label}
+                  </span>
+                </td>
                 <td style={{ padding: 10 }}>{o.expectedDate ? new Date(o.expectedDate).toLocaleDateString('bg-BG') : '—'}</td>
                 <td style={{ padding: 10 }}>
                   <Button onClick={() => navigate(`/scm/orders/${o.id}`)} style={{ background: '#fff', color: '#111', border: '1px solid #ddd' }}>
