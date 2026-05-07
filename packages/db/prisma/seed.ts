@@ -119,6 +119,28 @@ async function main() {
   })
 
   console.log('✅ SCM seed completed — 2 suppliers', supplier1.code, supplier2.code)
+
+  const prod001 = await prisma.product.findFirstOrThrow({ where: { tenantId: tenant.id, code: 'PROD-001' } })
+  const prod002 = await prisma.product.findFirstOrThrow({ where: { tenantId: tenant.id, code: 'PROD-002' } })
+  const prod003 = await prisma.product.findFirstOrThrow({ where: { tenantId: tenant.id, code: 'PROD-003' } })
+
+  await prisma.billOfMaterials.upsert({
+    where: { productId: prod001.id },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      productId: prod001.id,
+      version: '1.0',
+      isActive: true,
+      items: {
+        create: [
+          { componentId: prod002.id, quantity: 2, unit: 'кг.', note: 'Основна суровина' },
+          { componentId: prod003.id, quantity: 5, unit: 'бр.', note: 'Опаковка' }
+        ]
+      }
+    }
+  })
+  console.log('✅ MES seed completed — BOM for PROD-001')
 }
 
 main()

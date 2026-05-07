@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import { useAuthStore } from './store/auth.store'
 import AppShell from './components/layout/AppShell'
+import MesRouter from './modules/mes/MesRouter'
 import WmsRouter from './modules/wms/WmsRouter'
 import ScmRouter from './modules/scm/ScmRouter'
 
@@ -44,6 +45,16 @@ export default function App() {
             <PrivateRoute>
               <AppShell>
                 <ScmRouter />
+              </AppShell>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/mes/*"
+          element={
+            <PrivateRoute>
+              <AppShell>
+                <MesRouter />
               </AppShell>
             </PrivateRoute>
           }

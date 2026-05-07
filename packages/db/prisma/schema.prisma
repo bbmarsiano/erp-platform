@@ -27,6 +27,8 @@ model Tenant {
   suppliers     Supplier[]
   purchaseOrders PurchaseOrder[]
   deliveries    Delivery[]
+  billOfMaterials BillOfMaterials[]
+  workOrders    WorkOrder[]
 }
 
 model User {
@@ -92,6 +94,7 @@ model Warehouse {
   issues    GoodsIssue[]
   purchaseOrders PurchaseOrder[]
   deliveries Delivery[]
+  workOrders WorkOrder[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -111,6 +114,8 @@ model Location {
   receiptLines GoodsReceiptLine[]
   issueLines   GoodsIssueLine[]
   deliveryLines DeliveryLine[]
+  workOrderOutputs WorkOrder[]           @relation("WorkOrderOutput")
+  consumptionLocations MaterialConsumption[] @relation("ConsumptionLocation")
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
@@ -143,6 +148,10 @@ model Product {
   issueLines   GoodsIssueLine[]
   purchaseOrderLines PurchaseOrderLine[]
   deliveryLines DeliveryLine[]
+  bom             BillOfMaterials?
+  bomComponents   BomItem[]         @relation("BomComponent")
+  workOrders      WorkOrder[]       @relation("WorkOrderProduct")
+  consumptions    MaterialConsumption[] @relation("ConsumptionProduct")
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
@@ -283,6 +292,81 @@ model DeliveryLine {
   quantity   Float
   lotNumber  String?
   expiryDate DateTime?
+}
+
+model BillOfMaterials {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  productId   String    @unique
+  product     Product   @relation(fields: [productId], references: [id])
+  version     String    @default("1.0")
+  isActive    Boolean   @default(true)
+  items       BomItem[]
+  workOrders  WorkOrder[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model BomItem {
+  id            String          @id @default(cuid())
+  bomId         String
+  bom           BillOfMaterials @relation(fields: [bomId], references: [id])
+  componentId   String
+  component     Product         @relation("BomComponent", fields: [componentId], references: [id])
+  quantity      Float
+  unit          String?
+  note          String?
+}
+
+model WorkOrder {
+  id               String           @id @default(cuid())
+  tenantId         String
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  orderNo          String
+  productId        String
+  product          Product          @relation("WorkOrderProduct", fields: [productId], references: [id])
+  bomId            String?
+  bom              BillOfMaterials? @relation(fields: [bomId], references: [id])
+  warehouseId      String
+  warehouse        Warehouse        @relation(fields: [warehouseId], references: [id])
+  outputLocationId String
+  outputLocation   Location         @relation("WorkOrderOutput", fields: [outputLocationId], references: [id])
+  plannedQty       Float
+  producedQty      Float            @default(0)
+  status           WorkOrderStatus  @default(DRAFT)
+  plannedStart     DateTime?
+  plannedEnd       DateTime?
+  actualStart      DateTime?
+  actualEnd        DateTime?
+  note             String?
+  consumptions     MaterialConsumption[]
+  createdBy        String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([tenantId, orderNo])
+}
+
+enum WorkOrderStatus {
+  DRAFT
+  RELEASED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model MaterialConsumption {
+  id          String    @id @default(cuid())
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  productId   String
+  product     Product   @relation("ConsumptionProduct", fields: [productId], references: [id])
+  locationId  String
+  location    Location  @relation("ConsumptionLocation", fields: [locationId], references: [id])
+  plannedQty  Float
+  consumedQty Float     @default(0)
+  lotNumber   String?
 }
 
 model GoodsReceipt {

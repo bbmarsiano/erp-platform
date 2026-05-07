@@ -5,6 +5,7 @@ import App from './App'
 import { queryClient } from './lib/queryClient'
 import './modules/wms/index'
 import './modules/scm/index'
+import './modules/mes/index'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

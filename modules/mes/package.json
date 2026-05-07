@@ -1,0 +1,10 @@
+{
+  "name": "@dflow/mes",
+  "version": "1.0.0",
+  "main": "module.plugin.ts",
+  "dependencies": {
+    "@dflow/core": "workspace:*",
+    "@dflow/db": "workspace:*"
+  }
+}
+

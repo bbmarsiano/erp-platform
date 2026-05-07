@@ -119,6 +119,15 @@ importers:
         specifier: ^5.4.11
         version: 5.4.21(@types/node@22.19.17)
 
+  modules/mes:
+    dependencies:
+      '@dflow/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@dflow/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+
   modules/scm:
     dependencies:
       '@dflow/core':
