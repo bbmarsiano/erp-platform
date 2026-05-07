@@ -21,7 +21,7 @@ export default function Stock() {
         </div>
       </div>
 
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10 }}>
         {isLoading ? (
           <div style={{ padding: 12, color: '#6b7280' }}>Зареждане...</div>
         ) : error ? (
@@ -29,88 +29,110 @@ export default function Stock() {
         ) : rows.length === 0 ? (
           <div style={{ padding: 12, color: '#6b7280' }}>Няма наличности</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>Артикул</th>
-                <th style={{ padding: '10px 12px' }}>Код</th>
-                <th style={{ padding: '10px 12px' }}>Локация</th>
-                <th style={{ padding: '10px 12px' }}>Склад</th>
-                <th style={{ padding: '10px 12px' }}>Количество</th>
-                <th style={{ padding: '10px 12px' }}>Мин. количество</th>
-                <th style={{ padding: '10px 12px' }}>Статус</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((item) => (
-                <tr
-                  key={item.id}
-                  style={{
-                    background: item.quantity < item.product.minStock ? '#fff7ed' : 'white',
-                    borderBottom: '1px solid #f3f4f6'
-                  }}
-                >
-                  <td style={{ padding: '10px 12px' }}>{item.product.name}</td>
-                  <td style={{ padding: '10px 12px', fontFamily: 'monospace' }}>{item.product.code}</td>
-                  <td style={{ padding: '10px 12px' }}>{item.location.code}</td>
-                  <td style={{ padding: '10px 12px' }}>{item.location.warehouse.name}</td>
-                  <td
-                    style={{
-                      padding: '10px 12px',
-                      fontWeight: item.quantity < item.product.minStock ? 700 : 400,
-                      color: item.quantity < item.product.minStock ? '#dc2626' : 'inherit'
-                    }}
-                  >
-                    {item.quantity} {item.product?.unit}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>{item.product.minStock}</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    {item.quantity === 0 ? (
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: '#fee2e2',
-                          color: '#991b1b'
-                        }}
-                      >
-                        Изчерпан
-                      </span>
-                    ) : item.quantity < item.product.minStock ? (
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: '#fff7ed',
-                          color: '#c2410c',
-                          border: '1px solid #fed7aa'
-                        }}
-                      >
-                        ⚠️ Под минимум
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          padding: '2px 10px',
-                          borderRadius: 20,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: '#dcfce7',
-                          color: '#166534'
-                        }}
-                      >
-                        Нормално
-                      </span>
-                    )}
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <thead>
+                <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                  <th style={{ width: '22%', padding: '10px 12px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Артикул
+                  </th>
+                  <th style={{ width: '14%', padding: '10px 12px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Код
+                  </th>
+                  <th style={{ width: '28%', padding: '10px 12px', textAlign: 'left', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Локация
+                  </th>
+                  <th style={{ width: '14%', padding: '10px 12px', textAlign: 'right', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Количество
+                  </th>
+                  <th style={{ width: '10%', padding: '10px 12px', textAlign: 'right', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>Мин.</th>
+                  <th style={{ width: '12%', padding: '10px 12px', textAlign: 'center', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    Статус
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((item: any) => {
+                  const isLow = item.quantity < item.product?.minStock
+                  const isEmpty = item.quantity === 0
+                  return (
+                    <tr
+                      key={item.id}
+                      style={{
+                        background: isEmpty ? '#fff1f2' : isLow ? '#fff7ed' : 'white',
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                    >
+                      <td style={{ padding: '12px', fontSize: 14, fontWeight: 500 }}>{item.product?.name}</td>
+                      <td style={{ padding: '12px', fontSize: 13, color: '#6b7280', fontFamily: 'monospace' }}>{item.product?.code}</td>
+                      <td style={{ padding: '12px', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.location?.code} — {item.location?.warehouse?.name}
+                      </td>
+                      <td
+                        style={{
+                          padding: '12px',
+                          textAlign: 'right',
+                          fontSize: 14,
+                          fontWeight: isLow ? 700 : 400,
+                          color: isEmpty ? '#dc2626' : isLow ? '#c2410c' : '#111'
+                        }}
+                      >
+                        {item.quantity} {item.product?.unit}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontSize: 13, color: '#6b7280' }}>
+                        {item.product?.minStock} {item.product?.unit}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {isEmpty ? (
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background: '#fee2e2',
+                              color: '#991b1b',
+                              border: '1px solid #fca5a5'
+                            }}
+                          >
+                            Изчерпан
+                          </span>
+                        ) : isLow ? (
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background: '#fff7ed',
+                              color: '#c2410c',
+                              border: '1px solid #fdba74'
+                            }}
+                          >
+                            ⚠️ Под минимум
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background: '#dcfce7',
+                              color: '#166534',
+                              border: '1px solid #86efac'
+                            }}
+                          >
+                            ✓ Нормално
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
