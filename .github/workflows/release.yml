@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-engine:
+    name: Package engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Package engine
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          chmod +x scripts/package-engine.sh
+          bash scripts/package-engine.sh "${VERSION}"
+
+      - name: Upload engine artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-zip
+          path: dist/engine/*.zip
+
+  build-installer:
+    name: Build installer — all platforms
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: installer/go.sum
+
+      - name: Build all platforms
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          cd installer
+          mkdir -p dist
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.VERSION=${VERSION}" -o dist/dflow-installer-windows-amd64.exe .
+          GOOS=darwin  GOARCH=arm64 go build -ldflags="-s -w -X main.VERSION=${VERSION}" -o dist/dflow-installer-darwin-arm64 .
+          GOOS=darwin  GOARCH=amd64 go build -ldflags="-s -w -X main.VERSION=${VERSION}" -o dist/dflow-installer-darwin-amd64 .
+          GOOS=linux   GOARCH=amd64 go build -ldflags="-s -w -X main.VERSION=${VERSION}" -o dist/dflow-installer-linux-amd64 .
+          ls -lh dist/
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-binaries
+          path: installer/dist/
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-engine, build-installer]
+    steps:
+      - name: Download engine
+        uses: actions/download-artifact@v4
+        with:
+          name: engine-zip
+          path: artifacts/engine/
+
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          name: installer-binaries
+          path: artifacts/installer/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: DFlowERP ${{ github.ref_name }}
+          body: |
+            ## DFlowERP ${{ github.ref_name }}
+
+            ### Installer downloads
+            | Platform | File |
+            |----------|------|
+            | Windows 64-bit | `dflow-installer-windows-amd64.exe` |
+            | Mac Apple Silicon | `dflow-installer-darwin-arm64` |
+            | Mac Intel | `dflow-installer-darwin-amd64` |
+            | Linux 64-bit | `dflow-installer-linux-amd64` |
+
+            ### Usage
+            1. Download installer for your platform
+            2. Run and enter your license key
+            3. Follow the onboarding wizard
+
+            The engine (`dflow-engine-*.zip`) is downloaded automatically by the installer.
+          files: |
+            artifacts/installer/*
+            artifacts/engine/*.zip
+          draft: false
+          prerelease: false
+
