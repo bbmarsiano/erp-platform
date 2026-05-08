@@ -29,8 +29,9 @@ const buildServer = async (): Promise<FastifyInstance> => {
 const start = async (): Promise<void> => {
   try {
     const app = await buildServer()
+    const host = process.env.API_HOST || '0.0.0.0'
     const port = Number(process.env.PORT) || 3001
-    await app.listen({ port, host: '0.0.0.0' })
+    await app.listen({ port, host })
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(error)

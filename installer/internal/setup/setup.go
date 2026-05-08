@@ -20,13 +20,26 @@ func Run(cfg *config.InstallConfig) error {
 	cfg.JWTSecret = generateSecret(32)
 	jwtRefreshSecret := generateSecret(32)
 
+	serverHost := cfg.ServerHost
+	if serverHost == "" {
+		serverHost = "0.0.0.0"
+	}
+
+	apiURLHost := serverHost
+	if apiURLHost == "0.0.0.0" {
+		apiURLHost = "localhost"
+	}
+
 	envContent := fmt.Sprintf(`DATABASE_URL=%s
 JWT_SECRET=%s
 JWT_REFRESH_SECRET=%s
 LICENSE_KEY=%s
+LICENSE_SERVER_URL=https://lvhraynmvyvancqyezef.supabase.co
 NODE_ENV=production
-PORT=3001
-`, cfg.DatabaseURL(), cfg.JWTSecret, jwtRefreshSecret, cfg.LicenseKey)
+PORT=%d
+API_HOST=%s
+VITE_API_URL=http://%s:%d
+`, cfg.DatabaseURL(), cfg.JWTSecret, jwtRefreshSecret, cfg.LicenseKey, cfg.Port, serverHost, apiURLHost, cfg.Port)
 
 	envPath := filepath.Join(cfg.InstallPath, ".env")
 	if err := os.WriteFile(envPath, []byte(envContent), 0o600); err != nil {

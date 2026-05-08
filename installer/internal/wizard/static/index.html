@@ -75,6 +75,13 @@
     <input type="password" id="adminPass2" placeholder="Повтори паролата">
     <label>Порт на приложението</label>
     <input type="number" id="port" value="3001" min="1024" max="65535">
+    <label>IP адрес / хост на сървъра</label>
+    <input type="text" id="serverHost" value="0.0.0.0"
+      placeholder="напр. 192.168.1.100 или erp.firma.bg">
+    <small style="color:#888;font-size:12px;display:block;margin-top:-10px;margin-bottom:16px">
+      Адресът, на който служителите ще достъпват системата.<br>
+      Използвай <b>0.0.0.0</b> за достъп от всички мрежови интерфейси.
+    </small>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-secondary" onclick="goStep(1)" style="flex:1">← Назад</button>
       <button class="btn" onclick="goStep(3)" style="flex:2">Продължи →</button>
@@ -96,6 +103,8 @@
       <div class="icon">✅</div>
       <h2>Инсталацията е завършена!</h2>
       <p>DFlowERP е инсталиран успешно и работи на вашия сървър.</p>
+      <p id="successUrl" style="font-family:monospace;background:#f5f5f5;
+  padding:8px 12px;border-radius:6px;font-size:13px;margin-bottom:24px"></p>
       <button class="btn" id="openBtn" onclick="openERP()">
         Отвори DFlowERP
       </button>
@@ -123,7 +132,8 @@ function goStep(n) {
     document.getElementById('review').innerHTML = `
       <b>Фирма:</b> ${document.getElementById('companyName').value}<br>
       <b>Администратор:</b> ${document.getElementById('adminEmail').value}<br>
-      <b>Порт:</b> ${document.getElementById('port').value}<br>
+      <b>Сървър:</b> ${document.getElementById('serverHost').value}:${document.getElementById('port').value}<br>
+      <b>URL за достъп:</b> http://${document.getElementById('serverHost').value}:${document.getElementById('port').value}<br>
       <b>База данни:</b> dflow_erp (PostgreSQL)
     `;
   }
@@ -152,11 +162,13 @@ async function complete() {
         adminEmail:  document.getElementById('adminEmail').value,
         adminPass:   document.getElementById('adminPass').value,
         port: parseInt(document.getElementById('port').value),
+        serverHost:  document.getElementById('serverHost').value,
       })
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
     erpUrl = data.url;
+    document.getElementById('successUrl').textContent = data.url;
     goStep(4);
   } catch (e) {
     document.getElementById('error-msg').textContent = 'Грешка: ' + e.message;

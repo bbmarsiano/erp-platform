@@ -31,6 +31,7 @@ func Launch(cfg *config.InstallConfig) error {
 			AdminEmail  string `json:"adminEmail"`
 			AdminPass   string `json:"adminPass"`
 			Port        int    `json:"port"`
+			ServerHost  string `json:"serverHost"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, "Bad request", http.StatusBadRequest)
@@ -41,6 +42,7 @@ func Launch(cfg *config.InstallConfig) error {
 		cfg.AdminEmail = body.AdminEmail
 		cfg.AdminPass = body.AdminPass
 		cfg.Port = body.Port
+		cfg.ServerHost = body.ServerHost
 
 		if err := setup.Seed(cfg); err != nil {
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
@@ -51,9 +53,17 @@ func Launch(cfg *config.InstallConfig) error {
 			setup.StartService(cfg)
 		}()
 
+		host := body.ServerHost
+		if host == "" {
+			host = "localhost"
+		}
+		if host == "0.0.0.0" {
+			host = "localhost"
+		}
+
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": true,
-			"url":     fmt.Sprintf("http://localhost:%d", cfg.Port),
+			"url":     fmt.Sprintf("http://%s:%d", host, cfg.Port),
 		})
 	})
 
@@ -84,6 +94,7 @@ func LaunchTestMode(cfg *config.InstallConfig) error {
 			AdminEmail  string `json:"adminEmail"`
 			AdminPass   string `json:"adminPass"`
 			Port        int    `json:"port"`
+			ServerHost  string `json:"serverHost"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		cfg.CompanyName = body.CompanyName
@@ -92,9 +103,14 @@ func LaunchTestMode(cfg *config.InstallConfig) error {
 		if body.Port > 0 {
 			cfg.Port = body.Port
 		}
+		cfg.ServerHost = body.ServerHost
+		host := body.ServerHost
+		if host == "" || host == "0.0.0.0" {
+			host = "localhost"
+		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": true,
-			"url":     fmt.Sprintf("http://localhost:%d", 3001),
+			"url":     fmt.Sprintf("http://%s:%d", host, cfg.Port),
 		})
 	})
 	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {

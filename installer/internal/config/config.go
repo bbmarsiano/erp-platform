@@ -16,6 +16,7 @@ type InstallConfig struct {
 	InstallPath string
 	PgConfig    *PgConfig
 	Port        int
+	ServerHost  string
 	JWTSecret   string
 	CompanyName string
 	AdminEmail  string
