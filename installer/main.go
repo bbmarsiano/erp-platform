@@ -15,7 +15,7 @@ import (
 )
 
 const VERSION = "0.1.0"
-const LICENSE_SERVER = "https://YOUR_PROJECT.supabase.co"
+const LICENSE_SERVER = "https://lvhraynmvyvancqyezef.supabase.co"
 const GITHUB_REPO = "bbmarsiano/erp-platform"
 
 func main() {

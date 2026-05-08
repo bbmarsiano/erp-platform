@@ -28,11 +28,10 @@ func Validate(serverURL, key string) ([]string, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
 
 	body, _ := json.Marshal(map[string]string{"key": key})
-	resp, err := client.Post(
-		serverURL+"/functions/v1/validate-license",
-		"application/json",
-		bytes.NewBuffer(body),
-	)
+	req, _ := http.NewRequest("POST", serverURL+"/functions/v1/validate-license", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2aHJheW5tdnl2YW5jcXllemVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY4MDMsImV4cCI6MjA5MzYzMjgwM30.ubBo7w9sVcbq2oXDrJebWMP8Y2NOSd-aCAVdcRQsLC0")
+	resp, err := client.Do(req)
 	if err != nil {
 		return checkLocalCache(key)
 	}
