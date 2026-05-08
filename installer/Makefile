@@ -1,16 +1,35 @@
-VERSION=0.1.0
+VERSION ?= 0.1.0
 
-build-all: build-windows build-mac build-linux
+# Production builds (no dev flags)
+build-all: build-windows build-mac-arm build-mac-intel build-linux
 
 build-windows:
-	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/dflow-installer-windows-amd64.exe .
+	GOOS=windows GOARCH=amd64 go build \
+	  -ldflags="-s -w -X main.VERSION=$(VERSION)" \
+	  -o dist/dflow-installer-windows-amd64.exe .
 
-build-mac:
-	GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/dflow-installer-darwin-arm64 .
-	GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/dflow-installer-darwin-amd64 .
+build-mac-arm:
+	GOOS=darwin GOARCH=arm64 go build \
+	  -ldflags="-s -w -X main.VERSION=$(VERSION)" \
+	  -o dist/dflow-installer-darwin-arm64 .
+
+build-mac-intel:
+	GOOS=darwin GOARCH=amd64 go build \
+	  -ldflags="-s -w -X main.VERSION=$(VERSION)" \
+	  -o dist/dflow-installer-darwin-amd64 .
 
 build-linux:
-	GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/dflow-installer-linux-amd64 .
+	GOOS=linux GOARCH=amd64 go build \
+	  -ldflags="-s -w -X main.VERSION=$(VERSION)" \
+	  -o dist/dflow-installer-linux-amd64 .
+
+# Dev build — includes --wizard-only flag
+build-dev:
+	go build -tags dev -o dist/dflow-installer-dev .
+
+# Local production build (current platform)
+build:
+	go build -ldflags="-X main.VERSION=$(VERSION)" -o dist/dflow-installer .
 
 clean:
 	rm -rf dist/
