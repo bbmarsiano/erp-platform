@@ -1,43 +1,17 @@
 name: Deploy to Vercel
 
+# Vercel is connected directly to GitHub and auto-deploys on push to main.
+# This workflow is intentionally disabled to avoid conflicts.
+# Manual deploys can be triggered from the Vercel dashboard.
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/web/**'
-      - 'packages/core/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
-    name: Deploy frontend
+    name: Deploy frontend (manual)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Generate Prisma client
-        run: pnpm db:generate
-
-      - name: Build
-        run: pnpm --filter @dflow/web build
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: apps/web
-          vercel-args: '--prod'
+      - name: Info
+        run: echo "Deploy is handled automatically by Vercel GitHub integration"
 
