@@ -8,3 +8,6 @@ build/
 .DS_Store
 prisma/generated/
 installer/dist/
+license-server/admin/.env
+license-server/admin/node_modules/
+license-server/admin/dist/
