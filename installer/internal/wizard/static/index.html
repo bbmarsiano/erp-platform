@@ -195,37 +195,55 @@ function renderPrereqs(prereqs, allReady) {
 }
 
 function goStep(n) {
+  // Step 0 → 1: no validation needed (prerequisites already checked)
   if (n === 1) {
+    // just proceed
+  }
+
+  // Step 1 → 2: validate company info
+  if (n === 2) {
     if (!document.getElementById('companyName').value.trim()) {
-      alert('Моля въведете наименование на фирмата'); return;
+      alert('Моля въведете наименование на фирмата')
+      return
     }
     if (!document.getElementById('adminEmail').value.includes('@')) {
-      alert('Моля въведете валиден имейл'); return;
+      alert('Моля въведете валиден имейл')
+      return
     }
   }
-  if (n === 2) {
-    const p1 = document.getElementById('adminPass').value;
-    const p2 = document.getElementById('adminPass2').value;
-    if (p1.length < 8) { alert('Паролата трябва да е минимум 8 символа'); return; }
-    if (p1 !== p2) { alert('Паролите не съвпадат'); return; }
-  }
+
+  // Step 2 → 3: validate security config
   if (n === 3) {
+    const p1 = document.getElementById('adminPass').value
+    const p2 = document.getElementById('adminPass2').value
+    if (p1.length < 8) {
+      alert('Паролата трябва да е минимум 8 символа')
+      return
+    }
+    if (p1 !== p2) {
+      alert('Паролите не съвпадат')
+      return
+    }
+    const host = document.getElementById('serverHost').value
+    const port = document.getElementById('port').value
     document.getElementById('review').innerHTML = `
       <b>Фирма:</b> ${document.getElementById('companyName').value}<br>
       <b>Администратор:</b> ${document.getElementById('adminEmail').value}<br>
-      <b>Сървър:</b> ${document.getElementById('serverHost').value}:${document.getElementById('port').value}<br>
-      <b>URL за достъп:</b> http://${document.getElementById('serverHost').value}:${document.getElementById('port').value}<br>
+      <b>Сървър:</b> ${host}:${port}<br>
+      <b>URL за достъп:</b> http://${host === '0.0.0.0' ? 'localhost' : host}:${port}<br>
       <b>База данни:</b> dflow_erp (PostgreSQL)
-    `;
+    `
   }
 
-  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-  document.getElementById('step-' + n).classList.add('active');
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
+  document.getElementById('step-' + n).classList.add('active')
+
   document.querySelectorAll('.dot').forEach((d, i) => {
-    d.classList.toggle('active', i < n);
-  });
-  const pct = { 0: 10, 1: 33, 2: 66, 3: 90, 4: 100 }[n] || 10;
-  document.getElementById('progress').style.width = pct + '%';
+    d.classList.toggle('active', i <= n)
+  })
+
+  const pct = { 0: 10, 1: 33, 2: 66, 3: 90, 4: 100 }[n] || 10
+  document.getElementById('progress').style.width = pct + '%'
 }
 
 async function complete() {
