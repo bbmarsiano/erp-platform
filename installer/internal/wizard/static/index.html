@@ -49,16 +49,34 @@
   <div class="subtitle">Настройка на системата</div>
 
   <div class="step-indicator">
-    <div class="dot active" id="dot-1"></div>
+    <div class="dot active" id="dot-0"></div>
+    <div class="dot" id="dot-1"></div>
     <div class="dot" id="dot-2"></div>
     <div class="dot" id="dot-3"></div>
   </div>
 
   <div class="progress-bar">
-    <div class="progress-fill" id="progress" style="width:33%"></div>
+    <div class="progress-fill" id="progress" style="width:10%"></div>
   </div>
 
-  <div class="step active" id="step-1">
+  <!-- Step 0: Prerequisites check -->
+  <div class="step active" id="step-0">
+    <h3 style="margin-bottom:8px;font-size:16px">Проверка на системата</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:20px">
+      Проверяваме дали всички необходими компоненти са инсталирани...
+    </p>
+    <div id="prereq-list">
+      <div style="text-align:center;padding:20px;color:#888">Зареждане...</div>
+    </div>
+    <div id="prereq-error" class="error" style="display:none"></div>
+    <button class="btn" id="prereq-continue" style="display:none" onclick="goStep(1)">
+      Продължи към инсталация →
+    </button>
+    <div id="prereq-manual" style="display:none;margin-top:12px;font-size:13px;
+         padding:12px;background:#fef9c3;border-radius:8px;color:#854d0e"></div>
+  </div>
+
+  <div class="step" id="step-1">
     <h3 style="margin-bottom:20px;font-size:16px">Информация за фирмата</h3>
     <label>Наименование на фирмата</label>
     <input type="text" id="companyName" placeholder="Примерна ЕООД">
@@ -115,8 +133,69 @@
 <script>
 let erpUrl = '';
 
+window.addEventListener('load', checkPrereqs)
+
+async function checkPrereqs() {
+  try {
+    const resp = await fetch('/api/prereqs')
+    const data = await resp.json()
+    renderPrereqs(data.prereqs, data.allReady)
+  } catch(e) {
+    document.getElementById('prereq-list').innerHTML =
+      '<div style="color:#dc2626">Грешка при проверка на системата</div>'
+    document.getElementById('prereq-continue').style.display = 'block'
+  }
+}
+
+function renderPrereqs(prereqs, allReady) {
+  const statusMap = {
+    ok:          { icon: '✅', label: 'Готов',           color: '#166534', bg: '#dcfce7' },
+    missing:     { icon: '❌', label: 'Липсва',          color: '#991b1b', bg: '#fee2e2' },
+    old_version: { icon: '⚠️', label: 'Стара версия',   color: '#854d0e', bg: '#fef9c3' },
+    auto:        { icon: '🔄', label: 'Автоматично',     color: '#1e40af', bg: '#dbeafe' },
+  }
+
+  let html = ''
+  let manualInstall = []
+
+  prereqs.forEach(p => {
+    const s = statusMap[p.status] || statusMap.ok
+    html += `
+      <div style="display:flex;align-items:center;gap:10px;
+           padding:10px 0;border-bottom:1px solid #f0f0f0">
+        <span style="font-size:16px">${s.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:500">${p.name}</div>
+          <div style="font-size:12px;color:#888">
+            Нужна: ${p.required} · Намерена: ${p.found}
+          </div>
+        </div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:20px;
+              background:${s.bg};color:${s.color};font-weight:500">
+          ${s.label}
+        </span>
+      </div>`
+
+    if ((p.status === 'missing' || p.status === 'old_version') && !p.canAutoInstall) {
+      manualInstall.push(`<b>${p.name}:</b> Свали от <a href="${p.installUrl}" target="_blank">${p.installUrl}</a>`)
+    }
+  })
+
+  document.getElementById('prereq-list').innerHTML = html
+
+  if (allReady) {
+    document.getElementById('prereq-continue').style.display = 'block'
+  } else if (manualInstall.length > 0) {
+    const manualDiv = document.getElementById('prereq-manual')
+    manualDiv.style.display = 'block'
+    manualDiv.innerHTML = '⚠️ Моля инсталирай ръчно преди да продължиш:<br><br>' +
+      manualInstall.join('<br>') +
+      '<br><br>След инсталация рестартирай installer-а.'
+  }
+}
+
 function goStep(n) {
-  if (n === 2) {
+  if (n === 1) {
     if (!document.getElementById('companyName').value.trim()) {
       alert('Моля въведете наименование на фирмата'); return;
     }
@@ -124,11 +203,13 @@ function goStep(n) {
       alert('Моля въведете валиден имейл'); return;
     }
   }
-  if (n === 3) {
+  if (n === 2) {
     const p1 = document.getElementById('adminPass').value;
     const p2 = document.getElementById('adminPass2').value;
     if (p1.length < 8) { alert('Паролата трябва да е минимум 8 символа'); return; }
     if (p1 !== p2) { alert('Паролите не съвпадат'); return; }
+  }
+  if (n === 3) {
     document.getElementById('review').innerHTML = `
       <b>Фирма:</b> ${document.getElementById('companyName').value}<br>
       <b>Администратор:</b> ${document.getElementById('adminEmail').value}<br>
@@ -143,7 +224,7 @@ function goStep(n) {
   document.querySelectorAll('.dot').forEach((d, i) => {
     d.classList.toggle('active', i < n);
   });
-  const pct = { 1: 33, 2: 66, 3: 90, 4: 100 }[n] || 33;
+  const pct = { 0: 10, 1: 33, 2: 66, 3: 90, 4: 100 }[n] || 10;
   document.getElementById('progress').style.width = pct + '%';
 }
 

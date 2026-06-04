@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
 	"github.com/bbmarsiano/erp-platform/installer/internal/engine"
@@ -22,38 +23,30 @@ func main() {
 	printBanner()
 	licenseKey := promptInput("Enter your license key")
 	if licenseKey == "" {
-		color.Red("✗ License key is required")
-		os.Exit(1)
+		exitWithError("License key is required")
 	}
 
-	// Step 1: Validate license
 	color.Cyan("\n[1/5] Validating license...")
 	features, err := license.Validate(LICENSE_SERVER, licenseKey)
 	if err != nil {
-		color.Red("✗ License validation failed: %v", err)
-		os.Exit(1)
+		exitWithError("License validation failed: %v", err)
 	}
 	color.Green("✓ License valid. Features: %v", features)
 
-	// Step 2: PostgreSQL
 	color.Cyan("\n[2/5] Checking PostgreSQL...")
 	pgConfig, err := postgres.EnsureInstalled()
 	if err != nil {
-		color.Red("✗ PostgreSQL setup failed: %v", err)
-		os.Exit(1)
+		exitWithError("PostgreSQL setup failed: %v", err)
 	}
 	color.Green("✓ PostgreSQL ready at port %d", pgConfig.Port)
 
-	// Step 3: Download engine
 	color.Cyan("\n[3/5] Downloading DFlowERP engine v%s...", VERSION)
 	installPath, err := engine.Download(GITHUB_REPO, VERSION)
 	if err != nil {
-		color.Red("✗ Download failed: %v", err)
-		os.Exit(1)
+		exitWithError("Download failed: %v", err)
 	}
 	color.Green("✓ Engine installed to %s", installPath)
 
-	// Step 4: Setup DB + config
 	color.Cyan("\n[4/5] Setting up database...")
 	cfg := &config.InstallConfig{
 		LicenseKey:  licenseKey,
@@ -63,18 +56,25 @@ func main() {
 		Port:        3001,
 	}
 	if err := setup.Run(cfg); err != nil {
-		color.Red("✗ Setup failed: %v", err)
-		os.Exit(1)
+		exitWithError("Setup failed: %v", err)
 	}
 	color.Green("✓ Database configured")
 
-	// Step 5: Onboarding wizard
 	color.Cyan("\n[5/5] Opening onboarding wizard...")
 	color.Yellow("  Browser will open automatically at http://localhost:7788")
 	if err := wizard.Launch(cfg); err != nil {
-		color.Red("✗ Wizard failed: %v", err)
-		os.Exit(1)
+		exitWithError("Wizard failed: %v", err)
 	}
+}
+
+func exitWithError(format string, args ...interface{}) {
+	color.Red("✗ "+fmt.Sprintf(format, args...))
+	if runtime.GOOS == "windows" {
+		color.Yellow("\nPress Enter to exit...")
+		var line string
+		fmt.Scanln(&line)
+	}
+	os.Exit(1)
 }
 
 func printBanner() {
@@ -90,4 +90,3 @@ func promptInput(label string) string {
 	fmt.Scanln(&input)
 	return input
 }
-

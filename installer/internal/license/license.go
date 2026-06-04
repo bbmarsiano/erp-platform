@@ -2,6 +2,7 @@ package license
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"time"
 )
 
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2aHJheW5tdnl2YW5jcXllemVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY4MDMsImV4cCI6MjA5MzYzMjgwM30.ubBo7w9sVcbq2oXDrJebWMP8Y2NOSd-aCAVdcRQsLC0"
+
 type ValidateResponse struct {
 	Valid     bool     `json:"valid"`
 	Features  []string `json:"features"`
@@ -17,20 +20,36 @@ type ValidateResponse struct {
 	Tenant    string   `json:"tenant"`
 }
 
-type cacheFile struct {
-	Key          string     `json:"key"`
-	Features     []string   `json:"features"`
-	LastVerified time.Time  `json:"lastVerified"`
-	Raw          ValidateResponse `json:"raw"`
+type CacheEntry struct {
+	Key       string   `json:"key"`
+	Features  []string `json:"features"`
+	ExpiresAt string   `json:"expiresAt"`
+	CachedAt  string   `json:"cachedAt"`
 }
 
 func Validate(serverURL, key string) ([]string, error) {
-	client := &http.Client{Timeout: 15 * time.Second}
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+		ForceAttemptHTTP2: false,
+	}
+	client := &http.Client{
+		Timeout:   20 * time.Second,
+		Transport: transport,
+	}
 
 	body, _ := json.Marshal(map[string]string{"key": key})
-	req, _ := http.NewRequest("POST", serverURL+"/functions/v1/validate-license", bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST",
+		serverURL+"/functions/v1/validate-license",
+		bytes.NewBuffer(body))
+	if err != nil {
+		return checkLocalCache(key)
+	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2aHJheW5tdnl2YW5jcXllemVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTY4MDMsImV4cCI6MjA5MzYzMjgwM30.ubBo7w9sVcbq2oXDrJebWMP8Y2NOSd-aCAVdcRQsLC0")
+	req.Header.Set("Authorization", "Bearer "+ANON_KEY)
+	req.Header.Set("User-Agent", "DFlowERP-Installer/0.1.0")
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return checkLocalCache(key)
@@ -49,43 +68,39 @@ func Validate(serverURL, key string) ([]string, error) {
 	return result.Features, nil
 }
 
+func cacheFilePath() string {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".dflow")
+	_ = os.MkdirAll(dir, 0o700)
+	return filepath.Join(dir, "license_cache.json")
+}
+
 func checkLocalCache(key string) ([]string, error) {
-	p := cachePath()
-	b, err := os.ReadFile(p)
+	data, err := os.ReadFile(cacheFilePath())
 	if err != nil {
 		return nil, fmt.Errorf("license server unreachable and no local cache found")
 	}
-	var c cacheFile
-	if err := json.Unmarshal(b, &c); err != nil {
-		return nil, fmt.Errorf("license server unreachable and local cache is invalid")
+	var cache CacheEntry
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return nil, fmt.Errorf("license server unreachable and cache corrupted")
 	}
-	if c.Key != key {
+	if cache.Key != key {
 		return nil, fmt.Errorf("license server unreachable and cached key does not match")
 	}
-	if time.Since(c.LastVerified) > 30*24*time.Hour {
-		return nil, fmt.Errorf("license server unreachable and cache expired")
+	cachedAt, err := time.Parse(time.RFC3339, cache.CachedAt)
+	if err != nil || time.Since(cachedAt) > 30*24*time.Hour {
+		return nil, fmt.Errorf("license server unreachable and cache expired (>30 days)")
 	}
-	return c.Features, nil
+	return cache.Features, nil
 }
 
 func saveLocalCache(key string, result ValidateResponse) {
-	p := cachePath()
-	_ = os.MkdirAll(filepath.Dir(p), 0o700)
-	payload := cacheFile{
-		Key:          key,
-		Features:     result.Features,
-		LastVerified: time.Now(),
-		Raw:          result,
+	cache := CacheEntry{
+		Key:       key,
+		Features:  result.Features,
+		ExpiresAt: result.ExpiresAt,
+		CachedAt:  time.Now().Format(time.RFC3339),
 	}
-	b, _ := json.MarshalIndent(payload, "", "  ")
-	_ = os.WriteFile(p, b, 0o600)
+	data, _ := json.Marshal(cache)
+	_ = os.WriteFile(cacheFilePath(), data, 0o600)
 }
-
-func cachePath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".dflow/license_cache.json"
-	}
-	return filepath.Join(home, ".dflow", "license_cache.json")
-}
-

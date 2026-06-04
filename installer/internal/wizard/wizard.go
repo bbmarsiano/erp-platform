@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
+	"github.com/bbmarsiano/erp-platform/installer/internal/prereqs"
 	"github.com/bbmarsiano/erp-platform/installer/internal/setup"
 )
 
@@ -20,6 +21,7 @@ func Launch(cfg *config.InstallConfig) error {
 
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFiles))))
 	mux.HandleFunc("/", serveIndex)
+	registerPrereqsHandler(mux)
 
 	mux.HandleFunc("/api/complete", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -85,6 +87,7 @@ func LaunchTestMode(cfg *config.InstallConfig) error {
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFiles))))
 	mux.HandleFunc("/", serveIndex)
+	registerPrereqsHandler(mux)
 	mux.HandleFunc("/api/complete", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			return
@@ -120,6 +123,18 @@ func LaunchTestMode(cfg *config.InstallConfig) error {
 	port := 7788
 	go openBrowser(fmt.Sprintf("http://localhost:%d", port))
 	return http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
+}
+
+func registerPrereqsHandler(mux *http.ServeMux) {
+	mux.HandleFunc("/api/prereqs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		checks := prereqs.Check()
+		allReady := prereqs.AllReady(checks)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"prereqs":  checks,
+			"allReady": allReady,
+		})
+	})
 }
 
 func serveIndex(w http.ResponseWriter, r *http.Request) {
