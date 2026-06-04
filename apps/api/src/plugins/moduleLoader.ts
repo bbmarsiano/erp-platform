@@ -6,7 +6,13 @@ import { fileURLToPath } from 'url'
 import { dirname, resolve, join } from 'path'
 import { pathToFileURL } from 'node:url'
 
-export const loadedModules: ModuleManifest[] = []
+const globalForModules = globalThis as typeof globalThis & {
+  __dflowLoadedModules?: ModuleManifest[]
+}
+
+export const loadedModules: ModuleManifest[] =
+  globalForModules.__dflowLoadedModules ??
+  (globalForModules.__dflowLoadedModules = [])
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
@@ -31,7 +37,15 @@ const moduleLoaderPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) 
       try {
         const imported = await import(pathToFileURL(candidate).href)
         const plugin = imported.default as FastifyPluginAsync | undefined
-        const manifest = imported.manifest as ModuleManifest | undefined
+        const manifest =
+          (imported.manifest as ModuleManifest | undefined) ??
+          (Object.values(imported).find(
+            (value): value is ModuleManifest =>
+              typeof value === 'object' &&
+              value !== null &&
+              'id' in value &&
+              'apiPrefix' in value
+          ) as ModuleManifest | undefined)
 
         if (plugin) {
           await fastify.register(plugin, { prefix: manifest?.apiPrefix })
