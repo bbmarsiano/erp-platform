@@ -98,7 +98,14 @@ export const Sidebar = () => {
       <div style={{ marginTop: 'auto', fontSize: 12, color: '#4b5563' }}>
         <div>{user?.email ?? 'anonymous@local'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-          <NavLink to="/settings" style={baseLinkStyle}>
+          <NavLink
+            to="/settings"
+            style={({ isActive }) => ({
+              ...baseLinkStyle,
+              background: isActive ? '#eef2ff' : 'transparent',
+              color: isActive ? '#3730a3' : '#111827'
+            })}
+          >
             Настройки
           </NavLink>
           <Button onClick={handleLogout} style={{ width: '100%' }}>
