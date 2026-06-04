@@ -48,7 +48,7 @@ const moduleLoaderPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) 
           ) as ModuleManifest | undefined)
 
         if (plugin) {
-          await fastify.register(plugin, { prefix: manifest?.apiPrefix })
+          await fastify.register(plugin)
         }
 
         if (manifest) {
