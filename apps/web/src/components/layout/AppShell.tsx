@@ -1,9 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = () => {
+      setIsMobile(window.innerWidth < 768)
+      if (window.innerWidth >= 768) setMobileOpen(false)
+    }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   return (
     <div
@@ -14,29 +24,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         fontFamily: "'Inter', system-ui, sans-serif"
       }}
     >
-      <Sidebar open={sidebarOpen} onToggle={() => setSidebarOpen((o) => !o)} />
+      {!isMobile && <Sidebar open={true} onToggle={() => {}} isMobile={false} />}
+
+      {isMobile && mobileOpen && (
+        <>
+          <div
+            onClick={() => setMobileOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 99
+            }}
+          />
+          <Sidebar open={true} onToggle={() => setMobileOpen(false)} isMobile={true} />
+        </>
+      )}
+
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          marginLeft: sidebarOpen ? 240 : 64,
-          transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)',
+          marginLeft: isMobile ? 0 : 240,
           minWidth: 0
         }}
       >
-        <TopBar onMenuToggle={() => setSidebarOpen((o) => !o)} sidebarOpen={sidebarOpen} />
-        <main
-          style={{
-            flex: 1,
-            padding: '28px 32px',
-            maxWidth: 1400,
-            width: '100%',
-            margin: '0 auto'
-          }}
-        >
-          {children}
-        </main>
+        <TopBar onMenuToggle={() => setMobileOpen((o) => !o)} showHamburger={isMobile} />
+        <main style={{ flex: 1, padding: '28px 32px' }}>{children}</main>
       </div>
     </div>
   )

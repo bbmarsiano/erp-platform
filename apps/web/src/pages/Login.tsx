@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
+import logoLogin from '../assets/logo_login.png'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -9,6 +10,40 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes meshMove1 {
+        0%,100% { transform: translate(0,0) scale(1); }
+        33% { transform: translate(60px,-40px) scale(1.1); }
+        66% { transform: translate(-30px,50px) scale(0.95); }
+      }
+      @keyframes meshMove2 {
+        0%,100% { transform: translate(0,0) scale(1); }
+        33% { transform: translate(-50px,60px) scale(1.05); }
+        66% { transform: translate(40px,-30px) scale(1.1); }
+      }
+      @keyframes meshMove3 {
+        0%,100% { transform: translate(0,0) scale(1); }
+        50% { transform: translate(30px,40px) scale(1.08); }
+      }
+      @keyframes meshMove4 {
+        0%,100% { transform: translate(0,0) scale(1); }
+        40% { transform: translate(-40px,-50px) scale(1.06); }
+        80% { transform: translate(20px,30px) scale(0.98); }
+      }
+      .login-input:focus {
+        border-color: #7c3aed !important;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.1) !important;
+        outline: none !important;
+      }
+    `
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,82 +62,77 @@ export default function Login() {
     }
   }
 
+  const blobs: Array<{
+    color: string
+    w: number
+    h: number
+    top?: string
+    left?: string
+    right?: string
+    bottom?: string
+    anim: string
+  }> = [
+    { color: '#7c3aed', w: 600, h: 600, top: '-15%', left: '-10%', anim: 'meshMove1 12s ease infinite' },
+    { color: '#db2777', w: 500, h: 500, top: '40%', right: '-10%', anim: 'meshMove2 14s ease infinite' },
+    { color: '#ea580c', w: 400, h: 400, bottom: '-10%', left: '20%', anim: 'meshMove3 10s ease infinite' },
+    { color: '#9333ea', w: 350, h: 350, top: '10%', right: '20%', anim: 'meshMove4 16s ease infinite' }
+  ]
+
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: '#0a0118',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontFamily: "'Inter', system-ui, sans-serif",
+        position: 'relative',
+        overflow: 'hidden',
         padding: 20
       }}
     >
-      <div
-        style={{
-          position: 'fixed',
-          top: -100,
-          right: -100,
-          width: 400,
-          height: 400,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.05)'
-        }}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          bottom: -80,
-          left: -80,
-          width: 300,
-          height: 300,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.05)'
-        }}
-      />
+      {blobs.map((blob, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            width: blob.w,
+            height: blob.h,
+            borderRadius: '50%',
+            background: blob.color,
+            opacity: 0.18,
+            filter: 'blur(80px)',
+            animation: blob.anim,
+            top: blob.top,
+            left: blob.left,
+            right: blob.right,
+            bottom: blob.bottom,
+            pointerEvents: 'none'
+          }}
+        />
+      ))}
 
       <div
         style={{
-          background: 'white',
+          background: 'rgba(255,255,255,0.97)',
           borderRadius: 20,
-          padding: '40px 36px',
+          padding: '44px 40px',
           width: '100%',
-          maxWidth: 400,
-          boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+          maxWidth: 420,
+          boxShadow: '0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)',
           position: 'relative',
-          zIndex: 1
+          zIndex: 1,
+          backdropFilter: 'blur(20px)'
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 14,
-              margin: '0 auto 14px',
-              background: 'linear-gradient(135deg,#667eea,#764ba2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 22,
-              boxShadow: '0 8px 20px rgba(102,126,234,0.4)'
-            }}
-          >
-            ⚡
-          </div>
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: '#0f172a',
-              margin: '0 0 4px',
-              letterSpacing: '-0.3px'
-            }}
-          >
-            DFlowERP
-          </h1>
-          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Влезте в своя акаунт</p>
+          <img
+            src={logoLogin}
+            alt="Logo"
+            style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain', marginBottom: 16 }}
+          />
+          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>Влезте в своя акаунт</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -110,7 +140,7 @@ export default function Login() {
             <div
               style={{
                 padding: '12px 14px',
-                marginBottom: 16,
+                marginBottom: 20,
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
                 borderRadius: 10,
@@ -126,50 +156,70 @@ export default function Login() {
             </div>
           )}
 
-          {[
-            { id: 'email', label: 'Имейл адрес', type: 'email', placeholder: 'admin@firma.bg' },
-            { id: 'password', label: 'Парола', type: 'password', placeholder: '••••••••' }
-          ].map((field) => (
-            <div key={field.id} style={{ marginBottom: 16 }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#374151',
-                  marginBottom: 6
-                }}
-              >
-                {field.label}
-              </label>
-              <input
-                type={field.type}
-                placeholder={field.placeholder}
-                value={field.id === 'email' ? email : password}
-                onChange={(e) =>
-                  field.id === 'email' ? setEmail(e.target.value) : setPassword(e.target.value)
-                }
-                required
-                style={{
-                  width: '100%',
-                  padding: '11px 14px',
-                  border: '1.5px solid #e5e7eb',
-                  borderRadius: 10,
-                  fontSize: 14,
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.15s',
-                  fontFamily: 'inherit'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#667eea'
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e5e7eb'
-                }}
-              />
-            </div>
-          ))}
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: 6
+              }}
+            >
+              Имейл адрес
+            </label>
+            <input
+              className="login-input"
+              type="email"
+              value={email}
+              required
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                border: '1.5px solid #e5e7eb',
+                borderRadius: 10,
+                fontSize: 14,
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+                fontFamily: 'inherit',
+                background: 'white'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: 6
+              }}
+            >
+              Парола
+            </label>
+            <input
+              className="login-input"
+              type="password"
+              value={password}
+              required
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              style={{
+                width: '100%',
+                padding: '11px 14px',
+                border: '1.5px solid #e5e7eb',
+                borderRadius: 10,
+                fontSize: 14,
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+                fontFamily: 'inherit',
+                background: 'white'
+              }}
+            />
+          </div>
 
           <button
             type="submit"
@@ -177,22 +227,25 @@ export default function Login() {
             style={{
               width: '100%',
               padding: '12px',
-              background: loading ? '#9ca3af' : 'linear-gradient(135deg,#667eea,#764ba2)',
+              background: loading ? '#9ca3af' : '#7c3aed',
               color: 'white',
               border: 'none',
               borderRadius: 10,
               fontSize: 14,
               fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
-              marginTop: 4,
               fontFamily: 'inherit',
-              boxShadow: loading ? 'none' : '0 4px 14px rgba(102,126,234,0.4)',
+              boxShadow: loading ? 'none' : '0 4px 14px rgba(124,58,237,0.35)',
               transition: 'all 0.15s'
             }}
           >
             {loading ? 'Влизане...' : 'Влез в системата'}
           </button>
         </form>
+
+        <p style={{ textAlign: 'center', fontSize: 11, color: '#d1d5db', margin: '20px 0 0' }}>
+          powered by DFlowERP
+        </p>
       </div>
     </div>
   )

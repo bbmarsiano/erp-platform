@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import ReportsPlaceholder from '../../components/ReportsPlaceholder'
 import DeliveryDetail from './pages/DeliveryDetail'
 import Deliveries from './pages/Deliveries'
 import PurchaseOrderDetail from './pages/PurchaseOrderDetail'
@@ -15,7 +16,7 @@ export default function ScmRouter() {
       <Route path="orders/:id" element={<PurchaseOrderDetail />} />
       <Route path="deliveries" element={<Deliveries />} />
       <Route path="deliveries/:id" element={<DeliveryDetail />} />
+      <Route path="reports" element={<ReportsPlaceholder module="Верига на доставките" />} />
     </Routes>
   )
 }
-

@@ -24,10 +24,10 @@ function getPageTitle(pathname: string): string {
 
 export function TopBar({
   onMenuToggle,
-  sidebarOpen
+  showHamburger
 }: {
   onMenuToggle: () => void
-  sidebarOpen: boolean
+  showHamburger: boolean
 }) {
   const location = useLocation()
   const [companyName, setCompanyName] = useState('')
@@ -58,34 +58,35 @@ export function TopBar({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <button
-          onClick={onMenuToggle}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '6px',
-            borderRadius: 6,
-            color: '#6b7280',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            transition: 'background 0.15s'
-          }}
-        >
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              style={{
-                width: i === 1 && !sidebarOpen ? 12 : 16,
-                height: 2,
-                background: '#6b7280',
-                borderRadius: 1,
-                transition: 'width 0.2s'
-              }}
-            />
-          ))}
-        </button>
+        {showHamburger && (
+          <button
+            onClick={onMenuToggle}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: 6,
+              color: '#6b7280',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              transition: 'background 0.15s'
+            }}
+          >
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  width: 16,
+                  height: 2,
+                  background: '#6b7280',
+                  borderRadius: 1
+                }}
+              />
+            ))}
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {companyName && (
             <>

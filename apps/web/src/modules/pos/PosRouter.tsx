@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import ReportsPlaceholder from '../../components/ReportsPlaceholder'
 import PosDashboard from './pages/PosDashboard'
 import Registers from './pages/Registers'
 import SaleDetail from './pages/SaleDetail'
@@ -11,7 +12,7 @@ export default function PosRouter() {
       <Route path="sales" element={<Sales />} />
       <Route path="sales/:id" element={<SaleDetail />} />
       <Route path="registers" element={<Registers />} />
+      <Route path="reports" element={<ReportsPlaceholder module="Точка на продажба" />} />
     </Routes>
   )
 }
-

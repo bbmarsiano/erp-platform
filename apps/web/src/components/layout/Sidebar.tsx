@@ -1,5 +1,28 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  Users,
+  Warehouse,
+  Truck,
+  Factory,
+  ShoppingCart,
+  HardDrive,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Package,
+  BarChart3,
+  ClipboardList,
+  Building2,
+  ListTree,
+  Monitor,
+  CreditCard,
+  Shield,
+  History,
+  RotateCcw,
+  X
+} from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
 import { api } from '../../lib/api'
 
@@ -10,7 +33,6 @@ interface NavItem {
 interface NavGroup {
   id: string
   label: string
-  icon: string
   items: NavItem[]
   basePath: string
 }
@@ -19,7 +41,6 @@ const navGroups: NavGroup[] = [
   {
     id: 'wms',
     label: 'Складово стопанство',
-    icon: '🏭',
     basePath: '/wms',
     items: [
       { label: 'Табло', path: '/wms' },
@@ -34,7 +55,6 @@ const navGroups: NavGroup[] = [
   {
     id: 'scm',
     label: 'Верига на доставките',
-    icon: '🚚',
     basePath: '/scm',
     items: [
       { label: 'Табло', path: '/scm' },
@@ -47,7 +67,6 @@ const navGroups: NavGroup[] = [
   {
     id: 'mes',
     label: 'Производство',
-    icon: '⚙️',
     basePath: '/mes',
     items: [
       { label: 'Табло', path: '/mes' },
@@ -59,7 +78,6 @@ const navGroups: NavGroup[] = [
   {
     id: 'pos',
     label: 'Точка на продажба',
-    icon: '🛒',
     basePath: '/pos',
     items: [
       { label: 'Каса', path: '/pos' },
@@ -71,7 +89,6 @@ const navGroups: NavGroup[] = [
   {
     id: 'backup',
     label: 'Архивиране',
-    icon: '💾',
     basePath: '/backup',
     items: [
       { label: 'Табло', path: '/backup' },
@@ -82,7 +99,50 @@ const navGroups: NavGroup[] = [
   }
 ]
 
-export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle: () => void }) {
+const groupIcons: Record<string, { icon: React.ReactNode; color: string }> = {
+  wms: { icon: <Warehouse size={17} />, color: '#818cf8' },
+  scm: { icon: <Truck size={17} />, color: '#34d399' },
+  mes: { icon: <Factory size={17} />, color: '#f472b6' },
+  pos: { icon: <ShoppingCart size={17} />, color: '#38bdf8' },
+  backup: { icon: <HardDrive size={17} />, color: '#4ade80' }
+}
+
+const itemIcons: Record<string, React.ReactNode> = {
+  '/wms': <LayoutDashboard size={13} />,
+  '/wms/warehouses': <Warehouse size={13} />,
+  '/wms/stock': <Package size={13} />,
+  '/wms/receipts': <ClipboardList size={13} />,
+  '/wms/issues': <ClipboardList size={13} />,
+  '/wms/movements': <BarChart3 size={13} />,
+  '/wms/reports': <BarChart3 size={13} />,
+  '/scm': <LayoutDashboard size={13} />,
+  '/scm/suppliers': <Building2 size={13} />,
+  '/scm/orders': <ClipboardList size={13} />,
+  '/scm/deliveries': <Truck size={13} />,
+  '/scm/reports': <BarChart3 size={13} />,
+  '/mes': <LayoutDashboard size={13} />,
+  '/mes/bom': <ListTree size={13} />,
+  '/mes/orders': <ClipboardList size={13} />,
+  '/mes/reports': <BarChart3 size={13} />,
+  '/pos': <Monitor size={13} />,
+  '/pos/sales': <ClipboardList size={13} />,
+  '/pos/registers': <CreditCard size={13} />,
+  '/pos/reports': <BarChart3 size={13} />,
+  '/backup': <LayoutDashboard size={13} />,
+  '/backup/policies': <Shield size={13} />,
+  '/backup/jobs': <History size={13} />,
+  '/backup/restore': <RotateCcw size={13} />
+}
+
+export function Sidebar({
+  open,
+  onToggle,
+  isMobile
+}: {
+  open: boolean
+  onToggle: () => void
+  isMobile: boolean
+}) {
   const location = useLocation()
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
@@ -107,74 +167,63 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
     navigate('/login', { replace: true })
   }
 
-  const sidebarStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: open ? 240 : 64,
-    background: '#0f172a',
-    transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
-    display: 'flex',
-    flexDirection: 'column',
-    zIndex: 100,
-    overflow: 'hidden',
-    boxShadow: '2px 0 12px rgba(0,0,0,0.15)'
-  }
-
   return (
-    <div style={sidebarStyle}>
-      <div
-        style={{
-          padding: open ? '20px 16px 16px' : '20px 12px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          minHeight: 72,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: open ? 'flex-start' : 'center',
-          overflow: 'hidden'
-        }}
-      >
-        {open ? (
-          tenant?.logoUrl ? (
-            <div>
-              <img
-                src={tenant.logoUrl}
-                alt={tenant.name}
-                style={{
-                  maxHeight: 32,
-                  maxWidth: 140,
-                  objectFit: 'contain',
-                  filter: 'brightness(0) invert(1)'
-                }}
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).style.display = 'none'
-                }}
-              />
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
-                powered by DFlowERP
-              </div>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 240,
+        background: '#0f172a',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: isMobile ? 100 : 100,
+        overflow: 'hidden',
+        boxShadow: '2px 0 12px rgba(0,0,0,0.15)'
+      }}
+    >
+      {isMobile && (
+        <button
+          onClick={onToggle}
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            background: 'rgba(255,255,255,0.08)',
+            border: 'none',
+            borderRadius: 6,
+            padding: 6,
+            cursor: 'pointer',
+            color: 'rgba(255,255,255,0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1
+          }}
+        >
+          <X size={16} />
+        </button>
+      )}
+
+      <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        {tenant?.logoUrl ? (
+          <div>
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.name}
+              style={{ maxHeight: 36, maxWidth: 160, objectFit: 'contain', display: 'block' }}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+              powered by DFlowERP
             </div>
-          ) : (
-            <div>
-              <div
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: 'white',
-                  letterSpacing: '-0.3px'
-                }}
-              >
-                {tenant?.name || 'DFlowERP'}
-              </div>
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                powered by DFlowERP
-              </div>
-            </div>
-          )
+          </div>
         ) : (
-          <div style={{ fontSize: 18 }}>
-            {navGroups.find((g) => location.pathname.startsWith(g.basePath))?.icon || '⚡'}
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'white', letterSpacing: '-0.3px' }}>
+            {tenant?.name || 'DFlowERP'}
           </div>
         )}
       </div>
@@ -187,8 +236,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: open ? '9px 16px' : '9px 0',
-                justifyContent: open ? 'flex-start' : 'center',
+                padding: '9px 16px',
                 margin: '1px 8px',
                 borderRadius: 7,
                 background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
@@ -199,7 +247,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                 transition: 'all 0.15s'
               }}
             >
-              <span style={{ fontSize: 15, flexShrink: 0 }}>🏠</span>
+              <LayoutDashboard size={17} color="#94a3b8" />
               {open && <span>Табло</span>}
             </div>
           )}
@@ -213,8 +261,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  padding: open ? '9px 16px' : '9px 0',
-                  justifyContent: open ? 'flex-start' : 'center',
+                  padding: '9px 16px',
                   margin: '1px 8px',
                   borderRadius: 7,
                   background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
@@ -225,7 +272,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                   transition: 'all 0.15s'
                 }}
               >
-                <span style={{ fontSize: 15, flexShrink: 0 }}>👥</span>
+                <Users size={17} color="#94a3b8" />
                 {open && <span>Потребители</span>}
               </div>
             )}
@@ -237,20 +284,18 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
         {navGroups.map((group) => {
           const isGroupActive = location.pathname.startsWith(group.basePath)
           const isExpanded = expandedGroup === group.id
+          const gIcon = groupIcons[group.id]
 
           return (
             <div key={group.id}>
               <div
-                onClick={() => {
-                  if (!open) return
-                  setExpandedGroup(isExpanded ? null : group.id)
-                }}
+                onClick={() => setExpandedGroup(isExpanded ? null : group.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 10,
-                  padding: open ? '9px 16px' : '9px 0',
-                  justifyContent: open ? 'space-between' : 'center',
+                  padding: '9px 16px',
+                  justifyContent: 'space-between',
                   margin: '1px 8px',
                   borderRadius: 7,
                   background: isGroupActive ? 'rgba(99,102,241,0.15)' : 'transparent',
@@ -262,21 +307,21 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 15, flexShrink: 0 }}>{group.icon}</span>
+                  <span style={{ color: gIcon.color, display: 'flex', flexShrink: 0 }}>
+                    {gIcon.icon}
+                  </span>
                   {open && <span style={{ whiteSpace: 'nowrap' }}>{group.label}</span>}
                 </div>
                 {open && (
-                  <span
+                  <ChevronDown
+                    size={12}
                     style={{
-                      fontSize: 10,
                       opacity: 0.5,
                       transform: isExpanded ? 'rotate(180deg)' : 'rotate(0)',
                       transition: 'transform 0.2s',
-                      display: 'inline-block'
+                      flexShrink: 0
                     }}
-                  >
-                    ▼
-                  </span>
+                  />
                 )}
               </div>
 
@@ -290,6 +335,9 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                       <NavLink key={item.path} to={item.path} style={{ textDecoration: 'none' }}>
                         <div
                           style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
                             padding: '7px 16px 7px 42px',
                             margin: '1px 8px',
                             borderRadius: 6,
@@ -303,6 +351,9 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
                             borderLeft: isActive ? '2px solid #6366f1' : '2px solid transparent'
                           }}
                         >
+                          <span style={{ opacity: 0.6, display: 'flex', flexShrink: 0 }}>
+                            {itemIcons[item.path]}
+                          </span>
                           {item.label}
                         </div>
                       </NavLink>
@@ -322,8 +373,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
               display: 'flex',
               alignItems: 'center',
               gap: 10,
-              padding: open ? '8px 12px' : '8px 0',
-              justifyContent: open ? 'flex-start' : 'center',
+              padding: '8px 12px',
               borderRadius: 7,
               cursor: 'pointer',
               color: 'rgba(255,255,255,0.5)',
@@ -331,7 +381,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
               transition: 'all 0.15s'
             }}
           >
-            <span style={{ fontSize: 14 }}>⚙️</span>
+            <Settings size={15} color="#6b7280" />
             {open && <span>Настройки</span>}
           </div>
         </NavLink>
@@ -364,7 +414,7 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
           style={{
             width: '100%',
             marginTop: 6,
-            padding: open ? '8px 12px' : '8px 0',
+            padding: '8px 12px',
             background: 'transparent',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 7,
@@ -373,12 +423,12 @@ export function Sidebar({ open, onToggle: _onToggle }: { open: boolean; onToggle
             fontSize: 12,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: open ? 'flex-start' : 'center',
+            justifyContent: 'flex-start',
             gap: 8,
             transition: 'all 0.15s'
           }}
         >
-          <span>🚪</span>
+          <LogOut size={14} color="#6b7280" />
           {open && 'Изход'}
         </button>
       </div>
