@@ -1,14 +1,150 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/auth.store'
+import { api } from '../lib/api'
+
+type SettingsTab = 'profile' | 'system' | 'license' | 'company'
+
+function CompanySettings() {
+  const [name, setName] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    api
+      .get('/api/tenant')
+      .then((r) => {
+        setName(r.data.data.name || '')
+        setLogoUrl(r.data.data.logoUrl || '')
+      })
+      .catch(() => {})
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    await api.put('/api/tenant', { name, logoUrl: logoUrl || null })
+    setSaved(true)
+    setSaving(false)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
+  return (
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
+        padding: 24
+      }}
+    >
+      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 20px' }}>Настройки на фирмата</h2>
+      <div style={{ display: 'grid', gap: 16, maxWidth: 480 }}>
+        <div>
+          <label
+            style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#374151',
+              display: 'block',
+              marginBottom: 6
+            }}
+          >
+            Наименование на фирмата
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              fontSize: 14,
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+        <div>
+          <label
+            style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#374151',
+              display: 'block',
+              marginBottom: 6
+            }}
+          >
+            URL на лого
+            <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
+              (линк към изображение — https://...)
+            </span>
+          </label>
+          <input
+            value={logoUrl}
+            onChange={(e) => setLogoUrl(e.target.value)}
+            placeholder="https://example.com/logo.png"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: 8,
+              fontSize: 14,
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+        {logoUrl && (
+          <div
+            style={{
+              padding: 16,
+              background: '#f9fafb',
+              borderRadius: 8,
+              border: '1px solid #e5e7eb'
+            }}
+          >
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Преглед:</div>
+            <img
+              src={logoUrl}
+              alt="Logo preview"
+              style={{ maxHeight: 48, maxWidth: 200, objectFit: 'contain' }}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>powered by DFlowERP</div>
+          </div>
+        )}
+        <button
+          onClick={() => void save()}
+          disabled={saving}
+          style={{
+            padding: '10px 20px',
+            background: saving ? '#6b7280' : '#111',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: 'pointer',
+            alignSelf: 'flex-start'
+          }}
+        >
+          {saving ? 'Запазване...' : saved ? '✓ Запазено!' : 'Запази настройките'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function Settings() {
   const user = useAuthStore((s) => s.user)
-  const [activeTab, setActiveTab] = useState<'profile' | 'system' | 'license'>('profile')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
 
   const tabs = [
-    { id: 'profile', label: 'Профил' },
-    { id: 'system', label: 'Система' },
-    { id: 'license', label: 'Лиценз' }
+    { id: 'profile' as const, label: 'Профил' },
+    { id: 'system' as const, label: 'Система' },
+    { id: 'license' as const, label: 'Лиценз' },
+    { id: 'company' as const, label: 'Фирма' }
   ]
 
   return (
@@ -26,7 +162,7 @@ export default function Settings() {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as typeof activeTab)}
+            onClick={() => setActiveTab(tab.id)}
             style={{
               padding: '8px 16px',
               border: 'none',
@@ -223,6 +359,8 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {activeTab === 'company' && <CompanySettings />}
     </div>
   )
 }

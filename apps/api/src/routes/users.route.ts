@@ -156,6 +156,46 @@ const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     }
   )
 
+  // GET /api/tenant — get tenant info
+  fastify.get(
+    '/tenant',
+    {
+      schema: { tags: ['Users'], summary: 'Информация за фирмата' },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: request.user.tenantId }
+      })
+      return reply.send({ success: true, data: tenant })
+    }
+  )
+
+  // PUT /api/tenant — update tenant (name, logoUrl)
+  fastify.put(
+    '/tenant',
+    {
+      schema: { tags: ['Users'], summary: 'Обнови настройки на фирмата' },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      if (request.user.role !== 'SUPER_ADMIN') {
+        return reply
+          .status(403)
+          .send({ success: false, error: 'Само Супер Админ може да променя настройките на фирмата' })
+      }
+      const body = request.body as { name?: string; logoUrl?: string | null }
+      const tenant = await prisma.tenant.update({
+        where: { id: request.user.tenantId },
+        data: {
+          ...(body.name && { name: body.name }),
+          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl })
+        }
+      })
+      return reply.send({ success: true, data: tenant })
+    }
+  )
+
   // DELETE /api/users/:id — deactivate (soft delete)
   fastify.delete(
     '/users/:id',

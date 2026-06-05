@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { moduleRegistry } from '../../lib/moduleRegistry'
 import { useAuthStore } from '../../store/auth.store'
+import { api } from '../../lib/api'
 import { Button } from '../ui/Button'
 
 const staticNav = [{ label: 'Табло', path: '/dashboard' }]
@@ -13,8 +14,17 @@ export const Sidebar = () => {
   const navigate = useNavigate()
   const modules = useMemo(() => moduleRegistry.getModules(), [])
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+
+  useEffect(() => {
+    api
+      .get('/api/tenant')
+      .then((r) => setTenant(r.data.data))
+      .catch(() => {})
+  }, [])
+
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
@@ -37,13 +47,28 @@ export const Sidebar = () => {
         borderRight: '1px solid #e5e7eb',
         display: 'flex',
         flexDirection: 'column',
-        padding: 16,
         gap: 16
       }}
     >
-      <strong style={{ fontSize: 20 }}>DFlowERP</strong>
+      <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #e5e7eb' }}>
+        {tenant?.logoUrl ? (
+          <div>
+            <img
+              src={tenant.logoUrl}
+              alt={tenant.name}
+              style={{ maxHeight: 36, maxWidth: 160, objectFit: 'contain', display: 'block' }}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+            <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 4 }}>powered by DFlowERP</div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#111' }}>{tenant?.name || 'DFlowERP'}</div>
+        )}
+      </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px' }}>
         {staticNav.map((item) => (
           <NavLink
             key={item.path}
@@ -112,7 +137,7 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      <div style={{ marginTop: 'auto', fontSize: 12, color: '#4b5563' }}>
+      <div style={{ marginTop: 'auto', fontSize: 12, color: '#4b5563', padding: '0 16px 16px' }}>
         <div>{user?.email ?? 'anonymous@local'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           <NavLink

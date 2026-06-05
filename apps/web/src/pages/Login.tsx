@@ -18,7 +18,8 @@ export default function Login() {
       await login(email, password)
       navigate('/dashboard', { replace: true })
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? 'Invalid credentials')
+      const msg = err?.response?.data?.error ?? 'Невалиден имейл или парола'
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -85,16 +86,20 @@ export default function Login() {
           {error && (
             <div
               style={{
-                padding: '10px 12px',
+                padding: '10px 14px',
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
                 borderRadius: 8,
                 color: '#dc2626',
                 fontSize: 13,
-                marginBottom: 12
+                marginBottom: 16,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
               }}
             >
-              {error}
+              <span>⚠️</span>
+              <span>{error}</span>
             </div>
           )}
           <button
