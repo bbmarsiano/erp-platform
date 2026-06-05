@@ -8,6 +8,7 @@ import moduleLoaderPlugin from './plugins/moduleLoader'
 import swaggerPlugin from './plugins/swagger'
 import healthRoute from './routes/health.route'
 import authRoute from './routes/auth.route'
+import usersRoute from './routes/users.route'
 
 dotenv.config({ path: '../../.env' })
 
@@ -23,6 +24,7 @@ const buildServer = async (): Promise<FastifyInstance> => {
   await app.register(moduleLoaderPlugin)
   await app.register(healthRoute, { prefix: '/api' })
   await app.register(authRoute, { prefix: '/api' })
+  await app.register(usersRoute, { prefix: '/api' })
   return app
 }
 

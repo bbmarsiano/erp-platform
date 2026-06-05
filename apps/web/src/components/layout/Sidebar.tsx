@@ -5,9 +5,9 @@ import { moduleRegistry } from '../../lib/moduleRegistry'
 import { useAuthStore } from '../../store/auth.store'
 import { Button } from '../ui/Button'
 
-const staticNav = [
-  { label: 'Табло', path: '/dashboard' }
-]
+const staticNav = [{ label: 'Табло', path: '/dashboard' }]
+
+const adminNav = [{ label: 'Потребители', path: '/users' }]
 
 export const Sidebar = () => {
   const navigate = useNavigate()
@@ -19,6 +19,8 @@ export const Sidebar = () => {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const canManageUsers = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN'
 
   const baseLinkStyle: CSSProperties = {
     display: 'block',
@@ -55,6 +57,21 @@ export const Sidebar = () => {
             {item.label}
           </NavLink>
         ))}
+
+        {canManageUsers &&
+          adminNav.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              style={({ isActive }) => ({
+                ...baseLinkStyle,
+                background: isActive ? '#111827' : 'transparent',
+                color: isActive ? '#ffffff' : '#111827'
+              })}
+            >
+              {item.label}
+            </NavLink>
+          ))}
 
         {modules.map((module) => (
           <div key={module.id} style={{ marginTop: 6 }}>
