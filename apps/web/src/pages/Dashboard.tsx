@@ -11,11 +11,59 @@ interface DashboardStats {
   backup: { activePolicies: number; lastBackup: string | null; failedThisWeek: number }
 }
 
+const moduleColors: Record<string, { gradient: string; accent: string; text: string }> = {
+  wms: { gradient: 'linear-gradient(135deg,#667eea,#764ba2)', accent: '#667eea', text: '#4f46e5' },
+  scm: { gradient: 'linear-gradient(135deg,#11998e,#38ef7d)', accent: '#11998e', text: '#059669' },
+  mes: { gradient: 'linear-gradient(135deg,#f093fb,#f5576c)', accent: '#f5576c', text: '#dc2626' },
+  pos: { gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)', accent: '#4facfe', text: '#0284c7' },
+  backup: { gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', accent: '#38f9d7', text: '#0d9488' }
+}
+
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      .module-card {
+        animation: fadeInUp 0.4s ease both;
+        cursor: pointer;
+        background: white;
+        border-radius: 14px;
+        padding: 22px;
+        border: 1px solid #e5e7eb;
+        transition: transform 0.18s cubic-bezier(0.4,0,0.2,1),
+                    box-shadow 0.18s cubic-bezier(0.4,0,0.2,1);
+        position: relative;
+        overflow: hidden;
+      }
+      .module-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+      }
+      .stat-chip {
+        border-radius: 10px;
+        padding: 10px 12px;
+        transition: transform 0.15s;
+      }
+      .stat-chip:hover { transform: scale(1.02); }
+    `
+    document.head.appendChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -101,8 +149,6 @@ export default function Dashboard() {
       name: 'Складово стопанство',
       path: '/wms',
       icon: '🏭',
-      color: '#dbeafe',
-      borderColor: '#93c5fd',
       stats: stats
         ? [
             { label: 'Складове', value: stats.wms.warehouses },
@@ -117,8 +163,6 @@ export default function Dashboard() {
       name: 'Верига на доставките',
       path: '/scm',
       icon: '🚚',
-      color: '#dcfce7',
-      borderColor: '#86efac',
       stats: stats
         ? [
             { label: 'Доставчици', value: stats.scm.suppliers },
@@ -136,8 +180,6 @@ export default function Dashboard() {
       name: 'Производство',
       path: '/mes',
       icon: '⚙️',
-      color: '#fef9c3',
-      borderColor: '#fde047',
       stats: stats
         ? [
             { label: 'Активни рецептури', value: stats.mes.activeBoms },
@@ -151,8 +193,6 @@ export default function Dashboard() {
       name: 'Точка на продажба',
       path: '/pos',
       icon: '🛒',
-      color: '#fce7f3',
-      borderColor: '#f9a8d4',
       stats: stats
         ? [
             { label: 'Каси', value: stats.pos.registers },
@@ -166,8 +206,6 @@ export default function Dashboard() {
       name: 'Архивиране',
       path: '/backup',
       icon: '💾',
-      color: '#f3f4f6',
-      borderColor: '#d1d5db',
       stats: stats
         ? [
             { label: 'Активни политики', value: stats.backup.activePolicies },
@@ -190,19 +228,56 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: '32px', maxWidth: 1200 }}>
+    <div>
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
-          {greeting()}, {user?.firstName ?? user?.email?.split('@')[0]} 👋
-        </h1>
-        <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
-          {new Date().toLocaleDateString('bg-BG', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1
+              style={{
+                fontSize: 26,
+                fontWeight: 800,
+                margin: '0 0 4px',
+                color: '#0f172a',
+                letterSpacing: '-0.5px'
+              }}
+            >
+              {greeting()}, {user?.firstName ?? user?.email?.split('@')[0]} 👋
+            </h1>
+            <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
+              {new Date().toLocaleDateString('bg-BG', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 14px',
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: 20,
+              fontSize: 12,
+              color: '#6b7280',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+            }}
+          >
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: '#22c55e',
+                animation: 'pulse-dot 2s ease infinite'
+              }}
+            />
+            Онлайн
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -213,77 +288,126 @@ export default function Dashboard() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: 16
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: 20
           }}
         >
-          {modules.map((mod) => (
-            <div
-              key={mod.id}
-              onClick={() => navigate(mod.path)}
-              style={{
-                background: 'white',
-                border: `1px solid ${mod.borderColor}`,
-                borderRadius: 12,
-                padding: 20,
-                cursor: 'pointer',
-                transition: 'transform 0.15s, box-shadow 0.15s',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
-            >
+          {modules.map((mod, idx) => {
+            const colors = moduleColors[mod.id]
+            return (
               <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 3,
-                  background: mod.borderColor
-                }}
-              />
+                key={mod.id}
+                className="module-card"
+                style={{ animationDelay: `${idx * 0.07}s` }}
+                onClick={() => navigate(mod.path)}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 4,
+                    background: colors.gradient,
+                    borderRadius: '14px 14px 0 0'
+                  }}
+                />
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <span style={{ fontSize: 24 }}>{mod.icon}</span>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#111' }}>{mod.name}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af' }}>Виж детайли →</div>
-                </div>
-              </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -20,
+                    right: -20,
+                    width: 100,
+                    height: 100,
+                    borderRadius: '50%',
+                    background: colors.gradient,
+                    opacity: 0.06
+                  }}
+                />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {mod.stats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    style={{
-                      background: stat.alert ? '#fef2f2' : mod.color,
-                      borderRadius: 8,
-                      padding: '8px 10px'
-                    }}
-                  >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 18
+                  }}
+                >
+                  <div>
                     <div
                       style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        marginBottom: 10,
+                        background: colors.gradient,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         fontSize: 18,
-                        fontWeight: 700,
-                        color: stat.alert ? '#dc2626' : '#111'
+                        boxShadow: `0 4px 12px ${colors.accent}40`
                       }}
                     >
-                      {stat.value}
+                      {mod.icon}
                     </div>
-                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{stat.label}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#111' }}>{mod.name}</div>
                   </div>
-                ))}
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: colors.text,
+                      background: `${colors.accent}15`,
+                      padding: '3px 10px',
+                      borderRadius: 20
+                    }}
+                  >
+                    Виж →
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {mod.stats.map((stat) => {
+                    const hasAlert = 'alert' in stat && stat.alert
+                    return (
+                      <div
+                        key={stat.label}
+                        className="stat-chip"
+                        style={{
+                          background: hasAlert ? '#fef2f2' : '#f8faff',
+                          border: hasAlert ? '1px solid #fecaca' : '1px solid #e8edf5'
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 22,
+                            fontWeight: 800,
+                            letterSpacing: '-0.5px',
+                            color: hasAlert ? '#dc2626' : '#111',
+                            lineHeight: 1.1
+                          }}
+                        >
+                          {stat.value}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: hasAlert ? '#ef4444' : '#6b7280',
+                            marginTop: 3,
+                            fontWeight: 500
+                          }}
+                        >
+                          {stat.label}
+                          {hasAlert && ' ⚠️'}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

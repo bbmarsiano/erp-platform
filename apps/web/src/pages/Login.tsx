@@ -17,8 +17,10 @@ export default function Login() {
     try {
       await login(email, password)
       navigate('/dashboard', { replace: true })
-    } catch (err: any) {
-      const msg = err?.response?.data?.error ?? 'Невалиден имейл или парола'
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        'Невалиден имейл или парола'
       setError(msg)
     } finally {
       setLoading(false)
@@ -29,70 +31,91 @@ export default function Login() {
     <div
       style={{
         minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f5f5f5'
+        fontFamily: "'Inter', system-ui, sans-serif",
+        padding: 20
       }}
     >
       <div
         style={{
+          position: 'fixed',
+          top: -100,
+          right: -100,
+          width: 400,
+          height: 400,
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.05)'
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          bottom: -80,
+          left: -80,
+          width: 300,
+          height: 300,
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.05)'
+        }}
+      />
+
+      <div
+        style={{
           background: 'white',
-          padding: '40px',
-          borderRadius: '12px',
-          width: '380px',
-          boxShadow: '0 2px 16px rgba(0,0,0,0.08)'
+          borderRadius: 20,
+          padding: '40px 36px',
+          width: '100%',
+          maxWidth: 400,
+          boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+          position: 'relative',
+          zIndex: 1
         }}
       >
-        <h2 style={{ margin: '0 0 8px', fontSize: '22px' }}>Login to DFlowERP</h2>
-        <p style={{ margin: '0 0 24px', color: '#666', fontSize: '14px' }}>Enter your credentials to continue</p>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 14,
+              margin: '0 auto 14px',
+              background: 'linear-gradient(135deg,#667eea,#764ba2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+              boxShadow: '0 8px 20px rgba(102,126,234,0.4)'
+            }}
+          >
+            ⚡
+          </div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#0f172a',
+              margin: '0 0 4px',
+              letterSpacing: '-0.3px'
+            }}
+          >
+            DFlowERP
+          </h1>
+          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Влезте в своя акаунт</p>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 500 }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '14px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
           {error && (
             <div
               style={{
-                padding: '10px 14px',
+                padding: '12px 14px',
+                marginBottom: 16,
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
-                borderRadius: 8,
+                borderRadius: 10,
                 color: '#dc2626',
                 fontSize: 13,
-                marginBottom: 16,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 8
@@ -102,22 +125,72 @@ export default function Login() {
               <span>{error}</span>
             </div>
           )}
+
+          {[
+            { id: 'email', label: 'Имейл адрес', type: 'email', placeholder: 'admin@firma.bg' },
+            { id: 'password', label: 'Парола', type: 'password', placeholder: '••••••••' }
+          ].map((field) => (
+            <div key={field.id} style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: 6
+                }}
+              >
+                {field.label}
+              </label>
+              <input
+                type={field.type}
+                placeholder={field.placeholder}
+                value={field.id === 'email' ? email : password}
+                onChange={(e) =>
+                  field.id === 'email' ? setEmail(e.target.value) : setPassword(e.target.value)
+                }
+                required
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  border: '1.5px solid #e5e7eb',
+                  borderRadius: 10,
+                  fontSize: 14,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#667eea'
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb'
+                }}
+              />
+            </div>
+          ))}
+
           <button
             type="submit"
             disabled={loading}
             style={{
               width: '100%',
-              padding: '11px',
-              background: loading ? '#666' : '#111',
+              padding: '12px',
+              background: loading ? '#9ca3af' : 'linear-gradient(135deg,#667eea,#764ba2)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: loading ? 'not-allowed' : 'pointer'
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: 4,
+              fontFamily: 'inherit',
+              boxShadow: loading ? 'none' : '0 4px 14px rgba(102,126,234,0.4)',
+              transition: 'all 0.15s'
             }}
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Влизане...' : 'Влез в системата'}
           </button>
         </form>
       </div>
