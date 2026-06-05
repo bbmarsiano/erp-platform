@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Warehouse, Truck, Factory, ShoppingCart, HardDrive } from 'lucide-react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
 
@@ -9,6 +10,14 @@ interface DashboardStats {
   mes: { activeBoms: number; inProgressOrders: number; completedThisWeek: number }
   pos: { todaySales: number; todayRevenue: number; registers: number }
   backup: { activePolicies: number; lastBackup: string | null; failedThisWeek: number }
+}
+
+const moduleIcons: Record<string, React.ReactNode> = {
+  wms: <Warehouse size={20} color="white" />,
+  scm: <Truck size={20} color="white" />,
+  mes: <Factory size={20} color="white" />,
+  pos: <ShoppingCart size={20} color="white" />,
+  backup: <HardDrive size={20} color="white" />
 }
 
 const moduleColors: Record<string, { gradient: string; accent: string; text: string }> = {
@@ -148,7 +157,6 @@ export default function Dashboard() {
       id: 'wms',
       name: 'Складово стопанство',
       path: '/wms',
-      icon: '🏭',
       stats: stats
         ? [
             { label: 'Складове', value: stats.wms.warehouses },
@@ -162,7 +170,6 @@ export default function Dashboard() {
       id: 'scm',
       name: 'Верига на доставките',
       path: '/scm',
-      icon: '🚚',
       stats: stats
         ? [
             { label: 'Доставчици', value: stats.scm.suppliers },
@@ -179,7 +186,6 @@ export default function Dashboard() {
       id: 'mes',
       name: 'Производство',
       path: '/mes',
-      icon: '⚙️',
       stats: stats
         ? [
             { label: 'Активни рецептури', value: stats.mes.activeBoms },
@@ -192,7 +198,6 @@ export default function Dashboard() {
       id: 'pos',
       name: 'Точка на продажба',
       path: '/pos',
-      icon: '🛒',
       stats: stats
         ? [
             { label: 'Каси', value: stats.pos.registers },
@@ -205,7 +210,6 @@ export default function Dashboard() {
       id: 'backup',
       name: 'Архивиране',
       path: '/backup',
-      icon: '💾',
       stats: stats
         ? [
             { label: 'Активни политики', value: stats.backup.activePolicies },
@@ -345,11 +349,10 @@ export default function Dashboard() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 18,
                         boxShadow: `0 4px 12px ${colors.accent}40`
                       }}
                     >
-                      {mod.icon}
+                      {moduleIcons[mod.id]}
                     </div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#111' }}>{mod.name}</div>
                   </div>
