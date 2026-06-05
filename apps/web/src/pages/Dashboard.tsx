@@ -193,7 +193,7 @@ export default function Dashboard() {
     <div style={{ padding: '32px', maxWidth: 1200 }}>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 4px', color: '#111' }}>
-          {greeting()}, {user?.firstName || user?.email?.split('@')[0]} 👋
+          {greeting()}, {user?.firstName ?? user?.email?.split('@')[0]} 👋
         </h1>
         <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
           {new Date().toLocaleDateString('bg-BG', {
