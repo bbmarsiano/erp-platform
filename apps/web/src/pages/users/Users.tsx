@@ -33,6 +33,8 @@ export default function Users() {
   const currentUser = useAuthStore((s) => s.user)
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [hoveredUserId, setHoveredUserId] = useState<string | null>(null)
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -41,6 +43,12 @@ export default function Users() {
     role: 'OPERATOR'
   })
   const [formError, setFormError] = useState('')
+  const [editForm, setEditForm] = useState({
+    firstName: '',
+    lastName: '',
+    role: '',
+    newPassword: ''
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['users'],
@@ -67,6 +75,43 @@ export default function Users() {
   })
 
   const canManage = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN'
+
+  const updateMutation = useMutation({
+    mutationFn: (data: {
+      id: string
+      firstName: string
+      lastName: string
+      role: string
+      newPassword?: string
+    }) => {
+      const { id, newPassword, ...rest } = data
+      return api.put(`/api/users/${id}`, {
+        ...rest,
+        ...(newPassword ? { newPassword } : {})
+      })
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      setSelectedUser(null)
+    }
+  })
+
+  const handleRowClick = (user: User) => {
+    if (!canManage) return
+
+    if (selectedUser?.id === user.id) {
+      setSelectedUser(null)
+      return
+    }
+
+    setSelectedUser(user)
+    setEditForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      newPassword: ''
+    })
+  }
 
   return (
     <div style={{ padding: '32px' }}>
@@ -247,12 +292,25 @@ export default function Users() {
               {data?.map((user) => {
                 const rc = roleColors[user.role] || roleColors.READONLY
                 const isCurrentUser = user.id === currentUser?.id
+                const isSelected = selectedUser?.id === user.id
+                const isHovered = hoveredUserId === user.id
                 return (
+                  <>
                   <tr
                     key={user.id}
+                    onClick={() => handleRowClick(user)}
+                    onMouseEnter={() => setHoveredUserId(user.id)}
+                    onMouseLeave={() => setHoveredUserId(null)}
                     style={{
                       borderBottom: '1px solid #f3f4f6',
-                      background: user.isActive ? 'white' : '#fafafa'
+                      background: isSelected
+                        ? '#f0f9ff'
+                        : isHovered
+                          ? '#f9fafb'
+                          : user.isActive
+                            ? 'white'
+                            : '#fafafa',
+                      cursor: canManage ? 'pointer' : 'default'
                     }}
                   >
                     <td style={{ padding: '12px 16px', fontSize: 14, fontWeight: 500 }}>
@@ -296,7 +354,10 @@ export default function Users() {
                     <td style={{ padding: '12px 16px' }}>
                       {canManage && !isCurrentUser && (
                         <button
-                          onClick={() => toggleActive.mutate({ id: user.id, isActive: user.isActive })}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleActive.mutate({ id: user.id, isActive: user.isActive })
+                          }}
                           style={{
                             padding: '4px 12px',
                             fontSize: 12,
@@ -312,6 +373,171 @@ export default function Users() {
                       )}
                     </td>
                   </tr>
+
+                  {isSelected && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: 0, background: '#f8fafc' }}>
+                        <div style={{ padding: '20px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                          <h4 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 16px', color: '#374151' }}>
+                            Редактиране: {user.email}
+                          </h4>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                            <div>
+                              <label
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#6b7280',
+                                  display: 'block',
+                                  marginBottom: 4
+                                }}
+                              >
+                                Име
+                              </label>
+                              <input
+                                value={editForm.firstName}
+                                onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#6b7280',
+                                  display: 'block',
+                                  marginBottom: 4
+                                }}
+                              >
+                                Фамилия
+                              </label>
+                              <input
+                                value={editForm.lastName}
+                                onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+
+                            <div>
+                              <label
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#6b7280',
+                                  display: 'block',
+                                  marginBottom: 4
+                                }}
+                              >
+                                Роля
+                              </label>
+                              <select
+                                value={editForm.role}
+                                onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value }))}
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: 6,
+                                  fontSize: 13
+                                }}
+                              >
+                                <option value="OPERATOR">Оператор</option>
+                                <option value="MANAGER">Мениджър</option>
+                                <option value="ADMIN">Администратор</option>
+                                <option value="READONLY">Само четене</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#6b7280',
+                                  display: 'block',
+                                  marginBottom: 4
+                                }}
+                              >
+                                Нова парола <span style={{ color: '#9ca3af' }}>(незадължително)</span>
+                              </label>
+                              <input
+                                type="password"
+                                value={editForm.newPassword}
+                                onChange={(e) => setEditForm((f) => ({ ...f, newPassword: e.target.value }))}
+                                placeholder="Остави празно за без промяна"
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                            <button
+                              onClick={() =>
+                                updateMutation.mutate({
+                                  id: user.id,
+                                  firstName: editForm.firstName,
+                                  lastName: editForm.lastName,
+                                  role: editForm.role,
+                                  ...(editForm.newPassword ? { newPassword: editForm.newPassword } : {})
+                                })
+                              }
+                              disabled={updateMutation.isPending}
+                              style={{
+                                padding: '7px 16px',
+                                background: '#111',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 6,
+                                fontSize: 13,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {updateMutation.isPending ? 'Запазване...' : 'Запази промените'}
+                            </button>
+                            <button
+                              onClick={() => setSelectedUser(null)}
+                              style={{
+                                padding: '7px 16px',
+                                background: 'white',
+                                color: '#374151',
+                                border: '1px solid #d1d5db',
+                                borderRadius: 6,
+                                fontSize: 13,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Отказ
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 )
               })}
             </tbody>

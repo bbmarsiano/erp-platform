@@ -127,14 +127,21 @@ const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         lastName: string
         role: string
         isActive: boolean
+        newPassword: string
       }>
+
+      let hashedPassword: string | undefined
+      if (body.newPassword && body.newPassword.length >= 8) {
+        hashedPassword = await bcrypt.hash(body.newPassword, 10)
+      }
       const user = await prisma.user.update({
         where: { id, tenantId: request.user.tenantId },
         data: {
           ...(body.firstName && { firstName: body.firstName }),
           ...(body.lastName && { lastName: body.lastName }),
           ...(body.role && { role: body.role as 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'READONLY' }),
-          ...(body.isActive !== undefined && { isActive: body.isActive })
+          ...(body.isActive !== undefined && { isActive: body.isActive }),
+          ...(hashedPassword && { hashedPassword })
         },
         select: {
           id: true,

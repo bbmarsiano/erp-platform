@@ -82,7 +82,21 @@ export default function Login() {
               }}
             />
           </div>
-          {error && <p style={{ color: '#dc2626', fontSize: '13px', margin: '0 0 12px' }}>{error}</p>}
+          {error && (
+            <div
+              style={{
+                padding: '10px 12px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: 8,
+                color: '#dc2626',
+                fontSize: 13,
+                marginBottom: 12
+              }}
+            >
+              {error}
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
