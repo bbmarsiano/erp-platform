@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
-import ReportsPlaceholder from '../../components/ReportsPlaceholder'
 import WmsDashboard from './pages/WmsDashboard'
+import WmsReports from './pages/Reports'
 import Warehouses from './pages/Warehouses'
 import Stock from './pages/Stock'
 import Receipts from './pages/Receipts'
@@ -20,7 +20,7 @@ export default function WmsRouter() {
       <Route path="issues" element={<Issues />} />
       <Route path="issues/:id" element={<IssueDetail />} />
       <Route path="movements" element={<Movements />} />
-      <Route path="reports" element={<ReportsPlaceholder module="Складово стопанство" />} />
+      <Route path="reports" element={<WmsReports />} />
     </Routes>
   )
 }
