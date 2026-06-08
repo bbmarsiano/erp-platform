@@ -12,6 +12,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import { Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { api } from '../../../lib/api'
 
@@ -175,7 +176,8 @@ export default function WmsReports() {
             boxShadow: '0 2px 8px rgba(22,163,74,0.3)'
           }}
         >
-          📥 Експорт Excel
+          <Download size={15} />
+          Експорт Excel
         </button>
       </div>
 

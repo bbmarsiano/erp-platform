@@ -21,21 +21,86 @@ const reportsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     return createSuccessResponse(Object.values(grouped))
   })
 
-  fastify.get('/reports/top-products', { preHandler: [authenticate] }, async (request) => {
-    const lines = await prisma.saleLine.findMany({
-      where: { sale: { tenantId: request.user.tenantId, status: 'COMPLETED' } },
-      include: { product: true }
-    })
-    const grouped = lines.reduce<Record<string, { productId: string; code: string; name: string; quantity: number }>>((acc, l) => {
-      if (!acc[l.productId]) {
-        acc[l.productId] = { productId: l.productId, code: l.product.code, name: l.product.name, quantity: 0 }
+  fastify.get(
+    '/reports/sales-by-period',
+    { preHandler: [authenticate], schema: { tags: ['POS'], summary: 'Продажби по период' } },
+    async (request) => {
+      const { dateFrom, dateTo } = request.query as { dateFrom?: string; dateTo?: string }
+      const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const to = dateTo ? new Date(dateTo) : new Date()
+      to.setHours(23, 59, 59, 999)
+
+      const sales = await prisma.sale.findMany({
+        where: {
+          tenantId: request.user.tenantId,
+          status: 'COMPLETED',
+          createdAt: { gte: from, lte: to }
+        },
+        include: {
+          lines: { include: { product: { select: { name: true, code: true } } } },
+          cashRegister: { select: { name: true } }
+        },
+        orderBy: { createdAt: 'asc' }
+      })
+
+      const byDay: Record<string, { date: string; count: number; revenue: number }> = {}
+      for (const s of sales) {
+        const date = s.createdAt.toISOString().slice(0, 10)
+        if (!byDay[date]) byDay[date] = { date, count: 0, revenue: 0 }
+        byDay[date].count++
+        byDay[date].revenue += s.totalAmount
       }
-      acc[l.productId].quantity += l.quantity
-      return acc
-    }, {})
-    const top = Object.values(grouped).sort((a, b) => b.quantity - a.quantity).slice(0, 10)
-    return createSuccessResponse(top)
-  })
+
+      const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0)
+
+      return createSuccessResponse({
+        chart: Object.values(byDay),
+        sales,
+        summary: {
+          total: sales.length,
+          totalRevenue,
+          avgSale: sales.length ? totalRevenue / sales.length : 0,
+          cash: sales.filter((s) => s.paymentMethod === 'CASH').length,
+          card: sales.filter((s) => s.paymentMethod === 'CARD').length
+        }
+      })
+    }
+  )
+
+  fastify.get(
+    '/reports/top-products',
+    { preHandler: [authenticate], schema: { tags: ['POS'], summary: 'Топ артикули по период' } },
+    async (request) => {
+      const { dateFrom, dateTo } = request.query as { dateFrom?: string; dateTo?: string }
+      const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const to = dateTo ? new Date(dateTo) : new Date()
+      to.setHours(23, 59, 59, 999)
+
+      const lines = await prisma.saleLine.findMany({
+        where: {
+          sale: {
+            tenantId: request.user.tenantId,
+            status: 'COMPLETED',
+            createdAt: { gte: from, lte: to }
+          }
+        },
+        include: { product: { select: { name: true, code: true } } }
+      })
+
+      const byProduct: Record<string, { name: string; code: string; qty: number; revenue: number }> = {}
+      for (const l of lines) {
+        const key = l.productId
+        if (!byProduct[key]) {
+          byProduct[key] = { name: l.product.name, code: l.product.code, qty: 0, revenue: 0 }
+        }
+        byProduct[key].qty += l.quantity
+        byProduct[key].revenue += l.totalPrice
+      }
+
+      const data = Object.values(byProduct).sort((a, b) => b.revenue - a.revenue)
+      return createSuccessResponse(data)
+    }
+  )
 
   fastify.get('/reports/summary', { preHandler: [authenticate] }, async (request) => {
     const agg = await prisma.sale.aggregate({
