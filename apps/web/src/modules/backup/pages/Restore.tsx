@@ -1,4 +1,4 @@
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useRestorePoints, useTestRestore } from '../hooks/useBackup'
 
 const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString('bg-BG') : '—')
@@ -25,8 +25,8 @@ export default function Restore() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Възстановяване</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Възстановяване" subtitle="Точки за възстановяване" />
       <div style={{ marginTop: 14 }}>
         {((restorePoints.data ?? []) as Array<any>).map((job) => (
           <div key={job.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 8, background: '#fff' }}>
@@ -37,7 +37,7 @@ export default function Restore() {
                   Размер: {formatBytes(job.sizeBytes)} · Политика: {job.policy?.name ?? '—'}
                 </div>
               </div>
-              <Button onClick={() => handleTestRestore(job.id)} style={{ background: '#fff', border: '1px solid #ddd', color: '#111' }}>
+              <Button variant="secondary" onClick={() => handleTestRestore(job.id)}>
                 Тест на възстановяване
               </Button>
             </div>

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, Card, FormField, FormRow, Input, PageHeader, Select, StatusBadge } from '../../../components/ui'
 import { WarehouseSelector } from '../../wms/components/WarehouseSelector'
 import { useCreateDelivery, useDeliveries, usePurchaseOrders } from '../hooks/useScm'
 
@@ -42,71 +42,78 @@ export default function Deliveries() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Доставки</div>
-        <Button onClick={() => setShowForm((x) => !x)}>{showForm ? 'Отказ' : 'Нова доставка'}</Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Доставки"
+        subtitle="Документи за доставка на стока"
+        action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова доставка</Button> : undefined}
+      />
 
       {showForm ? (
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-          <select value={form.purchaseOrderId} onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })} style={{ padding: 8 }}>
-            <option value="">Без поръчка</option>
-            {orderOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.orderNo}
-              </option>
-            ))}
-          </select>
-          <WarehouseSelector value={form.warehouseId} onChange={(warehouseId) => setForm({ ...form, warehouseId })} />
-          <input placeholder="Доставчик" value={form.supplierName} onChange={(e) => setForm({ ...form, supplierName: e.target.value })} style={{ padding: 8 }} />
-          <input type="date" value={form.deliveryDate} onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })} style={{ padding: 8 }} />
-          <Button onClick={onCreate} disabled={createDelivery.isPending}>
-            Създай
-          </Button>
-        </div>
+        <Card style={{ marginBottom: 20 }}>
+          <FormRow columns={4}>
+            <FormField label="Поръчка">
+              <Select value={form.purchaseOrderId} onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })}>
+                <option value="">Без поръчка</option>
+                {orderOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.orderNo}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Склад" required>
+              <WarehouseSelector value={form.warehouseId} onChange={(warehouseId) => setForm({ ...form, warehouseId })} />
+            </FormField>
+            <FormField label="Доставчик">
+              <Input value={form.supplierName} onChange={(e) => setForm({ ...form, supplierName: e.target.value })} placeholder="Име на доставчик" />
+            </FormField>
+            <FormField label="Дата на доставка">
+              <Input type="date" value={form.deliveryDate} onChange={(e) => setForm({ ...form, deliveryDate: e.target.value })} />
+            </FormField>
+          </FormRow>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>
+              Отказ
+            </Button>
+            <Button onClick={onCreate} disabled={createDelivery.isPending}>
+              {createDelivery.isPending ? 'Запис...' : 'Създай'}
+            </Button>
+          </div>
+        </Card>
       ) : null}
 
-      <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 10 }}>Номер</th>
-              <th style={{ padding: 10 }}>Поръчка</th>
-              <th style={{ padding: 10 }}>Доставчик</th>
-              <th style={{ padding: 10 }}>Склад</th>
-              <th style={{ padding: 10 }}>Статус</th>
-              <th style={{ padding: 10 }}>Дата</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Номер</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Поръчка</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Доставчик</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Склад</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Статус</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Дата</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((d) => (
-              <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/scm/deliveries/${d.id}`)}>
-                <td style={{ padding: 10, fontFamily: 'monospace' }}>{d.deliveryNo}</td>
-                <td style={{ padding: 10 }}>{d.purchaseOrder?.orderNo ?? '—'}</td>
-                <td style={{ padding: 10 }}>{d.supplierName ?? '—'}</td>
-                <td style={{ padding: 10 }}>{d.warehouse?.name ?? '—'}</td>
-                <td style={{ padding: 10 }}>
-                  <span
-                    style={{
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      background: (deliveryStatusMap[d.status] ?? { bg: '#f3f4f6' }).bg,
-                      color: (deliveryStatusMap[d.status] ?? { color: '#374151' }).color
-                    }}
-                  >
-                    {(deliveryStatusMap[d.status] ?? { label: d.status }).label}
-                  </span>
-                </td>
-                <td style={{ padding: 10 }}>{d.createdAt ? new Date(d.createdAt).toLocaleString('bg-BG') : '—'}</td>
-              </tr>
-            ))}
+            {rows.map((d) => {
+              const st = deliveryStatusMap[d.status] ?? { label: d.status, bg: '#f3f4f6', color: '#374151' }
+              return (
+                <tr key={d.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => navigate(`/scm/deliveries/${d.id}`)}>
+                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{d.deliveryNo}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.purchaseOrder?.orderNo ?? '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.supplierName ?? '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.warehouse?.name ?? '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <StatusBadge label={st.label} bg={st.bg} color={st.color} />
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.createdAt ? new Date(d.createdAt).toLocaleString('bg-BG') : '—'}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
     </div>
   )
 }
-

@@ -1,4 +1,4 @@
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useBackupJobs, useVerifyBackupJob } from '../hooks/useBackup'
 
 const jobStatusMap: Record<string, { label: string; bg: string; color: string }> = {
@@ -27,8 +27,8 @@ export default function Jobs() {
   const jobs = useBackupJobs()
   const verify = useVerifyBackupJob()
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>История</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="История" subtitle="История на архивни задачи" />
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -59,7 +59,7 @@ export default function Jobs() {
                   {j.isVerified ? (
                     'Да'
                   ) : (
-                    <Button onClick={() => verify.mutate(j.id)} style={{ background: '#fff', border: '1px solid #ddd', color: '#111' }}>
+                    <Button variant="secondary" size="sm" onClick={() => verify.mutate(j.id)}>
                       Верифицирай
                     </Button>
                   )}

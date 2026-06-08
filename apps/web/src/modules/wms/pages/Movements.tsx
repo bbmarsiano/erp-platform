@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 
 interface Movement {
@@ -29,13 +30,8 @@ export default function Movements() {
   }
 
   return (
-    <div style={{ padding: '32px' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
-        Движения
-      </h1>
-      <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 24px' }}>
-        История на всички складови движения
-      </p>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Движения" subtitle="История на всички складови движения" />
 
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Зареждане...</div>

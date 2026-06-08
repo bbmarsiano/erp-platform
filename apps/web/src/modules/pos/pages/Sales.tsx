@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { PageHeader } from '../../../components/ui'
 import { useSales } from '../hooks/usePos'
 
 const paymentMap: Record<string, { label: string; bg: string; color: string }> = {
@@ -17,8 +18,8 @@ export default function Sales() {
   const sales = useSales()
   const rows = (sales.data ?? []) as Array<any>
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Продажби</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Продажби" subtitle="История на продажби" />
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

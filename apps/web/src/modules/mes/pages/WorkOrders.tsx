@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, Card, FormField, FormRow, Input, PageHeader, Select, StatusBadge } from '../../../components/ui'
 import { WarehouseSelector } from '../../wms/components/WarehouseSelector'
 import { useWarehouseLocations } from '../../wms/hooks/useWms'
 import { useBoms, useCreateWorkOrder, useWorkOrders } from '../hooks/useMes'
@@ -40,81 +40,106 @@ export default function WorkOrders() {
   const rows = useMemo(() => (orders.data ?? []) as Array<any>, [orders.data])
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Производствени нареждания</div>
-        <Button onClick={() => setShowForm((x) => !x)}>{showForm ? 'Отказ' : 'Ново нареждане'}</Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Производствени нареждания"
+        subtitle="Управление на производствени поръчки"
+        action={!showForm ? <Button onClick={() => setShowForm(true)}>Ново нареждане</Button> : undefined}
+      />
+
       {showForm ? (
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 120px 1fr auto', gap: 8, alignItems: 'end' }}>
-          <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} style={{ padding: 8 }}>
-            <option value="">Краен продукт</option>
-            {bomList.map((b) => (
-              <option key={b.productId} value={b.productId}>
-                {b.product?.code} — {b.product?.name}
-              </option>
-            ))}
-          </select>
-          <select value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })} style={{ padding: 8 }}>
-            <option value="">BOM (по избор)</option>
-            {bomList.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.product?.code} v{b.version}
-              </option>
-            ))}
-          </select>
-          <WarehouseSelector value={form.warehouseId} onChange={(warehouseId) => setForm({ ...form, warehouseId })} />
-          <select value={form.outputLocationId} onChange={(e) => setForm({ ...form, outputLocationId: e.target.value })} style={{ padding: 8 }}>
-            <option value="">Изходна локация</option>
-            {((locations.data ?? []) as Array<any>).map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.code}
-              </option>
-            ))}
-          </select>
-          <input type="number" value={form.plannedQty} onChange={(e) => setForm({ ...form, plannedQty: Number(e.target.value) })} style={{ padding: 8 }} />
-          <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Бележка" style={{ padding: 8 }} />
-          <Button onClick={onCreate}>Създай</Button>
-        </div>
+        <Card style={{ marginBottom: 20 }}>
+          <FormRow columns={3}>
+            <FormField label="Краен продукт" required>
+              <Select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}>
+                <option value="">Изберете продукт</option>
+                {bomList.map((b) => (
+                  <option key={b.productId} value={b.productId}>
+                    {b.product?.code} — {b.product?.name}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="BOM">
+              <Select value={form.bomId} onChange={(e) => setForm({ ...form, bomId: e.target.value })}>
+                <option value="">BOM (по избор)</option>
+                {bomList.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.product?.code} v{b.version}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Склад" required>
+              <WarehouseSelector value={form.warehouseId} onChange={(warehouseId) => setForm({ ...form, warehouseId })} />
+            </FormField>
+          </FormRow>
+          <FormRow columns={3}>
+            <FormField label="Изходна локация" required>
+              <Select value={form.outputLocationId} onChange={(e) => setForm({ ...form, outputLocationId: e.target.value })}>
+                <option value="">Изберете локация</option>
+                {((locations.data ?? []) as Array<any>).map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.code}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+            <FormField label="Планирано количество" required>
+              <Input type="number" value={form.plannedQty} onChange={(e) => setForm({ ...form, plannedQty: Number(e.target.value) })} />
+            </FormField>
+            <FormField label="Бележка">
+              <Input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="По избор" />
+            </FormField>
+          </FormRow>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>
+              Отказ
+            </Button>
+            <Button onClick={onCreate} disabled={createOrder.isPending}>
+              {createOrder.isPending ? 'Запис...' : 'Създай'}
+            </Button>
+          </div>
+        </Card>
       ) : null}
 
-      <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 10 }}>Номер</th>
-              <th style={{ padding: 10 }}>Продукт</th>
-              <th style={{ padding: 10 }}>Планирано кол.</th>
-              <th style={{ padding: 10 }}>Статус</th>
-              <th style={{ padding: 10 }}>Начало</th>
-              <th style={{ padding: 10 }}>Край</th>
-              <th style={{ padding: 10 }}>Действия</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Номер</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Продукт</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Планирано кол.</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Статус</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Начало</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Край</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Действия</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((wo) => (
-              <tr key={wo.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10, fontFamily: 'monospace' }}>{wo.orderNo}</td>
-                <td style={{ padding: 10 }}>{wo.product?.name}</td>
-                <td style={{ padding: 10 }}>{wo.plannedQty}</td>
-                <td style={{ padding: 10 }}>
-                  <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: woStatusMap[wo.status]?.bg, color: woStatusMap[wo.status]?.color }}>
-                    {woStatusMap[wo.status]?.label ?? wo.status}
-                  </span>
-                </td>
-                <td style={{ padding: 10 }}>{wo.actualStart ? new Date(wo.actualStart).toLocaleString('bg-BG') : '—'}</td>
-                <td style={{ padding: 10 }}>{wo.actualEnd ? new Date(wo.actualEnd).toLocaleString('bg-BG') : '—'}</td>
-                <td style={{ padding: 10 }}>
-                  <Button onClick={() => navigate(`/mes/orders/${wo.id}`)} style={{ background: '#fff', color: '#111', border: '1px solid #ddd' }}>
-                    Преглед
-                  </Button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((wo) => {
+              const st = woStatusMap[wo.status] ?? { label: wo.status, bg: '#f3f4f6', color: '#374151' }
+              return (
+                <tr key={wo.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{wo.orderNo}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{wo.product?.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{wo.plannedQty}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <StatusBadge label={st.label} bg={st.bg} color={st.color} />
+                  </td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{wo.actualStart ? new Date(wo.actualStart).toLocaleString('bg-BG') : '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{wo.actualEnd ? new Date(wo.actualEnd).toLocaleString('bg-BG') : '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <Button variant="secondary" size="sm" onClick={() => navigate(`/mes/orders/${wo.id}`)}>
+                      Преглед
+                    </Button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
     </div>
   )
 }
-

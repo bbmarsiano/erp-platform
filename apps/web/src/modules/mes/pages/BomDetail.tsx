@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
 import { useAddBomItem, useBom } from '../hooks/useMes'
 
@@ -27,8 +27,8 @@ export default function BomDetail() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Рецептура: {bom?.product?.name ?? ''}</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title={`Рецептура: ${bom?.product?.name ?? ''}`} />
       <div style={{ marginTop: 8, color: '#6b7280' }}>
         <Link to="/mes/bom">← Назад</Link>
       </div>

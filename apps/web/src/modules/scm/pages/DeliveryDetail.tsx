@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
 import { useAddDeliveryLine, useConfirmDelivery, useDelivery } from '../hooks/useScm'
 
@@ -42,15 +42,17 @@ export default function DeliveryDetail() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Доставка {delivery?.deliveryNo ?? ''}</div>
-        {delivery?.status === 'DRAFT' ? (
-          <Button onClick={onConfirm} disabled={confirm.isPending}>
-            Потвърди доставка
-          </Button>
-        ) : null}
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title={`Доставка ${delivery?.deliveryNo ?? ''}`}
+        action={
+          delivery?.status === 'DRAFT' ? (
+            <Button onClick={onConfirm} disabled={confirm.isPending}>
+              Потвърди доставка
+            </Button>
+          ) : undefined
+        }
+      />
       <div style={{ marginTop: 8, color: '#6b7280' }}>
         <Link to="/scm/deliveries">← Назад</Link>
       </div>

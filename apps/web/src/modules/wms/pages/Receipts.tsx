@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, Card, FormField, FormRow, Input, PageHeader } from '../../../components/ui'
 import { StatusBadge } from '../components/StatusBadge'
 import { WarehouseSelector } from '../components/WarehouseSelector'
 import { useCreateReceipt, useReceipts, useWarehouses } from '../hooks/useWms'
@@ -37,67 +37,47 @@ export default function Receipts() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>Приходни</div>
-          <div style={{ marginTop: 4, color: '#6b7280', fontSize: 13 }}>Документи за приемане на стока</div>
-        </div>
-        <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Отказ' : 'Нова приходна бележка'}</Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Приходни"
+        subtitle="Документи за приемане на стока"
+        action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова приходна бележка</Button> : undefined}
+      />
 
       {showForm ? (
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 10,
-            padding: 16,
-            marginBottom: 14,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr auto',
-            gap: 10,
-            alignItems: 'end'
-          }}
-        >
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Склад
-            <WarehouseSelector value={warehouseId} onChange={setWarehouseId} placeholder="Изберете склад" />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Доставчик
-            <input
-              value={supplierName}
-              onChange={(e) => setSupplierName(e.target.value)}
-              placeholder="Име на доставчик"
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d4d4d8' }}
-            />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Бележка
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="По избор"
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d4d4d8' }}
-            />
-          </label>
-          <Button onClick={onSubmit} disabled={createReceipt.isPending} style={{ height: 38 }}>
-            {createReceipt.isPending ? 'Запис...' : 'Създай'}
-          </Button>
-        </div>
+        <Card style={{ marginBottom: 20 }}>
+          <FormRow columns={3}>
+            <FormField label="Склад" required>
+              <WarehouseSelector value={warehouseId} onChange={setWarehouseId} placeholder="Изберете склад" />
+            </FormField>
+            <FormField label="Доставчик">
+              <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Име на доставчик" />
+            </FormField>
+            <FormField label="Бележка">
+              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="По избор" />
+            </FormField>
+          </FormRow>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>
+              Отказ
+            </Button>
+            <Button onClick={onSubmit} disabled={createReceipt.isPending}>
+              {createReceipt.isPending ? 'Запис...' : 'Създай'}
+            </Button>
+          </div>
+        </Card>
       ) : null}
 
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 10 }}>Номер</th>
-              <th style={{ padding: 10 }}>Склад</th>
-              <th style={{ padding: 10 }}>Доставчик</th>
-              <th style={{ padding: 10 }}>Статус</th>
-              <th style={{ padding: 10 }}>Дата</th>
-              <th style={{ padding: 10 }}>Действия</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Номер</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Склад</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Доставчик</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Статус</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Дата</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -122,20 +102,17 @@ export default function Receipts() {
             ) : (
               rows.map((r) => (
                 <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10, fontFamily: 'monospace' }}>{r.receiptNo}</td>
-                  <td style={{ padding: 10 }}>{warehouseMap.get(r.warehouseId) ?? '—'}</td>
-                  <td style={{ padding: 10, color: '#6b7280' }}>{r.supplierName ?? '—'}</td>
-                  <td style={{ padding: 10 }}>
+                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{r.receiptNo}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{warehouseMap.get(r.warehouseId) ?? '—'}</td>
+                  <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 13 }}>{r.supplierName ?? '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>
                     <StatusBadge status={r.status} />
                   </td>
-                  <td style={{ padding: 10, color: '#6b7280' }}>
+                  <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 13 }}>
                     {r.createdAt ? new Date(r.createdAt).toLocaleString('bg-BG') : '—'}
                   </td>
-                  <td style={{ padding: 10 }}>
-                    <Button
-                      onClick={() => navigate(`/wms/receipts/${r.id}`)}
-                      style={{ background: '#ffffff', color: '#111827', border: '1px solid #e5e7eb' }}
-                    >
+                  <td style={{ padding: '12px 16px' }}>
+                    <Button variant="secondary" size="sm" onClick={() => navigate(`/wms/receipts/${r.id}`)}>
                       Преглед
                     </Button>
                   </td>
@@ -148,4 +125,3 @@ export default function Receipts() {
     </div>
   )
 }
-

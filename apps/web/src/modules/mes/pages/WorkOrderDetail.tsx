@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useCompleteWorkOrder, useReleaseWorkOrder, useStartWorkOrder, useWorkOrder } from '../hooks/useMes'
 
 const woStatusMap: Record<string, { label: string; bg: string; color: string }> = {
@@ -19,15 +19,17 @@ export default function WorkOrderDetail() {
   const wo = workOrderQuery.data as any
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Нареждане {wo?.orderNo ?? ''}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {wo?.status === 'DRAFT' ? <Button onClick={() => release.mutate(id)}>Пусни</Button> : null}
-          {wo?.status === 'RELEASED' ? <Button onClick={() => start.mutate(id)}>Започни</Button> : null}
-          {wo?.status === 'IN_PROGRESS' ? <Button onClick={() => complete.mutate(id)} style={{ background: '#16a34a' }}>Завърши</Button> : null}
-        </div>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title={`Нареждане ${wo?.orderNo ?? ''}`}
+        action={
+          <div style={{ display: 'flex', gap: 8 }}>
+            {wo?.status === 'DRAFT' ? <Button onClick={() => release.mutate(id)}>Пусни</Button> : null}
+            {wo?.status === 'RELEASED' ? <Button onClick={() => start.mutate(id)}>Започни</Button> : null}
+            {wo?.status === 'IN_PROGRESS' ? <Button variant="success" onClick={() => complete.mutate(id)}>Завърши</Button> : null}
+          </div>
+        }
+      />
       <div style={{ marginTop: 8 }}>
         <Link to="/mes/orders">← Назад</Link>
       </div>

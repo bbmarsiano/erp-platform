@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { StatusBadge } from '../components/StatusBadge'
 import { WarehouseSelector } from '../components/WarehouseSelector'
 import {
@@ -84,21 +84,16 @@ export default function ReceiptDetail() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>Приходна бележка</div>
-          <div style={{ marginTop: 4, color: '#6b7280', fontSize: 13 }}>
-            {receipt?.receiptNo ? <span style={{ fontFamily: 'monospace' }}>{receipt.receiptNo}</span> : '—'}
-          </div>
-        </div>
-        <Button
-          onClick={() => navigate('/wms/receipts')}
-          style={{ background: '#ffffff', color: '#111827', border: '1px solid #e5e7eb' }}
-        >
-          Назад
-        </Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Приходна бележка"
+        subtitle={receipt?.receiptNo ? receipt.receiptNo : undefined}
+        action={
+          <Button variant="secondary" onClick={() => navigate('/wms/receipts')}>
+            Назад
+          </Button>
+        }
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14 }}>
@@ -125,21 +120,13 @@ export default function ReceiptDetail() {
           <div style={{ display: 'flex', gap: 8 }}>
             {receipt?.status === 'DRAFT' ? (
               <>
-                <Button
-                  onClick={saveDraft}
-                  disabled={updateDraft.isPending}
-                  style={{ background: '#ffffff', color: '#111827', border: '1px solid #e5e7eb' }}
-                >
+                <Button variant="secondary" onClick={saveDraft} disabled={updateDraft.isPending}>
                   {updateDraft.isPending ? 'Запис...' : 'Запази'}
                 </Button>
                 <Button onClick={onConfirm} disabled={confirm.isPending || lines.length === 0}>
                   Потвърди
                 </Button>
-                <Button
-                  onClick={onCancel}
-                  disabled={cancel.isPending}
-                  style={{ background: '#ffffff', color: '#991b1b', border: '1px solid #fecaca' }}
-                >
+                <Button variant="danger" onClick={onCancel} disabled={cancel.isPending}>
                   Анулирай
                 </Button>
               </>
@@ -239,7 +226,7 @@ export default function ReceiptDetail() {
                 />
               </label>
 
-              <Button onClick={addLine} style={{ height: 38 }}>
+              <Button onClick={addLine}>
                 Добави
               </Button>
             </div>

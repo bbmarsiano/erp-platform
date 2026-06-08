@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useBackupPolicies, useCreateBackupPolicy, useRunPolicy } from '../hooks/useBackup'
 
 const cronLabel = (cron: string) => {
@@ -36,11 +36,12 @@ export default function Policies() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Политики</div>
-        <Button onClick={() => setShowForm((x) => !x)}>{showForm ? 'Отказ' : 'Нова политика'}</Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Политики"
+        subtitle="Управление на политики за архивиране"
+        action={<Button onClick={() => setShowForm((x) => !x)}>{showForm ? 'Отказ' : 'Нова политика'}</Button>}
+      />
       {showForm ? (
         <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 120px 120px 1fr auto', gap: 8, alignItems: 'end' }}>
           <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Наименование" style={{ padding: 8 }} />
@@ -78,7 +79,7 @@ export default function Policies() {
                 <td style={{ padding: 10 }}>{p.isEncrypted ? 'Да' : 'Не'}</td>
                 <td style={{ padding: 10 }}>{p.isActive ? 'Активна' : 'Неактивна'}</td>
                 <td style={{ padding: 10 }}>
-                  <Button onClick={() => runPolicy.mutate(p.id)} style={{ background: '#fff', border: '1px solid #ddd', color: '#111' }}>
+                  <Button variant="secondary" size="sm" onClick={() => runPolicy.mutate(p.id)}>
                     Стартирай сега
                   </Button>
                 </td>

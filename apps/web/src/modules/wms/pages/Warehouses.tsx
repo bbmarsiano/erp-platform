@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from '../../../components/ui/Button'
+import { Button, Card, FormField, FormRow, Input, PageHeader } from '../../../components/ui'
 import { StatusBadge } from '../components/StatusBadge'
 import { useCreateWarehouse, useWarehouses } from '../hooks/useWms'
 
@@ -24,71 +24,46 @@ export default function Warehouses() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>Складове</div>
-          <div style={{ marginTop: 4, color: '#6b7280', fontSize: 13 }}>Управление на складове и адреси</div>
-        </div>
-        <Button onClick={() => setShowForm((v) => !v)}>{showForm ? 'Отказ' : 'Нов склад'}</Button>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Складове"
+        subtitle="Управление на складове и адреси"
+        action={!showForm ? <Button onClick={() => setShowForm(true)}>Нов склад</Button> : undefined}
+      />
 
       {showForm ? (
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e5e7eb',
-            borderRadius: 10,
-            padding: 16,
-            marginBottom: 14,
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr auto',
-            gap: 10,
-            alignItems: 'end'
-          }}
-        >
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Код
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="WH-01"
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d4d4d8' }}
-            />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Наименование
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Основен склад"
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d4d4d8' }}
-            />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#374151' }}>
-            Адрес
-            <input
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="София, България"
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d4d4d8' }}
-            />
-          </label>
-          <Button onClick={onSubmit} disabled={createWarehouse.isPending} style={{ height: 38 }}>
-            {createWarehouse.isPending ? 'Запис...' : 'Създай'}
-          </Button>
-        </div>
+        <Card style={{ marginBottom: 20 }}>
+          <FormRow columns={3}>
+            <FormField label="Код" required>
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="WH-01" />
+            </FormField>
+            <FormField label="Наименование" required>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Основен склад" />
+            </FormField>
+            <FormField label="Адрес">
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="София, България" />
+            </FormField>
+          </FormRow>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>
+              Отказ
+            </Button>
+            <Button onClick={onSubmit} disabled={createWarehouse.isPending}>
+              {createWarehouse.isPending ? 'Запис...' : 'Създай'}
+            </Button>
+          </div>
+        </Card>
       ) : null}
 
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 10 }}>Код</th>
-              <th style={{ padding: 10 }}>Наименование</th>
-              <th style={{ padding: 10 }}>Адрес</th>
-              <th style={{ padding: 10 }}>Статус</th>
-              <th style={{ padding: 10 }}>Действия</th>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Код</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Наименование</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Адрес</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Статус</th>
+              <th style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -113,11 +88,11 @@ export default function Warehouses() {
             ) : (
               rows.map((w) => (
                 <tr key={w.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10, fontFamily: 'monospace' }}>{w.code}</td>
-                  <td style={{ padding: 10, fontWeight: 700 }}>{w.name}</td>
-                  <td style={{ padding: 10, color: '#6b7280' }}>{w.address ?? '—'}</td>
-                  <td style={{ padding: 10 }}>{w.isActive ? <StatusBadge status="CONFIRMED" /> : <StatusBadge status="CANCELLED" />}</td>
-                  <td style={{ padding: 10, color: '#6b7280' }}>—</td>
+                  <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{w.code}</td>
+                  <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: 13 }}>{w.name}</td>
+                  <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 13 }}>{w.address ?? '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>{w.isActive ? <StatusBadge status="CONFIRMED" /> : <StatusBadge status="CANCELLED" />}</td>
+                  <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: 13 }}>—</td>
                 </tr>
               ))
             )}
@@ -127,4 +102,3 @@ export default function Warehouses() {
     </div>
   )
 }
-

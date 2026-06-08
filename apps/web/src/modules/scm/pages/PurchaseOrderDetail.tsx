@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
 import { useAddPurchaseOrderLine, usePurchaseOrder, useSendPurchaseOrder } from '../hooks/useScm'
 
@@ -26,15 +26,17 @@ export default function PurchaseOrderDetail() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900 }}>Поръчка покупка {order?.orderNo ?? ''}</div>
-        {order?.status === 'DRAFT' ? (
-          <Button onClick={() => sendOrder.mutate(id)} disabled={sendOrder.isPending}>
-            Изпрати
-          </Button>
-        ) : null}
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title={`Поръчка покупка ${order?.orderNo ?? ''}`}
+        action={
+          order?.status === 'DRAFT' ? (
+            <Button onClick={() => sendOrder.mutate(id)} disabled={sendOrder.isPending}>
+              Изпрати
+            </Button>
+          ) : undefined
+        }
+      />
       <div style={{ marginTop: 8, color: '#6b7280' }}>
         <Link to="/scm/orders">← Назад</Link>
       </div>

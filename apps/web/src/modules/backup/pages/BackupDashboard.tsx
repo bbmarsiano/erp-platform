@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { PageHeader } from '../../../components/ui'
 import { useBackupJobs, useBackupPolicies } from '../hooks/useBackup'
 
 function Card({ title, value }: { title: string; value: string | number }) {
@@ -29,8 +30,8 @@ export default function BackupDashboard() {
   }, [jobsQuery.data, policiesQuery.data])
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Архивиране</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Архивиране" subtitle="Обзор на архивирането" />
       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
         <Card title="Активни политики" value={stats.activePolicies} />
         <Card title="Последно архивиране" value={stats.lastBackup} />

@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 
 type Period = '7d' | '30d' | '90d' | 'custom'
@@ -140,7 +141,7 @@ export default function ScmReports() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <ReportHeader
         subtitle="Верига на доставките — анализи и отчети"
         onExport={exportExcel}
@@ -167,41 +168,32 @@ export default function ScmReports() {
 
 function ReportHeader({ subtitle, onExport }: { subtitle: string; onExport: () => void }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 24
-      }}
-    >
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
-          Справки
-        </h1>
-        <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>{subtitle}</p>
-      </div>
-      <button
-        onClick={onExport}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '9px 18px',
-          background: '#16a34a',
-          color: 'white',
-          border: 'none',
-          borderRadius: 8,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(22,163,74,0.3)'
-        }}
-      >
-        <Download size={15} />
-        Експорт Excel
-      </button>
-    </div>
+    <PageHeader
+      title="Справки"
+      subtitle={subtitle}
+      action={
+        <button
+          onClick={onExport}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '9px 18px',
+            background: '#16a34a',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(22,163,74,0.3)'
+          }}
+        >
+          <Download size={15} />
+          Експорт Excel
+        </button>
+      }
+    />
   )
 }
 

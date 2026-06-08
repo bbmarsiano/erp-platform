@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { PageHeader } from '../../../components/ui'
 import { useDeliveries, usePurchaseOrders, useSuppliers } from '../hooks/useScm'
 
 function Card({ title, value }: { title: string; value: string | number }) {
@@ -30,9 +31,8 @@ export default function ScmDashboard() {
   }, [deliveries.data, orders.data, suppliers.data])
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Верига на доставките</div>
-      <div style={{ marginTop: 4, color: '#6b7280' }}>SCM табло</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Верига на доставките" subtitle="SCM табло" />
       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
         <Card title="Активни доставчици" value={suppliers.isLoading ? '...' : stats.activeSuppliers} />
         <Card title="Поръчки в изчакване" value={orders.isLoading ? '...' : stats.sentOrders} />

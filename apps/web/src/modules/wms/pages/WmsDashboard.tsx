@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { PageHeader } from '../../../components/ui'
 import { useLowStock, useReceipts, useStockSummary, useWarehouses } from '../hooks/useWms'
 
 function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
@@ -42,13 +43,8 @@ export default function WmsDashboard() {
   }, [lowStock.data, receipts.data, stockSummary.data, warehouses.data])
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 900 }}>Склад (WMS)</div>
-          <div style={{ marginTop: 4, color: '#6b7280', fontSize: 13 }}>Обзор и ключови показатели</div>
-        </div>
-      </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Склад (WMS)" subtitle="Обзор и ключови показатели" />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
         <StatCard title="Общо складове" value={warehouses.isLoading ? '...' : totals.warehousesCount} />

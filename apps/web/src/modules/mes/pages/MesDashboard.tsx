@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { PageHeader } from '../../../components/ui'
 import { useBoms, useWorkOrders } from '../hooks/useMes'
 
 function Card({ title, value }: { title: string; value: string | number }) {
@@ -28,9 +29,8 @@ export default function MesDashboard() {
   }, [bomQuery.data, ordersQuery.data])
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>Производство</div>
-      <div style={{ marginTop: 4, color: '#6b7280' }}>MES табло</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="Производство" subtitle="MES табло" />
       <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
         <Card title="Активни рецептури" value={stats.activeBoms} />
         <Card title="Нареждания в изпълнение" value={stats.inProgress} />

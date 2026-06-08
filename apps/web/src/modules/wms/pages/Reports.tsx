@@ -14,6 +14,7 @@ import {
 } from 'recharts'
 import { Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 
 type Period = '7d' | '30d' | '90d' | 'custom'
@@ -142,23 +143,11 @@ export default function WmsReports() {
   ]
 
   return (
-    <div style={{ padding: '28px 32px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 24
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
-            Справки
-          </h1>
-          <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
-            Складово стопанство — анализи и отчети
-          </p>
-        </div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader
+        title="Справки"
+        subtitle="Складово стопанство — анализи и отчети"
+        action={
         <button
           onClick={exportExcel}
           style={{
@@ -179,7 +168,8 @@ export default function WmsReports() {
           <Download size={15} />
           Експорт Excel
         </button>
-      </div>
+        }
+      />
 
       <div
         style={{

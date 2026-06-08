@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button } from '../../../components/ui/Button'
+import { Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
 import { useCreateSale, useRegisters } from '../hooks/usePos'
 
@@ -66,8 +66,8 @@ export default function PosDashboard() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ fontSize: 22, fontWeight: 900 }}>POS терминал</div>
+    <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <PageHeader title="POS терминал" subtitle="Терминал за продажби" />
       <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 14, marginTop: 14 }}>
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>Продукти</div>
@@ -117,7 +117,7 @@ export default function PosDashboard() {
                 <option key={r.id} value={r.id}>{r.code} — {r.name}</option>
               ))}
             </select>
-            <Button onClick={completeSale} style={{ background: '#16a34a' }} disabled={createSale.isPending || !cart.length || !registerId}>
+            <Button variant="success" onClick={completeSale} disabled={createSale.isPending || !cart.length || !registerId}>
               Завърши продажба
             </Button>
           </div>
@@ -125,7 +125,7 @@ export default function PosDashboard() {
           {lastSale ? (
             <div style={{ marginTop: 12, padding: 10, borderRadius: 10, border: '1px solid #86efac', background: '#f0fdf4', color: '#166534' }}>
               ✅ Продажба {lastSale.saleNo} — {lastSale.totalAmount?.toFixed?.(2) ?? lastSale.totalAmount} лв.
-              <div><Button onClick={() => setLastSale(null)} style={{ marginTop: 8 }}>Нова продажба</Button></div>
+              <div style={{ marginTop: 8 }}><Button onClick={() => setLastSale(null)}>Нова продажба</Button></div>
             </div>
           ) : null}
         </div>

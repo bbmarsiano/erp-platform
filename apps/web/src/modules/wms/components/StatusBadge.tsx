@@ -10,12 +10,15 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span
       style={{
-        padding: '2px 10px',
+        display: 'inline-block',
+        padding: '3px 10px',
         borderRadius: 20,
         fontSize: 12,
-        fontWeight: 500,
+        fontWeight: 600,
         background: s.bg,
-        color: s.color
+        color: s.color,
+        whiteSpace: 'nowrap',
+        lineHeight: 1.4
       }}
     >
       {s.label}
