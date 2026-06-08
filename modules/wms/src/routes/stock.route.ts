@@ -76,7 +76,7 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             {
               id: `${p.id}-zero`,
               productId: p.id,
-              product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock },
+              product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock, barcode: p.barcode },
               location: null,
               quantity: 0,
               reservedQty: 0,
@@ -86,7 +86,7 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         }
         return p.stockItems.map((si) => ({
           ...si,
-          product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock }
+          product: { id: p.id, code: p.code, name: p.name, unit: p.unit, minStock: p.minStock, barcode: p.barcode }
         }))
       })
 
@@ -203,6 +203,107 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       })
 
       return createSuccessResponse(result)
+    }
+  )
+
+  fastify.get(
+    '/products/by-barcode/:barcode',
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ['WMS'],
+        summary: 'Намери продукт по баркод',
+        params: {
+          type: 'object',
+          properties: { barcode: { type: 'string' } }
+        }
+      }
+    },
+    async (request, reply) => {
+      const { barcode } = request.params as { barcode: string }
+
+      const product = await prisma.product.findFirst({
+        where: {
+          tenantId: request.user.tenantId,
+          barcode: barcode.trim(),
+          isActive: true
+        },
+        include: {
+          stockItems: {
+            include: { location: { include: { warehouse: true } } }
+          }
+        }
+      })
+
+      if (!product) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Продукт с този баркод не е намерен',
+          barcode
+        })
+      }
+
+      const totalStock = product.stockItems.reduce((s, si) => s + si.quantity, 0)
+
+      return reply.send({
+        success: true,
+        data: {
+          id: product.id,
+          code: product.code,
+          name: product.name,
+          barcode: product.barcode,
+          unit: product.unit,
+          totalStock,
+          stockItems: product.stockItems
+        }
+      })
+    }
+  )
+
+  fastify.put(
+    '/products/:id/barcode',
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ['WMS'],
+        summary: 'Задай баркод на продукт',
+        body: {
+          type: 'object',
+          required: ['barcode'],
+          properties: { barcode: { type: 'string' } }
+        }
+      }
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const { barcode } = request.body as { barcode: string }
+
+      const existing = await prisma.product.findFirst({
+        where: {
+          barcode: barcode.trim(),
+          tenantId: request.user.tenantId,
+          id: { not: id }
+        }
+      })
+      if (existing) {
+        return reply.status(409).send({
+          success: false,
+          error: `Баркодът вече се използва от продукт: ${existing.name}`
+        })
+      }
+
+      const owned = await prisma.product.findFirst({
+        where: { id, tenantId: request.user.tenantId }
+      })
+      if (!owned) {
+        return reply.status(404).send({ success: false, error: 'Продуктът не е намерен' })
+      }
+
+      const product = await prisma.product.update({
+        where: { id },
+        data: { barcode: barcode.trim() }
+      })
+      return reply.send({ success: true, data: product })
     }
   )
 }

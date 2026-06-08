@@ -143,6 +143,7 @@ model Product {
   tenant      Tenant          @relation(fields: [tenantId], references: [id])
   code        String
   name        String
+  barcode     String?         @unique
   description String?
   unit        String          @default("бр.")
   category    String?
