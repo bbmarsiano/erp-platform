@@ -80,19 +80,21 @@ export function useCameraScanner({
 
   useEffect(() => {
     if (!active || !supported) return
-
-    let Quagga: any = null
     let stopped = false
+    let QuaggaInstance: any = null
 
     const start = async () => {
+      let Quagga: any
       try {
-        const mod = await import('@ericblade/quagga2')
-        Quagga = mod.default
+        const pkg = '@ericblade/quagga2'
+        const mod = await import(/* @vite-ignore */ pkg)
+        Quagga = mod.default ?? mod
       } catch {
-        console.warn('quagga2 not installed — camera scanner unavailable')
+        console.warn('Camera scanner unavailable — install @ericblade/quagga2')
         return
       }
       if (stopped) return
+      QuaggaInstance = Quagga
 
       Quagga.init(
         {
@@ -101,14 +103,16 @@ export function useCameraScanner({
             target: document.getElementById(elementId),
             constraints: { facingMode: 'environment', width: 640, height: 480 }
           },
-          decoder: { readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader'] }
+          decoder: {
+            readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader']
+          }
         },
         (err: any) => {
           if (err) {
-            console.error('Camera scanner init error:', err)
+            console.error('Camera init error:', err)
             return
           }
-          Quagga.start()
+          if (!stopped) Quagga.start()
         }
       )
 
@@ -121,9 +125,9 @@ export function useCameraScanner({
     start()
     return () => {
       stopped = true
-      if (Quagga) {
+      if (QuaggaInstance) {
         try {
-          Quagga.stop()
+          QuaggaInstance.stop()
         } catch {
           /* ignore */
         }
