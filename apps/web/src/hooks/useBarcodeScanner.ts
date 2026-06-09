@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+// USB barcode scanner hook — works with any keyboard-wedge USB/Bluetooth scanner
 interface UseBarcodeOptions {
   onScan: (barcode: string) => void
   minLength?: number
@@ -7,8 +8,6 @@ interface UseBarcodeOptions {
   active?: boolean
 }
 
-// USB barcode scanners type very fast (< 50ms between chars).
-// This hook detects that pattern vs normal keyboard typing.
 export function useBarcodeScannerInput({
   onScan,
   minLength = 3,
@@ -16,7 +15,7 @@ export function useBarcodeScannerInput({
   active = true
 }: UseBarcodeOptions) {
   const buffer = useRef('')
-  const lastKey = useRef(0)
+  const lastKey = useRef<number>(0)
   const timer = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
@@ -61,73 +60,88 @@ export function useBarcodeScannerInput({
   }, [active, onScan, minLength, timeout])
 }
 
-// Camera scanner requires: pnpm --filter @dflow/web add @ericblade/quagga2
-// Optional — USB scanner works without it
+// Camera scanner hook using quagga2
 export function useCameraScanner({
   onScan,
   active = false,
-  elementId = 'camera-preview'
+  elementId = 'barcode-camera-preview'
 }: {
   onScan: (barcode: string) => void
   active?: boolean
   elementId?: string
 }) {
   const [supported, setSupported] = useState(false)
+  const quaggaRef = useRef<any>(null)
 
   useEffect(() => {
-    setSupported('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices)
+    setSupported(
+      typeof navigator !== 'undefined' &&
+        'mediaDevices' in navigator &&
+        'getUserMedia' in navigator.mediaDevices
+    )
   }, [])
 
   useEffect(() => {
     if (!active || !supported) return
+
     let stopped = false
-    let QuaggaInstance: any = null
 
-    const start = async () => {
-      let Quagga: any
+    const initQuagga = async () => {
       try {
-        const pkg = '@ericblade/quagga2'
-        const mod = await import(/* @vite-ignore */ pkg)
-        Quagga = mod.default ?? mod
-      } catch {
-        console.warn('Camera scanner unavailable — install @ericblade/quagga2')
-        return
+        const Quagga = (await import('@ericblade/quagga2')).default
+        if (stopped) return
+        quaggaRef.current = Quagga
+
+        await new Promise<void>((resolve, reject) => {
+          Quagga.init(
+            {
+              inputStream: {
+                type: 'LiveStream',
+                target: document.getElementById(elementId) as HTMLElement,
+                constraints: {
+                  facingMode: 'environment',
+                  width: { ideal: 640 },
+                  height: { ideal: 480 }
+                }
+              },
+              locator: { patchSize: 'medium', halfSample: true },
+              numOfWorkers: 2,
+              frequency: 10,
+              decoder: {
+                readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader', 'upc_reader']
+              },
+              locate: true
+            },
+            (err: any) => {
+              if (err) {
+                reject(err)
+                return
+              }
+              resolve()
+            }
+          )
+        })
+
+        if (stopped) return
+        Quagga.start()
+
+        Quagga.onDetected((result: any) => {
+          const code = result?.codeResult?.code
+          if (code) onScan(code)
+        })
+      } catch (err) {
+        console.error('Camera scanner error:', err)
       }
-      if (stopped) return
-      QuaggaInstance = Quagga
-
-      Quagga.init(
-        {
-          inputStream: {
-            type: 'LiveStream',
-            target: document.getElementById(elementId),
-            constraints: { facingMode: 'environment', width: 640, height: 480 }
-          },
-          decoder: {
-            readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader']
-          }
-        },
-        (err: any) => {
-          if (err) {
-            console.error('Camera init error:', err)
-            return
-          }
-          if (!stopped) Quagga.start()
-        }
-      )
-
-      Quagga.onDetected((result: any) => {
-        const code = result?.codeResult?.code
-        if (code) onScan(code)
-      })
     }
 
-    start()
+    initQuagga()
+
     return () => {
       stopped = true
-      if (QuaggaInstance) {
+      if (quaggaRef.current) {
         try {
-          QuaggaInstance.stop()
+          quaggaRef.current.stop()
+          quaggaRef.current = null
         } catch {
           /* ignore */
         }
