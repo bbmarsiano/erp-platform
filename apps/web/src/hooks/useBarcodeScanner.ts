@@ -88,7 +88,8 @@ export function useCameraScanner({
 
     const initQuagga = async () => {
       try {
-        const Quagga = (await import('@ericblade/quagga2')).default
+        const mod = await import(/* @vite-ignore */ '@ericblade/quagga2')
+        const Quagga = mod.default ?? mod
         if (stopped) return
         quaggaRef.current = Quagga
 

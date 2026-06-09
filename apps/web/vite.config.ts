@@ -12,13 +12,12 @@ export default defineConfig({
       }
     }
   },
+  optimizeDeps: {
+    include: ['@ericblade/quagga2']
+  },
   build: {
     rollupOptions: {
-      output: {
-        manualChunks: {
-          quagga: ['@ericblade/quagga2']
-        }
-      }
+      external: ['@ericblade/quagga2']
     }
   }
 })

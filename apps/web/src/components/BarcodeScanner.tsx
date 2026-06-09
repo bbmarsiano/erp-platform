@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { Scan, Camera, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useCallback, useRef } from 'react'
+import { Scan, Camera, X } from 'lucide-react'
 import { useBarcodeScannerInput, useCameraScanner } from '../hooks/useBarcodeScanner'
 import { api } from '../lib/api'
 
@@ -25,42 +25,82 @@ interface BarcodeScannerProps {
   title?: string
 }
 
+function playBeep(frequency: number, duration: number) {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+    oscillator.frequency.value = frequency
+    oscillator.type = 'sine'
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000)
+    oscillator.start(ctx.currentTime)
+    oscillator.stop(ctx.currentTime + duration / 1000)
+  } catch {
+    /* ignore */
+  }
+}
+
 export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод скенер' }: BarcodeScannerProps) {
   const [mode, setMode] = useState<'usb' | 'camera'>('usb')
   const [cameraActive, setCameraActive] = useState(false)
   const [manualInput, setManualInput] = useState('')
   const [scanning, setScanning] = useState(false)
-  const [lastScan, setLastScan] = useState('')
-  const [result, setResult] = useState<{ ok: boolean; message: string; product?: ScanResult } | null>(null)
+  const [lastScannedLabel, setLastScannedLabel] = useState('')
+  const lastScanned = useRef<string>('')
+  const scanTimeout = useRef<ReturnType<typeof setTimeout>>()
+  const [result, setResult] = useState<{
+    ok: boolean | null
+    message: string
+    product?: ScanResult
+  } | null>(null)
 
   const handleScan = useCallback(
     async (barcode: string) => {
-      if (scanning || barcode === lastScan) return
-      setLastScan(barcode)
+      if (barcode === lastScanned.current) return
+      lastScanned.current = barcode
+      setLastScannedLabel(barcode)
+      clearTimeout(scanTimeout.current)
+      scanTimeout.current = setTimeout(() => {
+        lastScanned.current = ''
+        setLastScannedLabel('')
+      }, 2000)
+
+      if (scanning) return
       setScanning(true)
       setResult(null)
+
+      setResult({ ok: null, message: `Сканиран: ${barcode}` })
 
       try {
         const resp = await api.get(`/api/wms/products/by-barcode/${encodeURIComponent(barcode)}`)
         const product = resp.data.data as ScanResult
-        setResult({ ok: true, message: `Намерен: ${product.name}`, product })
+        setResult({ ok: true, message: `✓ Намерен: ${product.name}`, product })
+
+        playBeep(800, 100)
+
         setTimeout(() => {
           onProductFound(product)
           setResult(null)
-          setLastScan('')
-        }, 800)
+          lastScanned.current = ''
+          setLastScannedLabel('')
+        }, 1000)
       } catch (err: any) {
-        const msg = err?.response?.data?.error || 'Баркодът не е намерен в системата'
-        setResult({ ok: false, message: msg })
+        const msg = err?.response?.data?.error || 'Баркодът не е намерен'
+        setResult({ ok: false, message: `✗ ${msg} (${barcode})` })
+        playBeep(200, 300)
         setTimeout(() => {
           setResult(null)
-          setLastScan('')
-        }, 2500)
+          lastScanned.current = ''
+          setLastScannedLabel('')
+        }, 3000)
       } finally {
         setScanning(false)
       }
     },
-    [scanning, lastScan, onProductFound]
+    [scanning, onProductFound]
   )
 
   useBarcodeScannerInput({ onScan: handleScan, active: mode === 'usb' })
@@ -281,12 +321,28 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
                       marginBottom: 10
                     }}
                   />
+                  {lastScannedLabel && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: '6px 12px',
+                        background: '#f3f4f6',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        color: '#6b7280',
+                        fontFamily: 'monospace'
+                      }}
+                    >
+                      Последен скан: {lastScannedLabel}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => setCameraActive(false)}
                     style={{
                       width: '100%',
                       padding: '8px',
+                      marginTop: 8,
                       background: '#fee2e2',
                       color: '#dc2626',
                       border: 'none',
@@ -312,16 +368,24 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                background: result.ok ? '#f0fdf4' : '#fef2f2',
-                border: `1px solid ${result.ok ? '#bbf7d0' : '#fecaca'}`
+                background: result.ok === null ? '#fefce8' : result.ok ? '#f0fdf4' : '#fef2f2',
+                border: `1px solid ${result.ok === null ? '#fde047' : result.ok ? '#bbf7d0' : '#fecaca'}`
               }}
             >
-              {result.ok ? <CheckCircle size={18} color="#16a34a" /> : <AlertCircle size={18} color="#dc2626" />}
+              <span style={{ fontSize: 18 }}>{result.ok === null ? '⏳' : result.ok ? '✅' : '❌'}</span>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: result.ok ? '#15803d' : '#dc2626' }}>{result.message}</div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: result.ok === null ? '#854d0e' : result.ok ? '#15803d' : '#dc2626'
+                  }}
+                >
+                  {result.message}
+                </div>
                 {result.product && (
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>
-                    Наличност: {result.product.totalStock} {result.product.unit}
+                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                    Наличност: {result.product.totalStock} {result.product.unit} · Цена: {result.product.price ?? '—'} лв.
                   </div>
                 )}
               </div>
