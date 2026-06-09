@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Scan, Camera, X } from 'lucide-react'
 import { useBarcodeScannerInput, useCameraScanner } from '../hooks/useBarcodeScanner'
 import { api } from '../lib/api'
@@ -110,6 +110,37 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
     active: mode === 'camera' && cameraActive,
     elementId: 'barcode-camera-preview'
   })
+
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.id = 'scanner-styles'
+    style.textContent = `
+    @keyframes scanLine {
+      0%   { top: 10%; opacity: 1; }
+      50%  { top: 85%; opacity: 1; }
+      100% { top: 10%; opacity: 1; }
+    }
+    @keyframes cornerPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    #barcode-camera-preview video {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    #barcode-camera-preview canvas {
+      display: none !important;
+    }
+  `
+    if (!document.getElementById('scanner-styles')) {
+      document.head.appendChild(style)
+    }
+    return () => {
+      const el = document.getElementById('scanner-styles')
+      if (el) el.remove()
+    }
+  }, [])
 
   return (
     <div
@@ -311,16 +342,166 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
               ) : (
                 <div>
                   <div
-                    id="barcode-camera-preview"
                     style={{
+                      position: 'relative',
                       width: '100%',
-                      height: 240,
-                      borderRadius: 10,
+                      height: 260,
+                      borderRadius: 12,
                       overflow: 'hidden',
-                      background: '#000',
-                      marginBottom: 10
+                      background: '#000'
                     }}
-                  />
+                  >
+                    <div
+                      id="barcode-camera-preview"
+                      style={{
+                        position: 'absolute',
+                        inset: 0
+                      }}
+                    />
+
+                    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '20%',
+                          background: 'rgba(0,0,0,0.5)'
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '20%',
+                          background: 'rgba(0,0,0,0.5)'
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '20%',
+                          left: 0,
+                          width: '10%',
+                          height: '60%',
+                          background: 'rgba(0,0,0,0.5)'
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '20%',
+                          right: 0,
+                          width: '10%',
+                          height: '60%',
+                          background: 'rgba(0,0,0,0.5)'
+                        }}
+                      />
+
+                      {[
+                        { top: '20%', left: '10%', borderTop: '3px solid #7c3aed', borderLeft: '3px solid #7c3aed' },
+                        { top: '20%', right: '10%', borderTop: '3px solid #7c3aed', borderRight: '3px solid #7c3aed' },
+                        { bottom: '20%', left: '10%', borderBottom: '3px solid #7c3aed', borderLeft: '3px solid #7c3aed' },
+                        { bottom: '20%', right: '10%', borderBottom: '3px solid #7c3aed', borderRight: '3px solid #7c3aed' }
+                      ].map((corner, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            width: 24,
+                            height: 24,
+                            animation: 'cornerPulse 2s ease infinite',
+                            ...corner
+                          }}
+                        />
+                      ))}
+
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: '10%',
+                          right: '10%',
+                          height: 2,
+                          background: 'linear-gradient(90deg, transparent, #7c3aed, #a78bfa, #7c3aed, transparent)',
+                          boxShadow: '0 0 8px #7c3aed',
+                          animation: 'scanLine 2s ease-in-out infinite'
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: '22%',
+                          left: 0,
+                          right: 0,
+                          textAlign: 'center',
+                          color: 'white',
+                          fontSize: 11,
+                          textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        Насочете баркода към рамката
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        zIndex: 10,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px'
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          background: 'rgba(0,0,0,0.6)',
+                          borderRadius: 20,
+                          padding: '4px 10px'
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: '#22c55e',
+                            boxShadow: '0 0 6px #22c55e',
+                            animation: 'cornerPulse 1s ease infinite'
+                          }}
+                        />
+                        <span style={{ color: 'white', fontSize: 11, fontWeight: 500 }}>Камерата е активна</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCameraActive(false)}
+                        style={{
+                          background: 'rgba(0,0,0,0.6)',
+                          border: 'none',
+                          borderRadius: 20,
+                          padding: '4px 10px',
+                          cursor: 'pointer',
+                          color: 'white',
+                          fontSize: 11,
+                          fontWeight: 500
+                        }}
+                      >
+                        ✕ Спри
+                      </button>
+                    </div>
+                  </div>
+
                   {lastScannedLabel && (
                     <div
                       style={{
@@ -336,24 +517,25 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
                       Последен скан: {lastScannedLabel}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setCameraActive(false)}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      marginTop: 8,
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: 'none',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600
-                    }}
-                  >
-                    Спри камерата
-                  </button>
+
+                  {result?.ok === null && (
+                    <div
+                      style={{
+                        marginTop: 8,
+                        padding: '8px 12px',
+                        background: '#fefce8',
+                        border: '1px solid #fde047',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        color: '#854d0e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}
+                    >
+                      <span>⏳</span> Обработване...
+                    </div>
+                  )}
                 </div>
               )}
             </div>

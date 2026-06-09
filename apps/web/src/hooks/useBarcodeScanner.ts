@@ -101,15 +101,30 @@ export function useCameraScanner({
                 target: document.getElementById(elementId) as HTMLElement,
                 constraints: {
                   facingMode: 'environment',
-                  width: { ideal: 640 },
-                  height: { ideal: 480 }
+                  width: { min: 640, ideal: 1280, max: 1920 },
+                  height: { min: 480, ideal: 720, max: 1080 }
+                },
+                area: {
+                  top: '20%',
+                  right: '10%',
+                  left: '10%',
+                  bottom: '20%'
                 }
               },
-              locator: { patchSize: 'medium', halfSample: true },
-              numOfWorkers: 2,
-              frequency: 10,
+              locator: {
+                patchSize: 'medium',
+                halfSample: false
+              },
+              numOfWorkers: navigator.hardwareConcurrency > 4 ? 4 : 2,
+              frequency: 15,
               decoder: {
-                readers: ['ean_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader', 'upc_reader']
+                readers: [
+                  { format: 'ean_reader', config: {} },
+                  { format: 'ean_8_reader', config: {} },
+                  { format: 'code_128_reader', config: {} },
+                  { format: 'code_39_reader', config: {} },
+                  { format: 'upc_reader', config: {} }
+                ]
               },
               locate: true
             },
@@ -128,7 +143,13 @@ export function useCameraScanner({
 
         Quagga.onDetected((result: any) => {
           const code = result?.codeResult?.code
-          if (code) onScan(code)
+          const errors =
+            result?.codeResult?.decodedCodes?.filter((x: any) => x.error !== undefined)?.map((x: any) => x.error) ?? []
+          const avgError = errors.length ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length : 1
+
+          if (code && avgError < 0.15) {
+            onScan(code)
+          }
         })
       } catch (err) {
         console.error('Camera scanner error:', err)
