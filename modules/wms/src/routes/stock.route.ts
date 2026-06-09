@@ -253,6 +253,7 @@ const stockRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           name: product.name,
           barcode: product.barcode,
           unit: product.unit,
+          price: product.price,
           totalStock,
           stockItems: product.stockItems
         }

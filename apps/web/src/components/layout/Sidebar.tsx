@@ -45,6 +45,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Табло', path: '/wms' },
       { label: 'Складове', path: '/wms/warehouses' },
+      { label: 'Продукти', path: '/wms/products' },
       { label: 'Наличности', path: '/wms/stock' },
       { label: 'Приемане', path: '/wms/receipts' },
       { label: 'Изпращане', path: '/wms/issues' },
@@ -110,6 +111,7 @@ const groupIcons: Record<string, { icon: React.ReactNode; color: string }> = {
 const itemIcons: Record<string, React.ReactNode> = {
   '/wms': <LayoutDashboard size={13} />,
   '/wms/warehouses': <Warehouse size={13} />,
+  '/wms/products': <Package size={13} />,
   '/wms/stock': <Package size={13} />,
   '/wms/receipts': <ClipboardList size={13} />,
   '/wms/issues': <ClipboardList size={13} />,

@@ -23,6 +23,7 @@ interface BarcodeScannerProps {
   onProductFound: (product: ScanResult) => void
   onClose: () => void
   title?: string
+  onNotFound?: (barcode: string) => void
 }
 
 function playBeep(frequency: number, duration: number) {
@@ -43,7 +44,12 @@ function playBeep(frequency: number, duration: number) {
   }
 }
 
-export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод скенер' }: BarcodeScannerProps) {
+export function BarcodeScanner({
+  onProductFound,
+  onClose,
+  title = 'Баркод скенер',
+  onNotFound
+}: BarcodeScannerProps) {
   const [mode, setMode] = useState<'usb' | 'camera'>('usb')
   const [cameraActive, setCameraActive] = useState(false)
   const [manualInput, setManualInput] = useState('')
@@ -89,18 +95,26 @@ export function BarcodeScanner({ onProductFound, onClose, title = 'Баркод 
         }, 1000)
       } catch (err: any) {
         const msg = err?.response?.data?.error || 'Баркодът не е намерен'
-        setResult({ ok: false, message: `✗ ${msg} (${barcode})` })
+        const scannedBarcode = barcode
+        setResult({ ok: false, message: `✗ ${msg} (${barcode})`, product: undefined })
         playBeep(200, 300)
-        setTimeout(() => {
-          setResult(null)
-          lastScanned.current = ''
-          setLastScannedLabel('')
-        }, 3000)
+
+        if (onNotFound) {
+          setTimeout(() => {
+            onNotFound(scannedBarcode)
+          }, 500)
+        } else {
+          setTimeout(() => {
+            setResult(null)
+            lastScanned.current = ''
+            setLastScannedLabel('')
+          }, 3000)
+        }
       } finally {
         setScanning(false)
       }
     },
-    [scanning, onProductFound]
+    [scanning, onProductFound, onNotFound]
   )
 
   useBarcodeScannerInput({ onScan: handleScan, active: mode === 'usb' })

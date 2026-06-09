@@ -8,12 +8,14 @@ import ReceiptDetail from './pages/ReceiptDetail'
 import Issues from './pages/Issues'
 import IssueDetail from './pages/IssueDetail'
 import Movements from './pages/Movements'
+import Products from './pages/Products'
 
 export default function WmsRouter() {
   return (
     <Routes>
       <Route index element={<WmsDashboard />} />
       <Route path="warehouses" element={<Warehouses />} />
+      <Route path="products" element={<Products />} />
       <Route path="stock" element={<Stock />} />
       <Route path="receipts" element={<Receipts />} />
       <Route path="receipts/:id" element={<ReceiptDetail />} />

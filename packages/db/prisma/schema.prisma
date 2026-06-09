@@ -149,6 +149,7 @@ model Product {
   category    String?
   minStock    Float           @default(0)
   maxStock    Float?
+  price       Float?
   isActive    Boolean         @default(true)
   stockItems  StockItem[]
   movements   StockMovement[]

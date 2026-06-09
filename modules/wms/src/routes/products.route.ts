@@ -1,0 +1,197 @@
+import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import { prisma } from '@dflow/db'
+import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
+
+const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
+  fastify.get(
+    '/products',
+    {
+      schema: { tags: ['WMS'], summary: 'Списък продукти' },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      const products = await prisma.product.findMany({
+        where: { tenantId: request.user.tenantId },
+        include: {
+          stockItems: true,
+          _count: { select: { stockItems: true } }
+        },
+        orderBy: { code: 'asc' }
+      })
+      return reply.send({ success: true, data: products })
+    }
+  )
+
+  fastify.post(
+    '/products',
+    {
+      schema: {
+        tags: ['WMS'],
+        summary: 'Създай продукт',
+        body: {
+          type: 'object',
+          required: ['code', 'name', 'unit'],
+          properties: {
+            code: { type: 'string' },
+            name: { type: 'string' },
+            unit: { type: 'string' },
+            barcode: { type: 'string' },
+            minStock: { type: 'number' },
+            price: { type: 'number' },
+            description: { type: 'string' }
+          }
+        }
+      },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      const body = request.body as {
+        code: string
+        name: string
+        unit: string
+        barcode?: string
+        minStock?: number
+        price?: number
+        description?: string
+      }
+
+      const existing = await prisma.product.findFirst({
+        where: { code: body.code.trim().toUpperCase(), tenantId: request.user.tenantId }
+      })
+      if (existing) {
+        return reply.status(409).send({
+          success: false,
+          error: `Продукт с код ${body.code} вече съществува`
+        })
+      }
+
+      if (body.barcode) {
+        const existingBarcode = await prisma.product.findFirst({
+          where: { barcode: body.barcode.trim(), tenantId: request.user.tenantId }
+        })
+        if (existingBarcode) {
+          return reply.status(409).send({
+            success: false,
+            error: `Баркодът вече се използва от: ${existingBarcode.name}`
+          })
+        }
+      }
+
+      const product = await prisma.product.create({
+        data: {
+          tenantId: request.user.tenantId,
+          code: body.code.trim().toUpperCase(),
+          name: body.name.trim(),
+          unit: body.unit.trim(),
+          barcode: body.barcode?.trim() || null,
+          minStock: body.minStock ?? 0,
+          price: body.price ?? null,
+          description: body.description?.trim() || null,
+          isActive: true
+        }
+      })
+
+      await prisma.auditLog.create({
+        data: {
+          tenantId: request.user.tenantId,
+          userId: request.user.id,
+          action: 'CREATE_PRODUCT',
+          entity: 'Product',
+          entityId: product.id,
+          payload: { code: product.code, name: product.name }
+        }
+      })
+
+      return reply.status(201).send({ success: true, data: product })
+    }
+  )
+
+  fastify.put(
+    '/products/:id',
+    {
+      schema: { tags: ['WMS'], summary: 'Обнови продукт' },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const body = request.body as Partial<{
+        name: string
+        unit: string
+        barcode: string | null
+        minStock: number
+        price: number
+        description: string
+        isActive: boolean
+      }>
+
+      const owned = await prisma.product.findFirst({
+        where: { id, tenantId: request.user.tenantId }
+      })
+      if (!owned) {
+        return reply.status(404).send({ success: false, error: 'Продуктът не е намерен' })
+      }
+
+      if (body.barcode) {
+        const existingBarcode = await prisma.product.findFirst({
+          where: {
+            barcode: body.barcode.trim(),
+            tenantId: request.user.tenantId,
+            NOT: { id }
+          }
+        })
+        if (existingBarcode) {
+          return reply.status(409).send({
+            success: false,
+            error: `Баркодът вече се използва от: ${existingBarcode.name}`
+          })
+        }
+      }
+
+      const product = await prisma.product.update({
+        where: { id },
+        data: {
+          ...(body.name !== undefined && { name: body.name.trim() }),
+          ...(body.unit !== undefined && { unit: body.unit.trim() }),
+          ...(body.barcode !== undefined && { barcode: body.barcode?.trim() || null }),
+          ...(body.minStock !== undefined && { minStock: body.minStock }),
+          ...(body.price !== undefined && { price: body.price }),
+          ...(body.description !== undefined && { description: body.description }),
+          ...(body.isActive !== undefined && { isActive: body.isActive })
+        }
+      })
+      return reply.send({ success: true, data: product })
+    }
+  )
+
+  fastify.delete(
+    '/products/:id',
+    {
+      schema: { tags: ['WMS'], summary: 'Деактивирай продукт' },
+      preHandler: [authenticate]
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+
+      const owned = await prisma.product.findFirst({
+        where: { id, tenantId: request.user.tenantId }
+      })
+      if (!owned) {
+        return reply.status(404).send({ success: false, error: 'Продуктът не е намерен' })
+      }
+
+      const stockItems = await prisma.stockItem.findMany({ where: { productId: id } })
+      const totalStock = stockItems.reduce((s, si) => s + si.quantity, 0)
+      if (totalStock > 0) {
+        return reply.status(400).send({
+          success: false,
+          error: `Не може да се деактивира — продуктът има наличност ${totalStock} бр.`
+        })
+      }
+
+      await prisma.product.update({ where: { id }, data: { isActive: false } })
+      return reply.send({ success: true, message: 'Продуктът е деактивиран' })
+    }
+  )
+}
+
+export default productsRoute
