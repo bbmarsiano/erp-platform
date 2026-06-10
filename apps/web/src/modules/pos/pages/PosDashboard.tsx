@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Scan, Printer, Download, RotateCcw, CheckCircle } from 'lucide-react'
 import { BarcodeScanner, type ScanResult } from '../../../components/BarcodeScanner'
 import { Button, PageHeader } from '../../../components/ui'
+import { api } from '../../../lib/api'
 import { useStock } from '../../wms/hooks/useWms'
 import { useCreateSale, useRegisters } from '../hooks/usePos'
 
@@ -16,13 +18,36 @@ type CartItem = {
   unitPrice: number
 }
 
+type TenantInfo = {
+  name?: string
+  logoUrl?: string
+  address?: string
+  eik?: string
+  vatNumber?: string
+  vatRegistered?: boolean
+  mol?: string
+  city?: string
+  phone?: string
+  bankName?: string
+  bankIban?: string
+}
+
 type CompletedSale = {
   saleNo: string
   total: number
   paymentMethod: string
   registerName: string
-  lines: { productName: string; quantity: number; unitPrice: number; total: number }[]
+  lines: { productName: string; quantity: number; unitPrice: number; total: number; vatRate?: number }[]
   createdAt: string
+  issueInvoice: boolean
+  invoiceNumber?: string
+  tenant?: TenantInfo
+}
+
+const getInvoiceNumber = () => {
+  const num = Number(localStorage.getItem('dflow_invoice_counter') || '0') + 1
+  localStorage.setItem('dflow_invoice_counter', String(num))
+  return `${new Date().getFullYear()}-${String(num).padStart(6, '0')}`
 }
 
 export default function PosDashboard() {
@@ -33,8 +58,14 @@ export default function PosDashboard() {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH')
   const [registerId, setRegisterId] = useState('')
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null)
+  const [issueInvoice, setIssueInvoice] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const receiptRef = useRef<HTMLDivElement>(null)
+
+  const { data: tenant } = useQuery({
+    queryKey: ['tenant'],
+    queryFn: () => api.get('/api/tenant').then((r) => r.data.data as TenantInfo)
+  })
 
   const products = useMemo(
     () =>
@@ -140,9 +171,15 @@ export default function PosDashboard() {
 
   const handleDownload = () => {
     if (!completedSale) return
+    const t = completedSale.tenant
+    const vatBase = t?.vatRegistered ? completedSale.total / 1.2 : completedSale.total
+    const vatAmt = t?.vatRegistered ? completedSale.total - vatBase : 0
     const lines = [
       '================================',
-      '        КАСОВА БЕЛЕЖКА',
+      t?.name || '        КАСОВА БЕЛЕЖКА',
+      t?.address ? `${t.address}${t.city ? `, ${t.city}` : ''}` : '',
+      t?.eik ? `ЕИК: ${t.eik}` : '',
+      t?.vatRegistered && t?.vatNumber ? `ДДС №: ${t.vatNumber}` : '',
       '================================',
       `Номер: ${completedSale.saleNo}`,
       `Дата:  ${new Date(completedSale.createdAt).toLocaleString('bg-BG')}`,
@@ -152,18 +189,88 @@ export default function PosDashboard() {
         (l) => `${l.productName}\n  ${l.quantity} x ${l.unitPrice.toFixed(2)} = ${l.total.toFixed(2)} лв.`
       ),
       '--------------------------------',
+      ...(t?.vatRegistered
+        ? [`Данъчна основа: ${vatBase.toFixed(2)} лв.`, `ДДС 20%: ${vatAmt.toFixed(2)} лв.`]
+        : []),
       `ОБЩО: ${completedSale.total.toFixed(2)} лв.`,
-      `Плащане: ${completedSale.paymentMethod === 'CASH' ? 'КЕШ' : completedSale.paymentMethod === 'CARD' ? 'КАРТА' : 'СМЕСЕНО'}`,
+      `Плащане: ${completedSale.paymentMethod === 'CASH' ? 'В БРОЙ' : completedSale.paymentMethod === 'CARD' ? 'С КАРТА' : 'СМЕСЕНО'}`,
       '================================',
       '     Благодарим ви!',
+      t?.mol ? `МОЛ: ${t.mol}` : '',
+      'Документът е издаден съгласно ЗДДС и Наредба Н-18',
       '================================'
-    ].join('\n')
+    ]
+      .filter(Boolean)
+      .join('\n')
 
-    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' })
+    const blob = new Blob(['\uFEFF' + lines], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `receipt-${completedSale.saleNo}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadInvoice = () => {
+    if (!completedSale?.invoiceNumber || !completedSale.tenant) return
+    const t = completedSale.tenant
+    const vatBase = t.vatRegistered ? completedSale.total / 1.2 : completedSale.total
+    const vatAmt = t.vatRegistered ? completedSale.total - vatBase : 0
+
+    const lines = [
+      '================================================================',
+      '                         Ф А К Т У Р А',
+      '================================================================',
+      `Фактура №:    ${completedSale.invoiceNumber}`,
+      `Дата:         ${new Date(completedSale.createdAt).toLocaleDateString('bg-BG')}`,
+      `Данъчна дата: ${new Date(completedSale.createdAt).toLocaleDateString('bg-BG')}`,
+      '',
+      '--- ДОСТАВЧИК ---',
+      `Фирма:  ${t.name || ''}`,
+      `ЕИК:    ${t.eik || ''}`,
+      t.vatRegistered ? `ДДС №:  ${t.vatNumber || ''}` : '',
+      `Адрес:  ${t.address || ''}, ${t.city || ''}`,
+      t.mol ? `МОЛ:    ${t.mol}` : '',
+      t.bankIban ? `IBAN:   ${t.bankIban}` : '',
+      t.bankName ? `Банка:  ${t.bankName}` : '',
+      '',
+      '--- ПОЛУЧАТЕЛ ---',
+      'Фирма:  [Получател]',
+      'ЕИК:    [ЕИК на получателя]',
+      'Адрес:  [Адрес на получателя]',
+      '(Полетата ще се попълват автоматично след добавяне на модул Счетоводство)',
+      '',
+      '================================================================',
+      'Артикул                        Кол.    Ед.цена    Стойност',
+      '----------------------------------------------------------------',
+      ...completedSale.lines.map(
+        (l) =>
+          `${l.productName.padEnd(30)} ${String(l.quantity).padStart(5)}  ${l.unitPrice.toFixed(2).padStart(9)}  ${l.total.toFixed(2).padStart(9)} лв.`
+      ),
+      '----------------------------------------------------------------',
+      ...(t.vatRegistered
+        ? [
+            `Данъчна основа (20%):              ${vatBase.toFixed(2).padStart(9)} лв.`,
+            `ДДС 20%:                           ${vatAmt.toFixed(2).padStart(9)} лв.`
+          ]
+        : []),
+      `ОБЩО:                              ${completedSale.total.toFixed(2).padStart(9)} лв.`,
+      '',
+      `Начин на плащане: ${completedSale.paymentMethod === 'CASH' ? 'В БРОЙ' : 'С КАРТА'}`,
+      '',
+      '================================================================',
+      'Съставил: _________________    Получател: _________________',
+      '',
+      'Документът е издаден съгласно ЗДДС',
+      '================================================================'
+    ].join('\n')
+
+    const blob = new Blob(['\uFEFF' + lines], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `invoice-${completedSale.invoiceNumber}.txt`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -173,6 +280,8 @@ export default function PosDashboard() {
     const currentCart = [...cart]
     const currentRegisterId = registerId
     const currentPaymentMethod = paymentMethod
+    const currentIssueInvoice = issueInvoice
+    const currentTenant = tenant
     const sale = await createSale.mutateAsync({
       cashRegisterId: registerId,
       paymentMethod,
@@ -195,10 +304,14 @@ export default function PosDashboard() {
         unitPrice: item.unitPrice,
         total: item.quantity * item.unitPrice
       })),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      issueInvoice: currentIssueInvoice,
+      invoiceNumber: currentIssueInvoice ? getInvoiceNumber() : undefined,
+      tenant: currentTenant
     })
     setCart([])
     setRegisterId('')
+    setIssueInvoice(false)
   }
 
   return (
@@ -292,6 +405,25 @@ export default function PosDashboard() {
                 </option>
               ))}
             </select>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                marginBottom: 10,
+                cursor: 'pointer',
+                fontSize: 13,
+                color: '#374151'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={issueInvoice}
+                onChange={(e) => setIssueInvoice(e.target.checked)}
+                style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#7c3aed' }}
+              />
+              Издай фактура
+            </label>
             <Button variant="success" onClick={completeSale} disabled={createSale.isPending || !cart.length || !registerId}>
               Завърши продажба
             </Button>
@@ -341,72 +473,184 @@ export default function PosDashboard() {
             </div>
 
             <div ref={receiptRef} style={{ padding: '20px 24px' }}>
-              <div
-                style={{
-                  textAlign: 'center',
-                  marginBottom: 16,
-                  paddingBottom: 16,
-                  borderBottom: '1px dashed #e5e7eb'
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 700 }}>КАСОВА БЕЛЕЖКА</div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                  {new Date(completedSale.createdAt).toLocaleString('bg-BG')}
-                </div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>Каса: {completedSale.registerName}</div>
-              </div>
+              {(() => {
+                const t = completedSale.tenant
+                return (
+                  <>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        marginBottom: 16,
+                        paddingBottom: 16,
+                        borderBottom: '1px dashed #e5e7eb'
+                      }}
+                    >
+                      {t?.logoUrl && (
+                        <img
+                          src={t.logoUrl}
+                          alt=""
+                          style={{ maxHeight: 40, objectFit: 'contain', marginBottom: 8 }}
+                          onError={(e) => {
+                            ;(e.target as HTMLImageElement).style.display = 'none'
+                          }}
+                        />
+                      )}
+                      <div style={{ fontSize: 14, fontWeight: 800 }}>{t?.name || 'DFlowERP'}</div>
+                      {t?.address && (
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>
+                          {t.address}
+                          {t?.city ? `, ${t.city}` : ''}
+                        </div>
+                      )}
+                      {t?.eik && <div style={{ fontSize: 11, color: '#6b7280' }}>ЕИК: {t.eik}</div>}
+                      {t?.vatRegistered && t?.vatNumber && (
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>ДДС №: {t.vatNumber}</div>
+                      )}
+                      {t?.phone && <div style={{ fontSize: 11, color: '#6b7280' }}>Тел: {t.phone}</div>}
+                    </div>
 
-              <div style={{ marginBottom: 16 }}>
-                {completedSale.lines.map((line, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: 8
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{line.productName}</div>
+                    <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.1em' }}>КАСОВА БЕЛЕЖКА</div>
+                      <div style={{ fontSize: 12, color: '#6b7280' }}>№ {completedSale.saleNo}</div>
                       <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                        {line.quantity} × {line.unitPrice.toFixed(2)} лв.
+                        {new Date(completedSale.createdAt).toLocaleString('bg-BG')}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>Каса: {completedSale.registerName}</div>
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr auto auto auto',
+                          gap: '4px 8px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#6b7280',
+                          borderBottom: '1px solid #e5e7eb',
+                          paddingBottom: 4,
+                          marginBottom: 6
+                        }}
+                      >
+                        <span>Артикул</span>
+                        <span style={{ textAlign: 'right' }}>Кол.</span>
+                        <span style={{ textAlign: 'right' }}>Ед.цена</span>
+                        <span style={{ textAlign: 'right' }}>Стойност</span>
+                      </div>
+                      {completedSale.lines.map((line, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr auto auto auto',
+                            gap: '2px 8px',
+                            fontSize: 12,
+                            marginBottom: 4
+                          }}
+                        >
+                          <span style={{ fontWeight: 500 }}>{line.productName}</span>
+                          <span style={{ textAlign: 'right', color: '#6b7280' }}>{line.quantity}</span>
+                          <span style={{ textAlign: 'right', color: '#6b7280' }}>{line.unitPrice.toFixed(2)}</span>
+                          <span style={{ textAlign: 'right', fontWeight: 600 }}>{line.total.toFixed(2)} лв.</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 10, marginBottom: 10 }}>
+                      {t?.vatRegistered && (
+                        <>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: 12,
+                              color: '#6b7280',
+                              marginBottom: 2
+                            }}
+                          >
+                            <span>Данъчна основа (20% ДДС):</span>
+                            <span>{(completedSale.total / 1.2).toFixed(2)} лв.</span>
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              fontSize: 12,
+                              color: '#6b7280',
+                              marginBottom: 6
+                            }}
+                          >
+                            <span>ДДС 20%:</span>
+                            <span>{(completedSale.total - completedSale.total / 1.2).toFixed(2)} лв.</span>
+                          </div>
+                        </>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 15, fontWeight: 800 }}>ОБЩО:</span>
+                        <span style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>
+                          {completedSale.total.toFixed(2)} лв.
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                        Начин на плащане:{' '}
+                        {completedSale.paymentMethod === 'CASH'
+                          ? 'В БРОЙ'
+                          : completedSale.paymentMethod === 'CARD'
+                            ? 'С КАРТА'
+                            : 'СМЕСЕНО'}
                       </div>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginLeft: 12 }}>{line.total.toFixed(2)} лв.</div>
-                  </div>
-                ))}
-              </div>
 
-              <div style={{ borderTop: '2px solid #0f172a', paddingTop: 12, marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 16, fontWeight: 800 }}>ОБЩО</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669' }}>
-                    {completedSale.total.toFixed(2)} лв.
-                  </div>
-                </div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                  Метод:{' '}
-                  {completedSale.paymentMethod === 'CASH'
-                    ? '💵 Кеш'
-                    : completedSale.paymentMethod === 'CARD'
-                      ? '💳 Карта'
-                      : 'Смесено'}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  textAlign: 'center',
-                  paddingTop: 12,
-                  borderTop: '1px dashed #e5e7eb',
-                  fontSize: 12,
-                  color: '#9ca3af'
-                }}
-              >
-                Благодарим ви!
-              </div>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        paddingTop: 10,
+                        borderTop: '1px dashed #e5e7eb',
+                        fontSize: 10,
+                        color: '#9ca3af'
+                      }}
+                    >
+                      <div>Благодарим ви!</div>
+                      {t?.mol && <div>МОЛ: {t.mol}</div>}
+                      <div style={{ marginTop: 4 }}>Документът е издаден съгласно ЗДДС и Наредба Н-18</div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
+
+            {completedSale.issueInvoice && (
+              <div style={{ padding: '12px 24px', borderTop: '1px solid #e5e7eb' }}>
+                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+                  📄 Фактура № {completedSale.invoiceNumber}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadInvoice}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px',
+                    background: '#7c3aed',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={15} />
+                  Свали фактура № {completedSale.invoiceNumber}
+                </button>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, textAlign: 'center' }}>
+                  Получателят ще може да се избира след добавяне на модул Счетоводство
+                </div>
+              </div>
+            )}
 
             <div
               style={{

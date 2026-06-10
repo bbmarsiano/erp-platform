@@ -13,6 +13,17 @@ model Tenant {
   name          String
   slug          String          @unique
   logoUrl       String?
+  address       String?
+  eik           String?
+  vatNumber     String?
+  vatRegistered Boolean         @default(false)
+  mol           String?
+  city          String?
+  country       String          @default("България")
+  phone         String?
+  email         String?
+  bankName      String?
+  bankIban      String?
   isActive      Boolean         @default(true)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

@@ -5,8 +5,21 @@ import { api } from '../lib/api'
 type SettingsTab = 'profile' | 'system' | 'license' | 'company'
 
 function CompanySettings() {
-  const [name, setName] = useState('')
-  const [logoUrl, setLogoUrl] = useState('')
+  const [form, setForm] = useState({
+    name: '',
+    logoUrl: '',
+    address: '',
+    eik: '',
+    vatNumber: '',
+    vatRegistered: false,
+    mol: '',
+    city: '',
+    country: 'България',
+    phone: '',
+    email: '',
+    bankName: '',
+    bankIban: ''
+  })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -14,124 +27,269 @@ function CompanySettings() {
     api
       .get('/api/tenant')
       .then((r) => {
-        setName(r.data.data.name || '')
-        setLogoUrl(r.data.data.logoUrl || '')
+        const t = r.data.data
+        setForm({
+          name: t.name || '',
+          logoUrl: t.logoUrl || '',
+          address: t.address || '',
+          eik: t.eik || '',
+          vatNumber: t.vatNumber || '',
+          vatRegistered: t.vatRegistered || false,
+          mol: t.mol || '',
+          city: t.city || '',
+          country: t.country || 'България',
+          phone: t.phone || '',
+          email: t.email || '',
+          bankName: t.bankName || '',
+          bankIban: t.bankIban || ''
+        })
       })
       .catch(() => {})
   }, [])
 
   const save = async () => {
     setSaving(true)
-    await api.put('/api/tenant', { name, logoUrl: logoUrl || null })
+    await api.put('/api/tenant', form)
     setSaved(true)
     setSaving(false)
     setTimeout(() => setSaved(false), 3000)
   }
 
-  return (
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '9px 12px',
+    border: '1.5px solid #e5e7eb',
+    borderRadius: 8,
+    fontSize: 13,
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+    outline: 'none'
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#374151',
+    marginBottom: 6
+  }
+
+  const section = (title: string) => (
     <div
       style={{
-        background: 'white',
-        border: '1px solid #e5e7eb',
-        borderRadius: 10,
-        padding: 24
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#7c3aed',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        marginTop: 20,
+        marginBottom: 12,
+        paddingBottom: 6,
+        borderBottom: '1px solid #e5e7eb'
       }}
     >
-      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 20px' }}>Настройки на фирмата</h2>
-      <div style={{ display: 'grid', gap: 16, maxWidth: 480 }}>
+      {title}
+    </div>
+  )
+
+  return (
+    <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 24 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 4px' }}>Настройки на фирмата</h2>
+      <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 20px' }}>
+        Тези данни се използват в касови бележки и фактури
+      </p>
+
+      {section('Основни данни')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: '#374151',
-              display: 'block',
-              marginBottom: 6
-            }}
-          >
-            Наименование на фирмата
-          </label>
+          <label style={labelStyle}>Наименование на фирмата *</label>
           <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              fontSize: 14,
-              boxSizing: 'border-box'
-            }}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
           />
         </div>
         <div>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              color: '#374151',
-              display: 'block',
-              marginBottom: 6
-            }}
-          >
-            URL на лого
-            <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>
-              (линк към изображение — https://...)
-            </span>
-          </label>
+          <label style={labelStyle}>МОЛ (Управител)</label>
           <input
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://example.com/logo.png"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: 8,
-              fontSize: 14,
-              boxSizing: 'border-box'
-            }}
+            value={form.mol}
+            onChange={(e) => setForm((f) => ({ ...f, mol: e.target.value }))}
+            placeholder="Иван Иванов"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
           />
         </div>
-        {logoUrl && (
-          <div
-            style={{
-              padding: 16,
-              background: '#f9fafb',
-              borderRadius: 8,
-              border: '1px solid #e5e7eb'
-            }}
-          >
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>Преглед:</div>
-            <img
-              src={logoUrl}
-              alt="Logo preview"
-              style={{ maxHeight: 48, maxWidth: 200, objectFit: 'contain' }}
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).style.display = 'none'
-              }}
-            />
-            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>powered by DFlowERP</div>
-          </div>
-        )}
-        <button
-          onClick={() => void save()}
-          disabled={saving}
-          style={{
-            padding: '10px 20px',
-            background: saving ? '#6b7280' : '#111',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: 'pointer',
-            alignSelf: 'flex-start'
-          }}
-        >
-          {saving ? 'Запазване...' : saved ? '✓ Запазено!' : 'Запази настройките'}
-        </button>
       </div>
+
+      {section('Данъчни данни')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div>
+          <label style={labelStyle}>ЕИК / Булстат *</label>
+          <input
+            value={form.eik}
+            onChange={(e) => setForm((f) => ({ ...f, eik: e.target.value }))}
+            placeholder="123456789"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>ДДС номер</label>
+          <input
+            value={form.vatNumber}
+            onChange={(e) => setForm((f) => ({ ...f, vatNumber: e.target.value }))}
+            placeholder="BG123456789"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={form.vatRegistered}
+            onChange={(e) => setForm((f) => ({ ...f, vatRegistered: e.target.checked }))}
+            style={{ width: 16, height: 16, cursor: 'pointer' }}
+          />
+          Регистриран по ДДС
+        </label>
+      </div>
+
+      {section('Адрес')}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div>
+          <label style={labelStyle}>Адрес на седалище</label>
+          <input
+            value={form.address}
+            onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+            placeholder="ул. Примерна 1"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Град</label>
+          <input
+            value={form.city}
+            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+            placeholder="София"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Държава</label>
+          <input
+            value={form.country}
+            onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+      </div>
+
+      {section('Контакти')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div>
+          <label style={labelStyle}>Телефон</label>
+          <input
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            placeholder="+359 2 000 0000"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Имейл</label>
+          <input
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            placeholder="info@firma.bg"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+      </div>
+
+      {section('Банкова информация')}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
+        <div>
+          <label style={labelStyle}>Банка</label>
+          <input
+            value={form.bankName}
+            onChange={(e) => setForm((f) => ({ ...f, bankName: e.target.value }))}
+            placeholder="ОББ"
+            style={fieldStyle}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>IBAN</label>
+          <input
+            value={form.bankIban}
+            onChange={(e) => setForm((f) => ({ ...f, bankIban: e.target.value }))}
+            placeholder="BG80BNBG96611020345678"
+            style={{ ...fieldStyle, fontFamily: 'monospace' }}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+        </div>
+      </div>
+
+      {section('Лого')}
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>URL на лого</label>
+        <input
+          value={form.logoUrl}
+          onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
+          placeholder="https://example.com/logo.png"
+          style={fieldStyle}
+          onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+          onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+        />
+        {form.logoUrl && (
+          <img
+            src={form.logoUrl}
+            alt="preview"
+            style={{ marginTop: 8, maxHeight: 40, objectFit: 'contain' }}
+            onError={(e) => {
+              ;(e.target as HTMLImageElement).style.display = 'none'
+            }}
+          />
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void save()}
+        disabled={saving}
+        style={{
+          padding: '10px 24px',
+          background: saving ? '#6b7280' : '#0f172a',
+          color: 'white',
+          border: 'none',
+          borderRadius: 8,
+          fontSize: 14,
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontFamily: 'inherit'
+        }}
+      >
+        {saving ? 'Запазване...' : saved ? '✓ Запазено!' : 'Запази настройките'}
+      </button>
     </div>
   )
 }
