@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Button, PageHeader } from '../../../components/ui'
+import { BackButton, Button, PageHeader } from '../../../components/ui'
 import { useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
 import { useAddDeliveryLine, useConfirmDelivery, useDelivery } from '../hooks/useScm'
 
@@ -43,6 +43,7 @@ export default function DeliveryDetail() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <BackButton to="/scm/deliveries" />
       <PageHeader
         title={`Доставка ${delivery?.deliveryNo ?? ''}`}
         action={
@@ -53,9 +54,6 @@ export default function DeliveryDetail() {
           ) : undefined
         }
       />
-      <div style={{ marginTop: 8, color: '#6b7280' }}>
-        <Link to="/scm/deliveries">← Назад</Link>
-      </div>
 
       {lastReceipt ? (
         <div style={{ marginTop: 12, padding: 12, border: '1px solid #86efac', borderRadius: 10, background: '#f0fdf4', color: '#166534' }}>

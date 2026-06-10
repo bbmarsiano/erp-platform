@@ -1,5 +1,5 @@
-import { Link, useParams } from 'react-router-dom'
-import { Button, PageHeader } from '../../../components/ui'
+import { useParams } from 'react-router-dom'
+import { BackButton, Button, PageHeader } from '../../../components/ui'
 import { useCompleteWorkOrder, useReleaseWorkOrder, useStartWorkOrder, useWorkOrder } from '../hooks/useMes'
 
 const woStatusMap: Record<string, { label: string; bg: string; color: string }> = {
@@ -20,6 +20,7 @@ export default function WorkOrderDetail() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <BackButton to="/mes/orders" />
       <PageHeader
         title={`Нареждане ${wo?.orderNo ?? ''}`}
         action={
@@ -30,9 +31,6 @@ export default function WorkOrderDetail() {
           </div>
         }
       />
-      <div style={{ marginTop: 8 }}>
-        <Link to="/mes/orders">← Назад</Link>
-      </div>
 
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }}>

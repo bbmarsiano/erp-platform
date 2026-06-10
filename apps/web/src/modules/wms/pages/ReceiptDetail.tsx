@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Button, PageHeader } from '../../../components/ui'
+import { BackButton, Button, PageHeader } from '../../../components/ui'
 import { StatusBadge } from '../components/StatusBadge'
 import { WarehouseSelector } from '../components/WarehouseSelector'
 import {
@@ -85,15 +85,8 @@ export default function ReceiptDetail() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <PageHeader
-        title="Приходна бележка"
-        subtitle={receipt?.receiptNo ? receipt.receiptNo : undefined}
-        action={
-          <Button variant="secondary" onClick={() => navigate('/wms/receipts')}>
-            Назад
-          </Button>
-        }
-      />
+      <BackButton to="/wms/receipts" />
+      <PageHeader title="Приходна бележка" subtitle={receipt?.receiptNo ? receipt.receiptNo : undefined} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
         <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14 }}>

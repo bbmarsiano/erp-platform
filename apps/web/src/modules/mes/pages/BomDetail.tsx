@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Button, PageHeader } from '../../../components/ui'
+import { useParams } from 'react-router-dom'
+import { BackButton, Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
 import { useAddBomItem, useBom } from '../hooks/useMes'
 
@@ -28,10 +28,8 @@ export default function BomDetail() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <BackButton to="/mes/bom" />
       <PageHeader title={`Рецептура: ${bom?.product?.name ?? ''}`} />
-      <div style={{ marginTop: 8, color: '#6b7280' }}>
-        <Link to="/mes/bom">← Назад</Link>
-      </div>
 
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

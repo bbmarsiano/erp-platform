@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Button, PageHeader } from '../../../components/ui'
+import { useParams } from 'react-router-dom'
+import { BackButton, Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
 import { useAddPurchaseOrderLine, usePurchaseOrder, useSendPurchaseOrder } from '../hooks/useScm'
 
@@ -27,6 +27,7 @@ export default function PurchaseOrderDetail() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <BackButton to="/scm/orders" />
       <PageHeader
         title={`Поръчка покупка ${order?.orderNo ?? ''}`}
         action={
@@ -37,9 +38,6 @@ export default function PurchaseOrderDetail() {
           ) : undefined
         }
       />
-      <div style={{ marginTop: 8, color: '#6b7280' }}>
-        <Link to="/scm/orders">← Назад</Link>
-      </div>
 
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14 }}>
         <div style={{ fontWeight: 800, marginBottom: 10 }}>Редове</div>

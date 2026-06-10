@@ -1,5 +1,5 @@
-import { Link, useParams } from 'react-router-dom'
-import { PageHeader } from '../../../components/ui'
+import { useParams } from 'react-router-dom'
+import { BackButton, PageHeader } from '../../../components/ui'
 import { useSale } from '../hooks/usePos'
 
 const paymentLabels: Record<string, string> = {
@@ -14,10 +14,8 @@ export default function SaleDetail() {
   const sale = saleQuery.data as any
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
+      <BackButton to="/pos/sales" />
       <PageHeader title={`Касова бележка ${sale?.saleNo ?? ''}`} />
-      <div style={{ marginTop: 8 }}>
-        <Link to="/pos/sales">← Назад</Link>
-      </div>
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
         <div>Каса: {sale?.cashRegister?.name ?? '-'}</div>
         <div>Метод: {sale?.paymentMethod ? paymentLabels[sale.paymentMethod] ?? sale.paymentMethod : '-'}</div>

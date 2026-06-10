@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Scan } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { Scan, Printer, Download, RotateCcw, CheckCircle } from 'lucide-react'
 import { BarcodeScanner, type ScanResult } from '../../../components/BarcodeScanner'
 import { Button, PageHeader } from '../../../components/ui'
 import { useStock } from '../../wms/hooks/useWms'
@@ -16,6 +16,15 @@ type CartItem = {
   unitPrice: number
 }
 
+type CompletedSale = {
+  saleNo: string
+  total: number
+  paymentMethod: string
+  registerName: string
+  lines: { productName: string; quantity: number; unitPrice: number; total: number }[]
+  createdAt: string
+}
+
 export default function PosDashboard() {
   const stock = useStock()
   const registers = useRegisters()
@@ -23,8 +32,9 @@ export default function PosDashboard() {
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH')
   const [registerId, setRegisterId] = useState('')
-  const [lastSale, setLastSale] = useState<any>(null)
+  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
+  const receiptRef = useRef<HTMLDivElement>(null)
 
   const products = useMemo(
     () =>
@@ -100,15 +110,95 @@ export default function PosDashboard() {
 
   const total = cart.reduce((sum, x) => sum + x.quantity * x.unitPrice, 0)
 
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank', 'width=400,height=600')
+    if (!printWindow || !receiptRef.current) return
+    printWindow.document.write(`
+    <html>
+    <head>
+      <title>Касова бележка ${completedSale?.saleNo}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; font-size: 12px;
+               width: 80mm; margin: 0 auto; padding: 10px; }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .separator { border-top: 1px dashed #000; margin: 8px 0; }
+        .row { display: flex; justify-content: space-between; margin: 3px 0; }
+        .total { font-size: 16px; font-weight: bold; margin: 8px 0; }
+        @media print { body { margin: 0; } }
+      </style>
+    </head>
+    <body>
+      ${receiptRef.current.innerHTML}
+      <script>window.onload = () => { window.print(); window.close(); }<\/script>
+    </body>
+    </html>
+  `)
+    printWindow.document.close()
+  }
+
+  const handleDownload = () => {
+    if (!completedSale) return
+    const lines = [
+      '================================',
+      '        КАСОВА БЕЛЕЖКА',
+      '================================',
+      `Номер: ${completedSale.saleNo}`,
+      `Дата:  ${new Date(completedSale.createdAt).toLocaleString('bg-BG')}`,
+      `Каса:  ${completedSale.registerName}`,
+      '--------------------------------',
+      ...completedSale.lines.map(
+        (l) => `${l.productName}\n  ${l.quantity} x ${l.unitPrice.toFixed(2)} = ${l.total.toFixed(2)} лв.`
+      ),
+      '--------------------------------',
+      `ОБЩО: ${completedSale.total.toFixed(2)} лв.`,
+      `Плащане: ${completedSale.paymentMethod === 'CASH' ? 'КЕШ' : completedSale.paymentMethod === 'CARD' ? 'КАРТА' : 'СМЕСЕНО'}`,
+      '================================',
+      '     Благодарим ви!',
+      '================================'
+    ].join('\n')
+
+    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `receipt-${completedSale.saleNo}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const completeSale = async () => {
     if (!registerId || cart.length === 0) return
+    const currentCart = [...cart]
+    const currentRegisterId = registerId
+    const currentPaymentMethod = paymentMethod
     const sale = await createSale.mutateAsync({
       cashRegisterId: registerId,
       paymentMethod,
-      lines: cart.map((c) => ({ productId: c.productId, locationId: c.locationId, quantity: c.quantity, unitPrice: c.unitPrice }))
+      lines: cart.map((c) => ({
+        productId: c.productId,
+        locationId: c.locationId,
+        quantity: c.quantity,
+        unitPrice: c.unitPrice
+      }))
     })
-    setLastSale(sale)
+    const registerList = (registers.data ?? []) as Array<{ id: string; name: string }>
+    setCompletedSale({
+      saleNo: sale.saleNo || sale.id,
+      total: Number(sale.totalAmount),
+      paymentMethod: currentPaymentMethod,
+      registerName: registerList.find((r) => r.id === currentRegisterId)?.name || '',
+      lines: currentCart.map((item) => ({
+        productName: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.quantity * item.unitPrice
+      })),
+      createdAt: new Date().toISOString()
+    })
     setCart([])
+    setRegisterId('')
   }
 
   return (
@@ -207,16 +297,195 @@ export default function PosDashboard() {
             </Button>
           </div>
 
-          {lastSale ? (
-            <div style={{ marginTop: 12, padding: 10, borderRadius: 10, border: '1px solid #86efac', background: '#f0fdf4', color: '#166534' }}>
-              ✅ Продажба {lastSale.saleNo} — {lastSale.totalAmount?.toFixed?.(2) ?? lastSale.totalAmount} лв.
-              <div style={{ marginTop: 8 }}>
-                <Button onClick={() => setLastSale(null)}>Нова продажба</Button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
+
+      {completedSale && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 420,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #059669, #10b981)',
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12
+              }}
+            >
+              <CheckCircle size={28} color="white" />
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>Продажбата е завършена!</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{completedSale.saleNo}</div>
+              </div>
+            </div>
+
+            <div ref={receiptRef} style={{ padding: '20px 24px' }}>
+              <div
+                style={{
+                  textAlign: 'center',
+                  marginBottom: 16,
+                  paddingBottom: 16,
+                  borderBottom: '1px dashed #e5e7eb'
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 700 }}>КАСОВА БЕЛЕЖКА</div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                  {new Date(completedSale.createdAt).toLocaleString('bg-BG')}
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Каса: {completedSale.registerName}</div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                {completedSale.lines.map((line, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: 8
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{line.productName}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                        {line.quantity} × {line.unitPrice.toFixed(2)} лв.
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginLeft: 12 }}>{line.total.toFixed(2)} лв.</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ borderTop: '2px solid #0f172a', paddingTop: 12, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 16, fontWeight: 800 }}>ОБЩО</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669' }}>
+                    {completedSale.total.toFixed(2)} лв.
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                  Метод:{' '}
+                  {completedSale.paymentMethod === 'CASH'
+                    ? '💵 Кеш'
+                    : completedSale.paymentMethod === 'CARD'
+                      ? '💳 Карта'
+                      : 'Смесено'}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  paddingTop: 12,
+                  borderTop: '1px dashed #e5e7eb',
+                  fontSize: 12,
+                  color: '#9ca3af'
+                }}
+              >
+                Благодарим ви!
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid #e5e7eb',
+                display: 'flex',
+                gap: 8
+              }}
+            >
+              <button
+                type="button"
+                onClick={handlePrint}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px',
+                  background: '#0f172a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Printer size={15} />
+                Принтирай
+              </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px',
+                  background: 'white',
+                  color: '#374151',
+                  border: '1.5px solid #e5e7eb',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Download size={15} />
+                Свали
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompletedSale(null)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  padding: '10px',
+                  background: '#f0fdf4',
+                  color: '#059669',
+                  border: '1.5px solid #bbf7d0',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <RotateCcw size={15} />
+                Нова продажба
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {scannerOpen && <BarcodeScanner title="POS Скенер" onProductFound={handleProductScanned} onClose={() => setScannerOpen(false)} />}
     </div>
