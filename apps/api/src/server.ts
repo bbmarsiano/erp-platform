@@ -7,6 +7,7 @@ import jwtPlugin from './plugins/jwt'
 import moduleLoaderPlugin from './plugins/moduleLoader'
 import swaggerPlugin from './plugins/swagger'
 import healthRoute from './routes/health.route'
+import publicRoute from './routes/public.route'
 import authRoute from './routes/auth.route'
 import usersRoute from './routes/users.route'
 
@@ -23,6 +24,7 @@ const buildServer = async (): Promise<FastifyInstance> => {
   await app.register(swaggerPlugin)
   await app.register(moduleLoaderPlugin)
   await app.register(healthRoute, { prefix: '/api' })
+  await app.register(publicRoute, { prefix: '/api' })
   await app.register(authRoute, { prefix: '/api' })
   await app.register(usersRoute, { prefix: '/api' })
   return app

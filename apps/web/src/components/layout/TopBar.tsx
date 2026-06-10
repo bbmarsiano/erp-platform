@@ -41,6 +41,12 @@ export function TopBar({
       .catch(() => {})
   }, [])
 
+  useEffect(() => {
+    if (companyName) {
+      document.title = `${companyName} — ERP`
+    }
+  }, [companyName])
+
   return (
     <div
       style={{

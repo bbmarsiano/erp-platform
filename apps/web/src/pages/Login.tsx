@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import logoLogin from '../assets/logo_login.png'
+import { api } from '../lib/api'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -10,6 +11,26 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [tenantName, setTenantName] = useState('')
+  const [tenantLogo, setTenantLogo] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .get('/api/public/tenant-info')
+      .then((r) => {
+        setTenantName(r.data.data.name || '')
+        setTenantLogo(r.data.data.logoUrl || null)
+      })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (tenantName && tenantName !== 'DFlowERP') {
+      document.title = `${tenantName} — ERP`
+    } else {
+      document.title = 'DFlowERP'
+    }
+  }, [tenantName])
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -127,12 +148,36 @@ export default function Login() {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img
-            src={logoLogin}
-            alt="Logo"
-            style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain', marginBottom: 16 }}
-          />
-          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>Влезте в своя акаунт</p>
+          {tenantLogo ? (
+            <img
+              src={tenantLogo}
+              alt={tenantName}
+              style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain', marginBottom: 12 }}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+          ) : (
+            <img
+              src={logoLogin}
+              alt="DFlowERP"
+              style={{ maxWidth: 200, maxHeight: 60, objectFit: 'contain', marginBottom: 12 }}
+            />
+          )}
+
+          {tenantName && tenantName !== 'DFlowERP' && tenantName !== 'Demo Company' ? (
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.3px' }}>
+                {tenantName}
+              </div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>ERP система</div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#0f172a' }}>DFlowERP</div>
+              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>Влезте в своя акаунт</div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
