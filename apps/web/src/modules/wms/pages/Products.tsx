@@ -33,6 +33,7 @@ const emptyForm = {
   price: '',
   description: '',
   initialStock: 0,
+  stockAdjustment: 0,
   warehouseId: ''
 }
 
@@ -87,6 +88,7 @@ export default function Products() {
     mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/api/wms/products/${id}`, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wms', 'products'] })
+      qc.invalidateQueries({ queryKey: ['wms', 'stock'] })
       setEditingProduct(null)
       setForm(emptyForm)
       setFormError('')
@@ -113,6 +115,7 @@ export default function Products() {
       price: product.price?.toString() || '',
       description: product.description || '',
       initialStock: 0,
+      stockAdjustment: 0,
       warehouseId: ''
     })
     setShowForm(true)
@@ -135,6 +138,10 @@ export default function Products() {
       setFormError('Изберете склад за началната наличност')
       return
     }
+    if (editingProduct && form.stockAdjustment !== 0 && !form.warehouseId) {
+      setFormError('Изберете склад за корекцията на наличност')
+      return
+    }
     if (editingProduct) {
       updateMutation.mutate({
         id: editingProduct.id,
@@ -144,7 +151,9 @@ export default function Products() {
           barcode: form.barcode || null,
           minStock: Number(form.minStock),
           price: form.price ? Number(form.price) : null,
-          description: form.description || null
+          description: form.description || null,
+          stockAdjustment: Number(form.stockAdjustment),
+          warehouseId: form.warehouseId || null
         }
       })
     } else {
@@ -371,6 +380,96 @@ export default function Products() {
               onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
             />
           </div>
+
+          {editingProduct && (
+            <div
+              style={{
+                marginBottom: 16,
+                padding: '14px 16px',
+                background: '#f8faff',
+                border: '1px solid #e0e7ff',
+                borderRadius: 10
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#4f46e5',
+                  marginBottom: 12,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Корекция на наличност
+              </div>
+
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
+                Текуща наличност:{' '}
+                <strong style={{ color: '#0f172a' }}>
+                  {editingProduct.stockItems?.reduce((s, si) => s + si.quantity, 0) ?? 0} {editingProduct.unit}
+                </strong>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+                <div>
+                  <label
+                    style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}
+                  >
+                    Корекция (+ добави / - извади)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={form.stockAdjustment}
+                    onChange={(e) => setForm((f) => ({ ...f, stockAdjustment: Number(e.target.value) }))}
+                    placeholder="0"
+                    style={inputStyle}
+                    onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+                    onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+                  />
+                  {form.stockAdjustment !== 0 && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        marginTop: 4,
+                        color: form.stockAdjustment > 0 ? '#059669' : '#dc2626'
+                      }}
+                    >
+                      {form.stockAdjustment > 0
+                        ? `+${form.stockAdjustment} ще се добавят`
+                        : `${form.stockAdjustment} ще се извадят`}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label
+                    style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}
+                  >
+                    Склад
+                  </label>
+                  <select
+                    value={form.warehouseId}
+                    onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}
+                    style={{ ...inputStyle, background: 'white', cursor: 'pointer' }}
+                  >
+                    <option value="">— Изберете склад —</option>
+                    {(warehouses as Array<{ id: string; name: string }>).map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {form.stockAdjustment !== 0 && !form.warehouseId && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#d97706' }}>
+                  ⚠ Изберете склад за да се запише корекцията
+                </div>
+              )}
+            </div>
+          )}
 
           {!editingProduct && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>

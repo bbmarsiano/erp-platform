@@ -566,47 +566,52 @@ export function BarcodeScanner({
                 padding: '12px 16px',
                 borderRadius: 10,
                 display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: result.ok === null ? '#fefce8' : result.ok ? '#f0fdf4' : '#fef2f2',
-                border: `1px solid ${result.ok === null ? '#fde047' : result.ok ? '#bbf7d0' : '#fecaca'}`
+                flexDirection: 'column',
+                gap: 8,
+                background: result.ok === null ? '#fefce8' : result.ok === true ? '#f0fdf4' : '#fef2f2',
+                border: `1px solid ${
+                  result.ok === null ? '#fde047' : result.ok === true ? '#bbf7d0' : '#fecaca'
+                }`
               }}
             >
-              <span style={{ fontSize: 18 }}>{result.ok === null ? '⏳' : result.ok ? '✅' : '❌'}</span>
-              <div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: result.ok === null ? '#854d0e' : result.ok ? '#15803d' : '#dc2626'
-                  }}
-                >
-                  {result.message}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>{result.ok === null ? '⏳' : result.ok ? '✅' : '❌'}</span>
+                <div style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: result.ok === null ? '#854d0e' : result.ok === true ? '#15803d' : '#dc2626'
+                    }}
+                  >
+                    {result.message}
+                  </div>
+                  {result.product && (
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                      Наличност: {result.product.totalStock} {result.product.unit}
+                      {result.product.price != null && ` · Цена: ${result.product.price} лв.`}
+                    </div>
+                  )}
                 </div>
-                {result.product && (
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                    Наличност: {result.product.totalStock} {result.product.unit} · Цена: {result.product.price ?? '—'} лв.
-                  </div>
-                )}
-                {result.ok === true && (
-                  <div style={{ marginTop: 6 }}>
-                    <div style={{ height: 3, background: '#dcfce7', borderRadius: 2, overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          height: '100%',
-                          background: '#16a34a',
-                          borderRadius: 2,
-                          width: '100%',
-                          animation: 'shrinkBar 2.5s linear forwards'
-                        }}
-                      />
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, textAlign: 'right' }}>
-                      Затваряне след 2.5с...
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {result.ok === true && (
+                <div>
+                  <div style={{ height: 4, background: '#dcfce7', borderRadius: 2, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        background: 'linear-gradient(90deg, #16a34a, #4ade80)',
+                        borderRadius: 2,
+                        animation: 'shrinkBar 2.5s linear forwards'
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3, textAlign: 'right' }}>
+                    Затваряне след 2.5с...
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

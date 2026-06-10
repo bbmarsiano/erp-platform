@@ -189,6 +189,8 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         price: number
         description: string
         isActive: boolean
+        stockAdjustment: number
+        warehouseId: string
       }>
 
       const owned = await prisma.product.findFirst({
@@ -226,6 +228,79 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           ...(body.isActive !== undefined && { isActive: body.isActive })
         }
       })
+
+      if (body.stockAdjustment && body.stockAdjustment !== 0 && body.warehouseId) {
+        const warehouse = await prisma.warehouse.findFirst({
+          where: { id: body.warehouseId, tenantId: request.user.tenantId, isActive: true }
+        })
+        if (!warehouse) {
+          return reply.status(400).send({ success: false, error: 'Складът не е намерен' })
+        }
+
+        const location = await prisma.location.findFirst({
+          where: { warehouseId: body.warehouseId, isActive: true },
+          orderBy: { code: 'asc' }
+        })
+
+        if (location) {
+          const qty = Math.abs(body.stockAdjustment)
+          const isIn = body.stockAdjustment > 0
+          const movType = isIn ? 'IN' : 'OUT'
+
+          const existing = await prisma.stockItem.findFirst({
+            where: {
+              tenantId: request.user.tenantId,
+              productId: id,
+              locationId: location.id,
+              lotNumber: null
+            }
+          })
+
+          if (!isIn) {
+            if (!existing || existing.quantity < qty) {
+              return reply.status(400).send({
+                success: false,
+                error: `Недостатъчна наличност за изваждане (налично: ${existing?.quantity ?? 0})`
+              })
+            }
+            await prisma.stockItem.update({
+              where: { id: existing.id },
+              data: { quantity: { decrement: qty } }
+            })
+          } else if (existing) {
+            await prisma.stockItem.update({
+              where: { id: existing.id },
+              data: { quantity: { increment: qty } }
+            })
+          } else {
+            await prisma.stockItem.create({
+              data: {
+                tenantId: request.user.tenantId,
+                productId: id,
+                locationId: location.id,
+                quantity: qty,
+                lotNumber: null
+              }
+            })
+          }
+
+          await prisma.stockMovement.create({
+            data: {
+              tenantId: request.user.tenantId,
+              productId: id,
+              movementType: movType,
+              quantity: qty,
+              toLocationId: isIn ? location.id : undefined,
+              fromLocationId: !isIn ? location.id : undefined,
+              referenceType: 'ADJUSTMENT',
+              referenceId: id,
+              note: 'Ръчна корекция на наличност',
+              createdBy: request.user.id
+            }
+          })
+        }
+      }
+
       return reply.send({ success: true, data: product })
     }
   )
