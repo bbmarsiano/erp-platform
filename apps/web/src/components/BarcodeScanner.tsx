@@ -92,7 +92,7 @@ export function BarcodeScanner({
           setResult(null)
           lastScanned.current = ''
           setLastScannedLabel('')
-        }, 1000)
+        }, 2500)
       } catch (err: any) {
         const msg = err?.response?.data?.error || 'Баркодът не е намерен'
         const scannedBarcode = barcode
@@ -137,6 +137,10 @@ export function BarcodeScanner({
     @keyframes cornerPulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
+    }
+    @keyframes shrinkBar {
+      from { width: 100%; }
+      to   { width: 0%; }
     }
     #barcode-camera-preview video {
       width: 100% !important;
@@ -582,6 +586,24 @@ export function BarcodeScanner({
                 {result.product && (
                   <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     Наличност: {result.product.totalStock} {result.product.unit} · Цена: {result.product.price ?? '—'} лв.
+                  </div>
+                )}
+                {result.ok === true && (
+                  <div style={{ marginTop: 6 }}>
+                    <div style={{ height: 3, background: '#dcfce7', borderRadius: 2, overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          background: '#16a34a',
+                          borderRadius: 2,
+                          width: '100%',
+                          animation: 'shrinkBar 2.5s linear forwards'
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, textAlign: 'right' }}>
+                      Затваряне след 2.5с...
+                    </div>
                   </div>
                 )}
               </div>

@@ -38,7 +38,9 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             barcode: { type: 'string' },
             minStock: { type: 'number' },
             price: { type: 'number' },
-            description: { type: 'string' }
+            description: { type: 'string' },
+            initialStock: { type: 'number' },
+            warehouseId: { type: 'string' }
           }
         }
       },
@@ -53,6 +55,8 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         minStock?: number
         price?: number
         description?: string
+        initialStock?: number
+        warehouseId?: string
       }
 
       const existing = await prisma.product.findFirst({
@@ -101,6 +105,69 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           payload: { code: product.code, name: product.name }
         }
       })
+
+      if (body.initialStock && body.initialStock > 0) {
+        if (!body.warehouseId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Изберете склад за началната наличност'
+          })
+        }
+
+        const warehouse = await prisma.warehouse.findFirst({
+          where: { id: body.warehouseId, tenantId: request.user.tenantId, isActive: true }
+        })
+        if (!warehouse) {
+          return reply.status(400).send({ success: false, error: 'Складът не е намерен' })
+        }
+
+        const location = await prisma.location.findFirst({
+          where: { warehouseId: body.warehouseId, isActive: true },
+          orderBy: { code: 'asc' }
+        })
+
+        if (location) {
+          const existing = await prisma.stockItem.findFirst({
+            where: {
+              tenantId: request.user.tenantId,
+              productId: product.id,
+              locationId: location.id,
+              lotNumber: null
+            }
+          })
+
+          if (existing) {
+            await prisma.stockItem.update({
+              where: { id: existing.id },
+              data: { quantity: { increment: body.initialStock } }
+            })
+          } else {
+            await prisma.stockItem.create({
+              data: {
+                tenantId: request.user.tenantId,
+                productId: product.id,
+                locationId: location.id,
+                quantity: body.initialStock,
+                lotNumber: null
+              }
+            })
+          }
+
+          await prisma.stockMovement.create({
+            data: {
+              tenantId: request.user.tenantId,
+              productId: product.id,
+              movementType: 'IN',
+              quantity: body.initialStock,
+              toLocationId: location.id,
+              referenceType: 'INITIAL_STOCK',
+              referenceId: product.id,
+              note: 'Начална наличност при създаване на продукт',
+              createdBy: request.user.id
+            }
+          })
+        }
+      }
 
       return reply.status(201).send({ success: true, data: product })
     }

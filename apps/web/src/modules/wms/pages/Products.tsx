@@ -6,6 +6,7 @@ import { BarcodeScanner } from '../../../components/BarcodeScanner'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
+import { useWarehouses } from '../hooks/useWms'
 
 interface Product {
   id: string
@@ -30,7 +31,9 @@ const emptyForm = {
   barcode: '',
   minStock: 0,
   price: '',
-  description: ''
+  description: '',
+  initialStock: 0,
+  warehouseId: ''
 }
 
 export default function Products() {
@@ -48,6 +51,8 @@ export default function Products() {
     queryFn: () => api.get('/api/wms/products').then((r) => r.data.data as Product[])
   })
 
+  const { data: warehouses = [] } = useWarehouses()
+
   const filtered = products.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -58,13 +63,19 @@ export default function Products() {
   const createMutation = useMutation({
     mutationFn: (data: typeof emptyForm) =>
       api.post('/api/wms/products', {
-        ...data,
+        code: data.code,
+        name: data.name,
+        unit: data.unit,
+        barcode: data.barcode || null,
         minStock: Number(data.minStock),
         price: data.price ? Number(data.price) : null,
-        barcode: data.barcode || null
+        description: data.description || null,
+        initialStock: Number(data.initialStock),
+        warehouseId: data.warehouseId || null
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wms', 'products'] })
+      qc.invalidateQueries({ queryKey: ['wms', 'stock'] })
       setShowForm(false)
       setForm(emptyForm)
       setFormError('')
@@ -100,7 +111,9 @@ export default function Products() {
       barcode: product.barcode || '',
       minStock: product.minStock,
       price: product.price?.toString() || '',
-      description: product.description || ''
+      description: product.description || '',
+      initialStock: 0,
+      warehouseId: ''
     })
     setShowForm(true)
     setFormError('')
@@ -116,6 +129,10 @@ export default function Products() {
   const handleSubmit = () => {
     if (!form.code.trim() || !form.name.trim() || !form.unit.trim()) {
       setFormError('Код, наименование и мерна единица са задължителни')
+      return
+    }
+    if (!editingProduct && form.initialStock > 0 && !form.warehouseId) {
+      setFormError('Изберете склад за началната наличност')
       return
     }
     if (editingProduct) {
@@ -354,6 +371,49 @@ export default function Products() {
               onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
             />
           </div>
+
+          {!editingProduct && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div>
+                <label
+                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}
+                >
+                  Начална наличност
+                  <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6 }}>(незадължително)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={form.initialStock}
+                  onChange={(e) => setForm((f) => ({ ...f, initialStock: Number(e.target.value) }))}
+                  placeholder="0"
+                  style={inputStyle}
+                  onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+                  onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+                />
+              </div>
+              <div>
+                <label
+                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}
+                >
+                  Склад за наличността
+                </label>
+                <select
+                  value={form.warehouseId}
+                  onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}
+                  style={{ ...inputStyle, background: 'white', cursor: 'pointer' }}
+                >
+                  <option value="">— Изберете склад —</option>
+                  {(warehouses as Array<{ id: string; name: string }>).map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           {formError && (
             <div

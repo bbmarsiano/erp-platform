@@ -61,22 +61,41 @@ export default function PosDashboard() {
   const handleProductScanned = useCallback(
     (product: ScanResult) => {
       setScannerOpen(false)
-      const fromStockList = products.find((r) => r.product.id === product.id && r.quantity > 0)
-      if (fromStockList) {
-        addToCart(fromStockList)
-        return
-      }
+
+      const stockRow = products.find((r) => r.product.id === product.id && r.quantity > 0)
       const stockItem = product.stockItems?.find((si) => si.quantity > 0 && si.location)
-      if (stockItem?.location) {
-        addToCart({
-          id: stockItem.id,
-          product: { id: product.id, name: product.name, code: product.code, unit: product.unit },
-          location: stockItem.location,
-          quantity: stockItem.quantity
-        })
-      }
+      const locationId = stockRow?.location?.id ?? stockItem?.location?.id ?? stockItem?.locationId
+      if (!locationId) return
+
+      const available = stockRow?.quantity ?? stockItem?.quantity ?? product.totalStock ?? 0
+      const unitPrice = product.price ?? 1
+
+      setCart((prev) => {
+        const idx = prev.findIndex((c) => c.productId === product.id && c.locationId === locationId)
+        if (idx >= 0) {
+          const next = [...prev]
+          next[idx] = {
+            ...next[idx],
+            quantity: Math.min(next[idx].quantity + 1, next[idx].available || available || 999)
+          }
+          return next
+        }
+        return [
+          ...prev,
+          {
+            productId: product.id,
+            locationId,
+            name: product.name,
+            code: product.code,
+            unit: product.unit,
+            available: available || 999,
+            quantity: 1,
+            unitPrice
+          }
+        ]
+      })
     },
-    [addToCart, products]
+    [products]
   )
 
   const total = cart.reduce((sum, x) => sum + x.quantity * x.unitPrice, 0)
