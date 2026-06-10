@@ -1,110 +1,118 @@
-# DFlowERP — Инструкции за тестване
+# DFlowERP — Инструкции за тестване v0.2.0
 
-## Prerequisites (задължителни на тестовата машина)
+## Prerequisites
 
 | Компонент | Версия | Проверка |
-|-----------|--------|----------|
-| Node.js | 20+ | `node --version` |
+|-----------|--------|---------|
+| Node.js | **20+** | `node --version` |
 | PostgreSQL | 14+ | `psql --version` |
 | pnpm | 9+ | `pnpm --version` |
 
+⚠️ **Node.js v12 НЕ работи.** Изтегли v20 LTS от https://nodejs.org
+
 ---
 
-## Mac (Apple Silicon — M1/M2/M3)
+## Инсталация с installer
 
+### Windows
+1. Свали `dflow-installer-windows-amd64.exe` от
+   https://github.com/bbmarsiano/erp-platform/releases/tag/v0.2.0-installer
+2. Отвори CMD като Administrator
+3. `cd C:\Users\[потребител]\Downloads`
+4. `dflow-installer-windows-amd64.exe`
+5. Въведи лиценз: `DEMO-0000-0000-0000`
+6. Браузърът се отваря на http://localhost:7788
+
+### Mac (Apple Silicon)
 ```bash
-# 1. Свали installer-а
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.1.0-installer/dflow-installer-darwin-arm64 -o dflow-installer
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.2.0-installer/dflow-installer-darwin-arm64 -o dflow-installer
 chmod +x dflow-installer
+./dflow-installer
+# Лиценз: DEMO-0000-0000-0000
+```
 
-# 2. Пусни
+### Mac (Intel)
+```bash
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.2.0-installer/dflow-installer-darwin-amd64 -o dflow-installer
+chmod +x dflow-installer
 ./dflow-installer
 ```
 
-## Mac (Intel)
-
+### Linux
 ```bash
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.1.0-installer/dflow-installer-darwin-amd64 -o dflow-installer
-chmod +x dflow-installer
-./dflow-installer
-```
-
-## Windows
-
-1. Свали `dflow-installer-windows-amd64.exe` от:
-   https://github.com/bbmarsiano/erp-platform/releases/tag/v0.1.0-installer
-2. Десен клик → **Run as Administrator**
-3. Следвай стъпките в терминала
-
-## Linux (Ubuntu/Debian)
-
-```bash
-# Провери Node.js (инсталирай ако липсва)
-node --version || (curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt-get install -y nodejs)
-
-# Свали и пусни installer-а
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.1.0-installer/dflow-installer-linux-amd64 -o dflow-installer
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.2.0-installer/dflow-installer-linux-amd64 -o dflow-installer
 chmod +x dflow-installer
 sudo ./dflow-installer
 ```
 
 ---
 
-## Стъпки в installer-а
+## Wizard стъпки
 
-1. **License key:** `DEMO-0000-0000-0000` (demo лиценз)
-2. Браузърът се отваря автоматично на `http://localhost:7788`
-3. **Стъпка 1 — Информация за фирмата:**
-   - Наименование на фирмата
-   - Администраторски имейл
-4. **Стъпка 2 — Сигурност и конфигурация:**
-   - Парола (минимум 8 символа)
-   - Порт (default: `3001`)
-   - IP адрес / хост (default: `0.0.0.0` за всички интерфейси)
-5. **Стъпка 3 — Преглед:** провери данните и натисни "Инсталирай DFlowERP"
-6. **Стъпка 4 — Успех:** натисни "Отвори DFlowERP" → зарежда login страницата
+1. **Лиценз:** `DEMO-0000-0000-0000`
+2. Браузърът отваря http://localhost:7788
+3. **Стъпка 0:** Проверка на prerequisites (Node.js, pnpm, PostgreSQL)
+4. **Стъпка 1:** Фирма + имейл
+5. **Стъпка 2:** Парола + порт (default 3001) + IP адрес (default 0.0.0.0)
+6. **Стъпка 3:** Преглед → "Инсталирай DFlowERP"
+7. **Стъпка 4:** Успех → "Отвори DFlowERP"
 
 ---
 
 ## Валидация след инсталация
 
 ```bash
-# 1. API health check
+# API health check
 curl http://localhost:3001/api/health
 # Очаквано: {"success":true,"data":{"status":"ok",...}}
 
-# 2. Login тест
+# Login
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"[admin email от wizard]","password":"[парола от wizard]"}'
-# Очаквано: {"success":true,"data":{"accessToken":"...",...}}
+  -d '{"email":"[admin email]","password":"[парола от wizard]"}'
 
-# 3. База данни
-psql -U dflow -d dflow_erp -c "SELECT name, slug FROM tenants;"
-# Очаквано: ред с фирмата от wizard-а
-
-# 4. .env файл (Mac)
-cat ~/Applications/DFlowERP/.env
-
-# 4. .env файл (Linux)
-cat /opt/dflow-erp/.env
-
-# 5. Frontend
-# Отвори в браузър: http://localhost:3001
-# Трябва да зареди React login страницата
+# WMS - склад
+curl http://localhost:3001/api/wms/warehouses \
+  -H "Authorization: Bearer [токен от login]"
 ```
 
 ---
 
-## VPN / мрежов достъп (за служители)
+## Баркод скенер — тестване
 
-Когато ERP-то е инсталирано на централен сървър:
+### USB/Bluetooth скенер
+1. Отиди на `/wms/products`
+2. Кликни "Нов продукт" → попълни данните → в "Баркод" поле кликни 📷 иконата
+3. Насочи скенера към баркод — автоматично попълва полето
 
-1. По време на инсталация задай **IP адрес на сървъра** вместо `0.0.0.0`
-   - Пример: `192.168.1.100` или `erp.firma.bg`
-2. Служителите се свързват с VPN към мрежата на фирмата
-3. Отварят браузър на `http://192.168.1.100:3001`
-4. Логват се с потребителско име и парола
+### Camera скенер
+```bash
+# Инсталирай camera library (еднократно)
+pnpm --filter @dflow/web add @ericblade/quagga2
+```
+1. Chrome браузър (не Safari)
+2. POS → "Сканирай" → "Камера" → "Активирай камера"
+3. Разреши достъп до камерата
+4. Насочи баркода към рамката
+
+---
+
+## VPN/мрежов достъп
+
+При инсталация на сървър:
+1. В wizard Стъпка 2 → IP: `192.168.1.100` (IP на сървъра)
+2. Служителите отварят: `http://192.168.1.100:3001`
+
+---
+
+## Dev тест (без инсталация)
+
+```bash
+cd installer
+make build-dev
+./dist/dflow-installer-dev --wizard-only
+# http://localhost:7788
+```
 
 ---
 
@@ -112,33 +120,23 @@ cat /opt/dflow-erp/.env
 
 | Проблем | Решение |
 |---------|---------|
-| Download 404 | Провери дали release `v0.1.0-engine` съществува в GitHub |
-| PostgreSQL install fails | `sudo apt-get install -y postgresql-16` (Linux) или `brew install postgresql@16` (Mac) |
-| pnpm install fails | Провери Node.js версия: трябва 20+ |
-| Port 3001 зает | Промени порта в wizard-а (напр. `3002`) |
-| Браузърът не се отваря | Отвори ръчно `http://localhost:7788` |
-| "Invalid credentials" при login | Провери дали seed-ът е минал: `psql -U dflow -d dflow_erp -c "SELECT email FROM users;"` |
-
----
-
-## Dev тестване (без пълна инсталация)
-
-```bash
-cd installer
-make build-dev
-./dist/dflow-installer-dev --wizard-only
-# Отваря wizard на http://localhost:7788 без реална инсталация
-```
+| Node.js стара версия | Свали v20 LTS от nodejs.org |
+| winget не работи | Свали Node.js директно от nodejs.org |
+| Port 3001 зает | Смени порта в wizard стъпка 2 |
+| Браузърът не се отваря | Отвори ръчно http://localhost:7788 |
+| Camera не работи | Ползвай Chrome, не Safari |
+| "License unreachable" | Провери интернет връзката |
 
 ---
 
 ## Releases
 
-| Файл | Платформа |
-|------|-----------|
-| `dflow-installer-windows-amd64.exe` | Windows 64-bit |
-| `dflow-installer-darwin-arm64` | Mac Apple Silicon |
-| `dflow-installer-darwin-amd64` | Mac Intel |
-| `dflow-installer-linux-amd64` | Linux 64-bit |
+| Файл | Платформа | Размер |
+|------|-----------|--------|
+| `dflow-installer-windows-amd64.exe` | Windows 64-bit | ~7.5MB |
+| `dflow-installer-darwin-arm64` | Mac Apple Silicon | ~6.8MB |
+| `dflow-installer-darwin-amd64` | Mac Intel | ~7.3MB |
+| `dflow-installer-linux-amd64` | Linux 64-bit | ~7.2MB |
 
-Release URL: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.1.0-installer
+Installer: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.2.0-installer
+Engine: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.2.0-engine

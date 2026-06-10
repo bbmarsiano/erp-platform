@@ -1,38 +1,60 @@
 # DFlowERP Installer
 
-## For end users (clients)
-Download the installer for your platform from:
-https://github.com/bbmarsiano/erp-platform/releases
+Cross-platform installer за DFlowERP. Автоматизира инсталацията на:
+- PostgreSQL (ако липсва)
+- Node.js engine (изтегля от GitHub Releases)
+- База данни + миграции
+- .env конфигурация
+- Onboarding wizard (браузър на порт 7788)
 
-### Windows
-1. Download `dflow-installer-windows-amd64.exe`
-2. Run as Administrator
-3. Enter your license key when prompted
-4. Follow the onboarding wizard
+## Изтегляне
+
+https://github.com/bbmarsiano/erp-platform/releases/tag/v0.2.0-installer
+
+## Употреба
+
+### Windows (CMD като Administrator)
+```cmd
+dflow-installer-windows-amd64.exe
+```
 
 ### Mac
-1. Download `dflow-installer-darwin-arm64` (Apple Silicon) or `dflow-installer-darwin-amd64` (Intel)
-2. `chmod +x dflow-installer-darwin-arm64`
-3. `./dflow-installer-darwin-arm64`
-4. Enter your license key and follow the wizard
+```bash
+chmod +x dflow-installer-darwin-arm64
+./dflow-installer-darwin-arm64
+```
 
 ### Linux
-1. Download `dflow-installer-linux-amd64`
-2. `chmod +x dflow-installer-linux-amd64`
-3. `sudo ./dflow-installer-linux-amd64`
-4. Enter your license key and follow the wizard
-
-## For developers (dev testing)
 ```bash
-cd installer
-# Build dev version with --wizard-only flag
+chmod +x dflow-installer-linux-amd64
+sudo ./dflow-installer-linux-amd64
+```
+
+## Инсталационен процес
+
+```
+[0] Проверка на Node.js (нужна е v20+)
+[1/5] Валидация на лиценз → Supabase
+[2/5] Проверка/инсталация на PostgreSQL
+[3/5] Изтегляне на engine от GitHub Releases
+[4/5] Създаване на база данни + миграции
+[5/5] Onboarding wizard → http://localhost:7788
+```
+
+## Dev режим (само wizard UI)
+
+```bash
 make build-dev
-# Test wizard UI without full install
 ./dist/dflow-installer-dev --wizard-only
 ```
 
-Build all platforms
+## Build за всички платформи
+
 ```bash
-make build-all VERSION=0.1.0
+make build-all VERSION=0.2.0
 ```
 
+## License
+
+Demo лиценз: `DEMO-0000-0000-0000`
+License server: https://lvhraynmvyvancqyezef.supabase.co
