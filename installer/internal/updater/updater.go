@@ -11,6 +11,7 @@ import (
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/engine"
 	"github.com/bbmarsiano/erp-platform/installer/internal/license"
+	"github.com/bbmarsiano/erp-platform/installer/internal/prismacli"
 	"github.com/fatih/color"
 )
 
@@ -156,18 +157,7 @@ func backupDatabase(dbURL, installPath, version string) (string, error) {
 }
 
 func runMigrations(installPath, dbURL string) error {
-	prismaPath := filepath.Join(installPath, "node_modules", ".bin", "prisma")
-	schemaPath := filepath.Join(installPath, "packages", "db", "prisma", "schema.prisma")
-
-	if runtime.GOOS == "windows" {
-		prismaPath += ".cmd"
-	}
-
-	cmd := exec.Command(prismaPath, "migrate", "deploy", "--schema", schemaPath)
-	cmd.Env = append(os.Environ(), "DATABASE_URL="+dbURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return prismacli.RunMigrateDeploy(installPath, dbURL)
 }
 
 func rollback(backupPath, dbURL string) {

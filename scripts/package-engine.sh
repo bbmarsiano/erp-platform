@@ -97,7 +97,7 @@ echo "📦 Installing Node.js dependencies..."
 if ! command -v pnpm &> /dev/null; then
   npm install -g pnpm@9.15.0
 fi
-pnpm install --frozen-lockfile --prod
+pnpm install --prod --shamefully-hoist
 echo "✅ Dependencies installed"
 EOF
 chmod +x "${PACKAGE_DIR}/install-deps.sh"
@@ -106,7 +106,7 @@ chmod +x "${PACKAGE_DIR}/install-deps.sh"
 cat > "${PACKAGE_DIR}/install-deps.bat" << 'EOF'
 @echo off
 where pnpm >nul 2>nul || npm install -g pnpm@9.15.0
-pnpm install --frozen-lockfile --prod
+pnpm install --prod --shamefully-hoist
 echo Dependencies installed
 EOF
 

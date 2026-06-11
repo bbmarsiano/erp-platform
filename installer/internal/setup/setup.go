@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
+	"github.com/bbmarsiano/erp-platform/installer/internal/prismacli"
 	"github.com/bbmarsiano/erp-platform/installer/internal/service"
 )
 
@@ -47,13 +48,7 @@ VITE_API_URL=http://%s:%d
 	}
 
 	fmt.Println("  Running database migrations...")
-	cmd := exec.Command("node", filepath.Join(cfg.InstallPath, "node_modules/.bin/prisma"),
-		"migrate", "deploy",
-		"--schema", filepath.Join(cfg.InstallPath, "packages/db/prisma/schema.prisma"))
-	cmd.Env = append(os.Environ(), "DATABASE_URL="+cfg.DatabaseURL())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return prismacli.RunMigrateDeploy(cfg.InstallPath, cfg.DatabaseURL())
 }
 
 func createDatabase(cfg *config.InstallConfig) error {
