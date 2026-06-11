@@ -34,7 +34,11 @@ echo "📁 Copying packages..."
 mkdir -p "${PACKAGE_DIR}/packages"
 for pkg in packages/*/; do
   pkg_name=$(basename "$pkg")
-  rsync -a --exclude='node_modules' --exclude='dist' \
+  rsync_excludes=(--exclude='node_modules')
+  if [ "$pkg_name" != "db" ]; then
+    rsync_excludes+=(--exclude='dist')
+  fi
+  rsync -a "${rsync_excludes[@]}" \
     "${pkg}" "${PACKAGE_DIR}/packages/${pkg_name}/"
 done
 

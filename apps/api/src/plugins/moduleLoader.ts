@@ -2,8 +2,7 @@ import type { ModuleManifest } from '@dflow/core'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
-import { fileURLToPath } from 'url'
-import { dirname, resolve, join } from 'path'
+import { resolve, join } from 'path'
 import { pathToFileURL } from 'node:url'
 
 const globalForModules = globalThis as typeof globalThis & {
@@ -13,8 +12,6 @@ const globalForModules = globalThis as typeof globalThis & {
 export const loadedModules: ModuleManifest[] =
   globalForModules.__dflowLoadedModules ??
   (globalForModules.__dflowLoadedModules = [])
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
 
 const moduleLoaderPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   const modulesDir = resolve(__dirname, '../../../../modules')

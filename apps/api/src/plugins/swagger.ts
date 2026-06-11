@@ -3,11 +3,7 @@ import swaggerUi from '@fastify/swagger-ui'
 import fp from 'fastify-plugin/plugin.js'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+import { join } from 'path'
 
 const swaggerPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   const packageJsonPath = join(__dirname, '../../../../package.json')
