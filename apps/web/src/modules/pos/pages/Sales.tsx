@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../../components/ui'
+import { formatCurrency } from '../../../lib/currency'
 import { useSales } from '../hooks/usePos'
 
 const paymentMap: Record<string, { label: string; bg: string; color: string }> = {
@@ -42,7 +43,7 @@ export default function Sales() {
                     {paymentMap[s.paymentMethod]?.label ?? s.paymentMethod}
                   </span>
                 </td>
-                <td style={{ padding: 10 }}>{s.totalAmount.toFixed(2)} лв.</td>
+                <td style={{ padding: 10 }}>{formatCurrency(s.totalAmount)}</td>
                 <td style={{ padding: 10 }}>
                   <span
                     style={{

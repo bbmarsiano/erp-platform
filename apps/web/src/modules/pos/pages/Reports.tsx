@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { Download } from 'lucide-react'
 import { PageHeader } from '../../../components/ui'
+import { formatCurrency, CURRENCY_SYMBOL } from '../../../lib/currency'
 import * as XLSX from 'xlsx'
 import { api } from '../../../lib/api'
 
@@ -203,8 +204,8 @@ function SalesReport({ data, loading }: { data: SalesReportData | undefined; loa
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <KpiCard label="Общо продажби" value={summary.total} />
-        <KpiCard label="Приход" value={`${summary.totalRevenue.toFixed(2)} лв.`} color="#059669" />
-        <KpiCard label="Средна продажба" value={`${summary.avgSale.toFixed(2)} лв.`} />
+        <KpiCard label="Приход" value={formatCurrency(summary.totalRevenue)} color="#059669" />
+        <KpiCard label="Средна продажба" value={formatCurrency(summary.avgSale)} />
         <KpiCard label="Кеш" value={summary.cash} color="#d97706" />
         <KpiCard label="Карта" value={summary.card} color="#1e40af" />
       </div>
@@ -218,7 +219,7 @@ function SalesReport({ data, loading }: { data: SalesReportData | undefined; loa
             <Tooltip />
             <Legend />
             <Bar yAxisId="left" dataKey="count" name="Брой" fill="#4facfe" radius={[4, 4, 0, 0]} />
-            <Bar yAxisId="right" dataKey="revenue" name="Приход (лв.)" fill="#7c3aed" radius={[4, 4, 0, 0]} />
+            <Bar yAxisId="right" dataKey="revenue" name={`Приход (${CURRENCY_SYMBOL})`} fill="#7c3aed" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -238,7 +239,7 @@ function SalesReport({ data, loading }: { data: SalesReportData | undefined; loa
                   <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontSize: 12 }}>{s.saleNo}</td>
                   <td style={{ padding: '8px 12px' }}>{s.cashRegister?.name}</td>
                   <td style={{ padding: '8px 12px' }}>{paymentLabels[s.paymentMethod] || s.paymentMethod}</td>
-                  <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>{s.totalAmount.toFixed(2)} лв.</td>
+                  <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>{formatCurrency(s.totalAmount)}</td>
                   <td style={{ padding: '8px 12px', color: '#9ca3af' }}>{new Date(s.createdAt).toLocaleDateString('bg-BG')}</td>
                 </tr>
               ))}
@@ -267,7 +268,7 @@ function ProductsReport({ data, loading }: { data: ProductRow[] | undefined; loa
             <XAxis type="number" tick={{ fontSize: 11 }} />
             <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} />
             <Tooltip />
-            <Bar dataKey="revenue" name="Приход (лв.)" fill="#4facfe" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="revenue" name={`Приход (${CURRENCY_SYMBOL})`} fill="#4facfe" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -287,7 +288,7 @@ function ProductsReport({ data, loading }: { data: ProductRow[] | undefined; loa
                   <td style={{ padding: '8px 12px', fontWeight: 500 }}>{p.name}</td>
                   <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: '#6b7280' }}>{p.code}</td>
                   <td style={{ padding: '8px 12px', fontWeight: 700 }}>{p.qty}</td>
-                  <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>{p.revenue.toFixed(2)} лв.</td>
+                  <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>{formatCurrency(p.revenue)}</td>
                 </tr>
               ))}
             </tbody>

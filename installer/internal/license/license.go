@@ -48,7 +48,7 @@ func Validate(serverURL, key string) ([]string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+ANON_KEY)
-	req.Header.Set("User-Agent", "DFlowERP-Installer/0.1.0")
+	req.Header.Set("User-Agent", "DFlowERP-Installer/0.3.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -89,7 +89,7 @@ func ValidateWithVersion(serverURL, key string) ([]string, string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+ANON_KEY)
-	req.Header.Set("User-Agent", "DFlowERP-Installer/0.2.0")
+	req.Header.Set("User-Agent", "DFlowERP-Installer/0.3.0")
 
 	resp, err := client.Do(req)
 	if err != nil {

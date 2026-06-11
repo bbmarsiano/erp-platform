@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { Scan, Camera, X } from 'lucide-react'
 import { useBarcodeScannerInput, useCameraScanner } from '../hooks/useBarcodeScanner'
 import { api } from '../lib/api'
+import { formatCurrency } from '../lib/currency'
 
 export interface ScanResult {
   id: string
@@ -589,7 +590,7 @@ export function BarcodeScanner({
                   {result.product && (
                     <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                       Наличност: {result.product.totalStock} {result.product.unit}
-                      {result.product.price != null && ` · Цена: ${result.product.price} лв.`}
+                      {result.product.price != null && ` · Цена: ${formatCurrency(result.product.price)}`}
                     </div>
                   )}
                 </div>

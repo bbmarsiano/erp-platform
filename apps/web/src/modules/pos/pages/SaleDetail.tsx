@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { BackButton, PageHeader } from '../../../components/ui'
+import { formatCurrency } from '../../../lib/currency'
 import { useSale } from '../hooks/usePos'
 
 const paymentLabels: Record<string, string> = {
@@ -34,13 +35,13 @@ export default function SaleDetail() {
               <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: 8 }}>{l.product?.name}</td>
                 <td style={{ padding: 8 }}>{l.quantity}</td>
-                <td style={{ padding: 8 }}>{l.unitPrice.toFixed(2)} лв.</td>
-                <td style={{ padding: 8 }}>{l.totalPrice.toFixed(2)} лв.</td>
+                <td style={{ padding: 8 }}>{formatCurrency(l.unitPrice)}</td>
+                <td style={{ padding: 8 }}>{formatCurrency(l.totalPrice)}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop: 12, fontSize: 24, fontWeight: 800 }}>Общо: {sale?.totalAmount?.toFixed?.(2) ?? 0} лв.</div>
+        <div style={{ marginTop: 12, fontSize: 24, fontWeight: 800 }}>Общо: {formatCurrency(sale?.totalAmount ?? 0)}</div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
+import { APP_VERSION } from '../version'
 
 type SettingsTab = 'profile' | 'system' | 'license' | 'company'
 
@@ -409,7 +410,7 @@ export default function Settings() {
           <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 20px' }}>Системна информация</h2>
           <div style={{ display: 'grid', gap: 12, fontSize: 14 }}>
             {[
-              { label: 'Версия', value: 'DFlowERP v0.1.0' },
+              { label: 'Версия', value: `DFlowERP v${APP_VERSION}` },
               { label: 'API URL', value: import.meta.env.VITE_API_URL || 'http://localhost:3001' },
               { label: 'Среда', value: import.meta.env.MODE },
               {

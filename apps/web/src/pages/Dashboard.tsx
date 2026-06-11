@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Warehouse, Truck, Factory, ShoppingCart, HardDrive } from 'lucide-react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
+import { formatCurrency } from '../lib/currency'
 
 interface DashboardStats {
   wms: { warehouses: number; stockItems: number; draftReceipts: number; lowStock: number }
@@ -202,7 +203,7 @@ export default function Dashboard() {
         ? [
             { label: 'Каси', value: stats.pos.registers },
             { label: 'Продажби днес', value: stats.pos.todaySales },
-            { label: 'Приход днес', value: `${stats.pos.todayRevenue.toFixed(2)} лв.` }
+            { label: 'Приход днес', value: formatCurrency(stats.pos.todayRevenue) }
           ]
         : []
     },

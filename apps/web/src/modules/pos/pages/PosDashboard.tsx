@@ -4,6 +4,7 @@ import { Scan, Printer, Download, RotateCcw, CheckCircle } from 'lucide-react'
 import { BarcodeScanner, type ScanResult } from '../../../components/BarcodeScanner'
 import { Button, PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
+import { CURRENCY_CODE, CURRENCY_SYMBOL, formatCurrency } from '../../../lib/currency'
 import { useStock } from '../../wms/hooks/useWms'
 import { useCreateSale, useRegisters } from '../hooks/usePos'
 
@@ -186,13 +187,13 @@ export default function PosDashboard() {
       `Каса:  ${completedSale.registerName}`,
       '--------------------------------',
       ...completedSale.lines.map(
-        (l) => `${l.productName}\n  ${l.quantity} x ${l.unitPrice.toFixed(2)} = ${l.total.toFixed(2)} лв.`
+        (l) => `${l.productName}\n  ${l.quantity} x ${formatCurrency(l.unitPrice)} = ${formatCurrency(l.total)}`
       ),
       '--------------------------------',
       ...(t?.vatRegistered
-        ? [`Данъчна основа: ${vatBase.toFixed(2)} лв.`, `ДДС 20%: ${vatAmt.toFixed(2)} лв.`]
+        ? [`Данъчна основа: ${formatCurrency(vatBase)}`, `ДДС 20%: ${formatCurrency(vatAmt)}`]
         : []),
-      `ОБЩО: ${completedSale.total.toFixed(2)} лв.`,
+      `ОБЩО: ${formatCurrency(completedSale.total)}`,
       `Плащане: ${completedSale.paymentMethod === 'CASH' ? 'В БРОЙ' : completedSale.paymentMethod === 'CARD' ? 'С КАРТА' : 'СМЕСЕНО'}`,
       '================================',
       '     Благодарим ви!',
@@ -246,16 +247,17 @@ export default function PosDashboard() {
       '----------------------------------------------------------------',
       ...completedSale.lines.map(
         (l) =>
-          `${l.productName.padEnd(30)} ${String(l.quantity).padStart(5)}  ${l.unitPrice.toFixed(2).padStart(9)}  ${l.total.toFixed(2).padStart(9)} лв.`
+          `${l.productName.padEnd(30)} ${String(l.quantity).padStart(5)}  ${l.unitPrice.toFixed(2).padStart(9)}  ${l.total.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`
       ),
       '----------------------------------------------------------------',
       ...(t.vatRegistered
         ? [
-            `Данъчна основа (20%):              ${vatBase.toFixed(2).padStart(9)} лв.`,
-            `ДДС 20%:                           ${vatAmt.toFixed(2).padStart(9)} лв.`
+            `Данъчна основа (20%):              ${vatBase.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`,
+            `ДДС 20%:                           ${vatAmt.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`
           ]
         : []),
-      `ОБЩО:                              ${completedSale.total.toFixed(2).padStart(9)} лв.`,
+      `ОБЩО:                              ${completedSale.total.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`,
+      `Валута: ${CURRENCY_CODE}`,
       '',
       `Начин на плащане: ${completedSale.paymentMethod === 'CASH' ? 'В БРОЙ' : 'С КАРТА'}`,
       '',
@@ -385,11 +387,11 @@ export default function PosDashboard() {
                   onChange={(e) => setCart((p) => p.map((x, i) => (i === idx ? { ...x, unitPrice: Number(e.target.value) } : x)))}
                   style={{ width: 90 }}
                 />
-                <span>{(c.quantity * c.unitPrice).toFixed(2)} лв.</span>
+                <span>{formatCurrency(c.quantity * c.unitPrice)}</span>
               </div>
             </div>
           ))}
-          <div style={{ marginTop: 14, fontSize: 28, fontWeight: 900 }}>Общо: {total.toFixed(2)} лв.</div>
+          <div style={{ marginTop: 14, fontSize: 28, fontWeight: 900 }}>Общо: {formatCurrency(total)}</div>
 
           <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
             <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as any)} style={{ padding: 8 }}>
@@ -551,7 +553,7 @@ export default function PosDashboard() {
                           <span style={{ fontWeight: 500 }}>{line.productName}</span>
                           <span style={{ textAlign: 'right', color: '#6b7280' }}>{line.quantity}</span>
                           <span style={{ textAlign: 'right', color: '#6b7280' }}>{line.unitPrice.toFixed(2)}</span>
-                          <span style={{ textAlign: 'right', fontWeight: 600 }}>{line.total.toFixed(2)} лв.</span>
+                          <span style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(line.total)}</span>
                         </div>
                       ))}
                     </div>
@@ -569,7 +571,7 @@ export default function PosDashboard() {
                             }}
                           >
                             <span>Данъчна основа (20% ДДС):</span>
-                            <span>{(completedSale.total / 1.2).toFixed(2)} лв.</span>
+                            <span>{formatCurrency(completedSale.total / 1.2)}</span>
                           </div>
                           <div
                             style={{
@@ -581,14 +583,14 @@ export default function PosDashboard() {
                             }}
                           >
                             <span>ДДС 20%:</span>
-                            <span>{(completedSale.total - completedSale.total / 1.2).toFixed(2)} лв.</span>
+                            <span>{formatCurrency(completedSale.total - completedSale.total / 1.2)}</span>
                           </div>
                         </>
                       )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: 15, fontWeight: 800 }}>ОБЩО:</span>
                         <span style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>
-                          {completedSale.total.toFixed(2)} лв.
+                          {formatCurrency(completedSale.total)}
                         </span>
                       </div>
                       <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>

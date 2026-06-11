@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { ArrowUp, ExternalLink, X } from 'lucide-react'
 import { useAuthStore } from '../store/auth.store'
+import { APP_VERSION } from '../version'
 
-const CURRENT_VERSION = '0.2.0'
+const CURRENT_VERSION = APP_VERSION
 
 function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map(Number)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { api } from '../../lib/api'
+import { APP_VERSION } from '../../version'
 
 const pageTitles: Record<string, string> = {
   '/dashboard': 'Табло',
@@ -105,7 +106,7 @@ export function TopBar({
           </span>
         </div>
       </div>
-      <span style={{ fontSize: 11, color: '#d1d5db', fontFamily: 'monospace' }}>v0.1.0</span>
+      <span style={{ fontSize: 11, color: '#d1d5db', fontFamily: 'monospace' }}>v{APP_VERSION}</span>
     </div>
   )
 }

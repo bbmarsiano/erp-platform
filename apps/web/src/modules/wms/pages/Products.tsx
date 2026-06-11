@@ -6,6 +6,7 @@ import { BarcodeScanner } from '../../../components/BarcodeScanner'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
+import { formatCurrency } from '../../../lib/currency'
 import { useWarehouses } from '../hooks/useWms'
 
 interface Product {
@@ -349,7 +350,7 @@ export default function Products() {
               <label
                 style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}
               >
-                Цена (лв.)
+                Цена (€)
               </label>
               <input
                 type="number"
@@ -673,7 +674,7 @@ export default function Products() {
                         {p.minStock} {p.unit}
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: 13 }}>
-                        {p.price != null ? `${Number(p.price).toFixed(2)} лв.` : '—'}
+                        {p.price != null ? formatCurrency(p.price) : '—'}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span
