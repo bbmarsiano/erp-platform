@@ -68,6 +68,51 @@ func Validate(serverURL, key string) ([]string, error) {
 	return result.Features, nil
 }
 
+func ValidateWithVersion(serverURL, key string) ([]string, string, error) {
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		},
+		ForceAttemptHTTP2: false,
+	}
+	client := &http.Client{
+		Timeout:   20 * time.Second,
+		Transport: transport,
+	}
+
+	body, _ := json.Marshal(map[string]string{"key": key})
+	req, err := http.NewRequest("POST",
+		serverURL+"/functions/v1/validate-license",
+		bytes.NewBuffer(body))
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+ANON_KEY)
+	req.Header.Set("User-Agent", "DFlowERP-Installer/0.2.0")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("license server unreachable")
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Valid          bool     `json:"valid"`
+		Features       []string `json:"features"`
+		AllowedVersion string   `json:"allowedVersion"`
+		Error          string   `json:"error"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, "", fmt.Errorf("invalid response")
+	}
+	if !result.Valid {
+		return nil, "", fmt.Errorf("%s", result.Error)
+	}
+
+	return result.Features, result.AllowedVersion, nil
+}
+
 func cacheFilePath() string {
 	home, _ := os.UserHomeDir()
 	dir := filepath.Join(home, ".dflow")

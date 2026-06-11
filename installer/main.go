@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
@@ -10,17 +13,33 @@ import (
 	"github.com/bbmarsiano/erp-platform/installer/internal/license"
 	"github.com/bbmarsiano/erp-platform/installer/internal/postgres"
 	"github.com/bbmarsiano/erp-platform/installer/internal/setup"
+	"github.com/bbmarsiano/erp-platform/installer/internal/updater"
 	"github.com/bbmarsiano/erp-platform/installer/internal/wizard"
 	"github.com/fatih/color"
 )
 
-var VERSION = "0.1.0"
+var VERSION = "0.2.0"
 
 const LICENSE_SERVER = "https://lvhraynmvyvancqyezef.supabase.co"
 const GITHUB_REPO = "bbmarsiano/erp-platform"
 
 func main() {
+	updateMode := flag.Bool("update", false, "Update existing DFlowERP installation")
+	flag.Parse()
+
 	printBanner()
+
+	if *updateMode {
+		licenseKey := getCachedLicenseKey()
+		if licenseKey == "" {
+			licenseKey = promptInput("Enter your license key")
+		}
+		if err := updater.Run(LICENSE_SERVER, licenseKey, GITHUB_REPO); err != nil {
+			exitWithError("Update failed: %v", err)
+		}
+		return
+	}
+
 	licenseKey := promptInput("Enter your license key")
 	if licenseKey == "" {
 		exitWithError("License key is required")
@@ -65,6 +84,22 @@ func main() {
 	if err := wizard.Launch(cfg); err != nil {
 		exitWithError("Wizard failed: %v", err)
 	}
+}
+
+func getCachedLicenseKey() string {
+	home, _ := os.UserHomeDir()
+	cacheFile := filepath.Join(home, ".dflow", "license_cache.json")
+	data, err := os.ReadFile(cacheFile)
+	if err != nil {
+		return ""
+	}
+	var cache struct {
+		Key string `json:"key"`
+	}
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return ""
+	}
+	return cache.Key
 }
 
 func exitWithError(format string, args ...interface{}) {
