@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { LicenseKey, supabase } from '../lib/supabase'
 
 export default function Licenses() {
   const [licenses, setLicenses] = useState<LicenseKey[]>([])
+  const [editingVersion, setEditingVersion] = useState<{ id: string; value: string } | null>(null)
 
-  const loadLicenses = async () => {
+  const refetch = useCallback(async () => {
     const { data } = await supabase
       .from('license_keys')
       .select('*, tenant:tenants(*)')
       .order('created_at', { ascending: false })
-    setLicenses((data as LicenseKey[]) ?? [])
-  }
+    if (data) setLicenses(data as LicenseKey[])
+  }, [])
 
   useEffect(() => {
-    void loadLicenses()
-  }, [])
+    void refetch()
+  }, [refetch])
 
   const deactivate = async (id: string) => {
     await supabase.from('license_keys').update({ is_active: false }).eq('id', id)
-    await loadLicenses()
+    await refetch()
   }
 
   const masked = (key: string) => `${key.slice(0, 4)}****`
@@ -34,6 +35,7 @@ export default function Licenses() {
             <th align="left">Изтича</th>
             <th align="left">Последна валидация</th>
             <th align="left">Инсталации</th>
+            <th align="left">Обновление</th>
             <th align="left">Статус</th>
             <th align="left">Действие</th>
           </tr>
@@ -50,6 +52,107 @@ export default function Licenses() {
               <td>{new Date(license.expires_at).toLocaleDateString('bg-BG')}</td>
               <td>{license.last_validated_at ? new Date(license.last_validated_at).toLocaleString('bg-BG') : '-'}</td>
               <td>{license.install_count}</td>
+              <td style={{ padding: '12px 16px' }}>
+                {editingVersion?.id === license.id ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      value={editingVersion.value}
+                      onChange={(e) => setEditingVersion({ id: license.id, value: e.target.value })}
+                      placeholder="0.3.0"
+                      style={{
+                        width: 80,
+                        padding: '4px 8px',
+                        border: '1.5px solid #7c3aed',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        outline: 'none',
+                        fontFamily: 'monospace'
+                      }}
+                      autoFocus
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          await supabase
+                            .from('license_keys')
+                            .update({ allowed_version: editingVersion.value || null })
+                            .eq('id', license.id)
+                          setEditingVersion(null)
+                          await refetch()
+                        }
+                        if (e.key === 'Escape') setEditingVersion(null)
+                      }}
+                    />
+                    <button
+                      onClick={async () => {
+                        await supabase
+                          .from('license_keys')
+                          .update({ allowed_version: editingVersion.value || null })
+                          .eq('id', license.id)
+                        setEditingVersion(null)
+                        await refetch()
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#7c3aed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontSize: 11
+                      }}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await supabase.from('license_keys').update({ allowed_version: null }).eq('id', license.id)
+                        setEditingVersion(null)
+                        await refetch()
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: 'none',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontSize: 11
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setEditingVersion({ id: license.id, value: license.allowed_version || '' })}
+                    style={{
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    {license.allowed_version ? (
+                      <span
+                        style={{
+                          padding: '2px 10px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          background: '#f0fdf4',
+                          color: '#16a34a',
+                          border: '1px solid #bbf7d0',
+                          fontFamily: 'monospace'
+                        }}
+                      >
+                        ↑ v{license.allowed_version}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#d1d5db', fontSize: 11 }}>— няма</span>
+                    )}
+                  </div>
+                )}
+              </td>
               <td>{license.is_active ? 'Активен' : 'Неактивен'}</td>
               <td>
                 <button disabled={!license.is_active} onClick={() => void deactivate(license.id)}>
@@ -63,4 +166,3 @@ export default function Licenses() {
     </div>
   )
 }
-

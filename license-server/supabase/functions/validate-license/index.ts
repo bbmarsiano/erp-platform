@@ -76,7 +76,8 @@ serve(async (req) => {
         expiresAt: license.expires_at,
         tenant: license.tenant.name,
         maxUsers: license.max_users,
-        plan: license.tenant.plan
+        plan: license.tenant.plan,
+        allowedVersion: license.allowed_version ?? null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

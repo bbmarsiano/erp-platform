@@ -26,6 +26,7 @@ export interface LicenseKey {
   is_active: boolean
   last_validated_at: string | null
   install_count: number
+  allowed_version: string | null
   created_at: string
   tenant?: Tenant
 }
