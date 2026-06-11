@@ -18,6 +18,7 @@ func ResolvePath(installPath string) string {
 		filepath.Join(installPath, "node_modules", ".bin", "prisma"),
 		filepath.Join(installPath, "packages", "db", "node_modules", ".bin", "prisma"),
 		filepath.Join(installPath, "node_modules", ".pnpm", "prisma@5.22.0", "node_modules", "prisma", "build", "index.js"),
+		filepath.Join(installPath, "node_modules", ".pnpm", "node_modules", ".bin", "prisma"),
 	}
 
 	if runtime.GOOS == "windows" {
@@ -54,7 +55,7 @@ func RunMigrateDeploy(installPath, dbURL string) error {
 	var cmd *exec.Cmd
 	switch {
 	case prismaPath == npxFallback:
-		cmd = exec.Command("npx", "prisma", "migrate", "deploy", "--schema", schemaPath)
+		cmd = exec.Command("npx", "prisma@5.22.0", "migrate", "deploy", "--schema", schemaPath)
 	case strings.HasSuffix(prismaPath, ".js"):
 		cmd = exec.Command("node", prismaPath, "migrate", "deploy", "--schema", schemaPath)
 	default:
