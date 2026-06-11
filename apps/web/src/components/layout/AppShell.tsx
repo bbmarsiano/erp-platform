@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { UpdateBanner } from '../UpdateBanner'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
@@ -53,6 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TopBar onMenuToggle={() => setMobileOpen((o) => !o)} showHamburger={isMobile} />
         <main style={{ flex: 1, padding: '28px 32px' }}>{children}</main>
       </div>
+      <UpdateBanner />
     </div>
   )
 }

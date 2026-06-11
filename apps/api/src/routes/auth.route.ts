@@ -50,7 +50,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
                       role: { type: 'string' },
                       tenantId: { type: 'string' }
                     }
-                  }
+                  },
+                  allowedVersion: { type: ['string', 'null'] }
                 }
               }
             }
@@ -113,6 +114,30 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         }
       })
 
+      let allowedVersion: string | null = null
+      try {
+        const licenseKey = process.env.LICENSE_KEY
+        const licenseServerUrl = process.env.LICENSE_SERVER_URL
+        const licenseServerKey = process.env.LICENSE_SERVER_KEY
+        if (licenseKey && licenseServerUrl && licenseServerKey) {
+          const licResp = await fetch(
+            `${licenseServerUrl}/functions/v1/validate-license`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${licenseServerKey}`
+              },
+              body: JSON.stringify({ key: licenseKey })
+            }
+          )
+          const licData = (await licResp.json()) as { valid?: boolean; allowedVersion?: string | null }
+          if (licData.valid) allowedVersion = licData.allowedVersion ?? null
+        }
+      } catch {
+        /* ignore license check errors */
+      }
+
       return reply.send({
         success: true,
         data: {
@@ -125,7 +150,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             lastName: user.lastName,
             role: user.role,
             tenantId: user.tenantId
-          }
+          },
+          allowedVersion
         }
       })
     }
