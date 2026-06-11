@@ -47,8 +47,8 @@ func Launch(cfg *config.InstallConfig) error {
 		cfg.ServerHost = body.ServerHost
 
 		if err := setup.Seed(cfg); err != nil {
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
+			fmt.Printf("  ⚠ Seed skipped: %v\n", err)
+			fmt.Println("  (Default admin account will be created on first run)")
 		}
 
 		go func() {

@@ -11,6 +11,7 @@ import (
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
 	"github.com/bbmarsiano/erp-platform/installer/internal/prismacli"
 	"github.com/bbmarsiano/erp-platform/installer/internal/service"
+	"github.com/bbmarsiano/erp-platform/installer/internal/tsxcli"
 )
 
 func Run(cfg *config.InstallConfig) error {
@@ -77,11 +78,7 @@ func generateSecret(length int) string {
 
 func Seed(cfg *config.InstallConfig) error {
 	seedPath := filepath.Join(cfg.InstallPath, "packages/db/prisma/seed.ts")
-	cmd := exec.Command("node", filepath.Join(cfg.InstallPath, "node_modules/.bin/tsx"), seedPath)
-	cmd.Env = append(os.Environ(), "DATABASE_URL="+cfg.DatabaseURL())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return tsxcli.RunScript(cfg.InstallPath, seedPath, cfg.DatabaseURL())
 }
 
 func StartService(cfg *config.InstallConfig) {
