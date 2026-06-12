@@ -3,7 +3,6 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { resolve, join } from 'path'
-import { pathToFileURL } from 'node:url'
 
 const globalForModules = globalThis as typeof globalThis & {
   __dflowLoadedModules?: ModuleManifest[]
@@ -32,7 +31,7 @@ const moduleLoaderPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) 
       }
 
       try {
-        const imported = await import(pathToFileURL(candidate).href)
+        const imported = require(candidate)
         const plugin = imported.default as FastifyPluginAsync | undefined
         const manifest =
           (imported.manifest as ModuleManifest | undefined) ??
