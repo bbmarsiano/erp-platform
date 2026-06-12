@@ -16,6 +16,7 @@
   "packageManager": "pnpm@9.15.0",
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "esbuild": "^0.25.0",
     "typescript": "^5.8.3"
   }
 }

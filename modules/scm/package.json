@@ -1,7 +1,10 @@
 {
   "name": "@dflow/scm",
   "version": "1.0.0",
-  "main": "module.plugin.ts",
+  "main": "dist/module.plugin.js",
+  "scripts": {
+    "build": "esbuild module.plugin.ts manifest.ts 'src/**/*.ts' --platform=node --format=cjs --outdir=dist --outbase=."
+  },
   "dependencies": {
     "@dflow/core": "workspace:*",
     "@dflow/db": "workspace:*"
