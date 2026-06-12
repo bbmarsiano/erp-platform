@@ -1,7 +1,10 @@
 import dotenv from 'dotenv'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import Fastify, { FastifyInstance } from 'fastify'
 import helmet from '@fastify/helmet'
 import sensible from '@fastify/sensible'
+import fastifyStatic from '@fastify/static'
 import corsPlugin from './plugins/cors'
 import jwtPlugin from './plugins/jwt'
 import moduleLoaderPlugin from './plugins/moduleLoader'
@@ -27,6 +30,26 @@ const buildServer = async (): Promise<FastifyInstance> => {
   await app.register(publicRoute, { prefix: '/api' })
   await app.register(authRoute, { prefix: '/api' })
   await app.register(usersRoute, { prefix: '/api' })
+
+  const webDistPath = join(__dirname, '../../web/dist')
+  if (existsSync(webDistPath)) {
+    await app.register(fastifyStatic, {
+      root: webDistPath,
+      prefix: '/'
+    })
+
+    app.setNotFoundHandler(async (request, reply) => {
+      if (request.url.startsWith('/api/')) {
+        return reply.status(404).send({
+          message: `Route ${request.method}:${request.url} not found`,
+          error: 'Not Found',
+          statusCode: 404
+        })
+      }
+      return reply.sendFile('index.html')
+    })
+  }
+
   return app
 }
 
