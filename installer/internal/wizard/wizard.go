@@ -43,8 +43,15 @@ func Launch(cfg *config.InstallConfig) error {
 		cfg.CompanyName = body.CompanyName
 		cfg.AdminEmail = body.AdminEmail
 		cfg.AdminPass = body.AdminPass
-		cfg.Port = body.Port
+		if body.Port > 0 {
+			cfg.Port = body.Port
+		}
 		cfg.ServerHost = body.ServerHost
+
+		if err := setup.WriteEnv(cfg, ""); err != nil {
+			http.Error(w, "Failed to write configuration", http.StatusInternalServerError)
+			return
+		}
 
 		if err := setup.Seed(cfg); err != nil {
 			fmt.Printf("  ⚠ Seed skipped: %v\n", err)

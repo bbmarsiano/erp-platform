@@ -39,8 +39,8 @@ func ResolvePath(installPath string) string {
 	return npxFallback
 }
 
-// RunScript executes a TypeScript file via tsx.
-func RunScript(installPath, scriptPath, dbURL string) error {
+// RunScript executes a TypeScript file via tsx with optional extra environment variables.
+func RunScript(installPath, scriptPath, dbURL string, extraEnv map[string]string) error {
 	tsxPath := ResolvePath(installPath)
 	fmt.Printf("  tsx path: %s\n", tsxPath)
 
@@ -56,6 +56,9 @@ func RunScript(installPath, scriptPath, dbURL string) error {
 
 	cmd.Dir = installPath
 	cmd.Env = append(os.Environ(), "DATABASE_URL="+dbURL)
+	for key, value := range extraEnv {
+		cmd.Env = append(cmd.Env, key+"="+value)
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

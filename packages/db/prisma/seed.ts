@@ -3,41 +3,55 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+const COMPANY_NAME = process.env.COMPANY_NAME || 'Demo Company'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@dflowerp.com'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'
+const LICENSE_KEY = process.env.LICENSE_KEY || 'DEMO-0000-0000-0000'
+
+function slugify(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || 'demo'
+}
+
 async function main() {
-  // Create default tenant
+  const tenantSlug = slugify(COMPANY_NAME)
+
   const tenant = await prisma.tenant.upsert({
-    where: { slug: 'demo' },
-    update: {},
+    where: { slug: tenantSlug },
+    update: { name: COMPANY_NAME },
     create: {
-      name: 'Demo Company',
-      slug: 'demo',
+      name: COMPANY_NAME,
+      slug: tenantSlug,
       isActive: true
     }
   })
 
-  // Create admin user
-  const hashedPassword = await bcrypt.hash('admin123', 10)
+  const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10)
   await prisma.user.upsert({
-    where: { email: 'admin@dflowerp.com' },
-    update: {},
+    where: { email: ADMIN_EMAIL },
+    update: { hashedPassword, tenantId: tenant.id },
     create: {
-      email: 'admin@dflowerp.com',
+      email: ADMIN_EMAIL,
       hashedPassword,
       firstName: 'Admin',
-      lastName: 'User',
+      lastName: tenant.name,
       role: 'SUPER_ADMIN',
       tenantId: tenant.id,
       isActive: true
     }
   })
 
-  // Create demo license key
   await prisma.licenseKey.upsert({
     where: { tenantId: tenant.id },
-    update: {},
+    update: { key: LICENSE_KEY },
     create: {
       tenantId: tenant.id,
-      key: 'DEMO-0000-0000-0000',
+      key: LICENSE_KEY,
       expiresAt: new Date('2027-12-31'),
       features: ['module:wms', 'module:mes', 'module:scm', 'module:pos', 'module:backup'],
       isActive: true
@@ -82,9 +96,9 @@ async function main() {
   }
 
   console.log('✅ Seed completed')
-  console.log('   Tenant: Demo Company (slug: demo)')
-  console.log('   Admin: admin@dflowerp.com / admin123')
-  console.log('   License: DEMO-0000-0000-0000')
+  console.log(`   Tenant: ${COMPANY_NAME} (slug: ${tenantSlug})`)
+  console.log(`   Admin: ${ADMIN_EMAIL}`)
+  console.log(`   License: ${LICENSE_KEY}`)
   console.log('✅ WMS seed completed — warehouse + locations + products')
 
   const supplier1 = await prisma.supplier.upsert({

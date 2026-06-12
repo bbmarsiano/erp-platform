@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
 	"github.com/bbmarsiano/erp-platform/installer/internal/prismacli"
@@ -22,6 +23,15 @@ func Run(cfg *config.InstallConfig) error {
 	cfg.JWTSecret = generateSecret(32)
 	jwtRefreshSecret := generateSecret(32)
 
+	if err := WriteEnv(cfg, jwtRefreshSecret); err != nil {
+		return err
+	}
+
+	fmt.Println("  Running database migrations...")
+	return prismacli.RunMigrateDeploy(cfg.InstallPath, cfg.DatabaseURL())
+}
+
+func WriteEnv(cfg *config.InstallConfig, jwtRefreshSecret string) error {
 	serverHost := cfg.ServerHost
 	if serverHost == "" {
 		serverHost = "0.0.0.0"
@@ -30,6 +40,26 @@ func Run(cfg *config.InstallConfig) error {
 	apiURLHost := serverHost
 	if apiURLHost == "0.0.0.0" {
 		apiURLHost = "localhost"
+	}
+
+	envPath := filepath.Join(cfg.InstallPath, ".env")
+	if jwtRefreshSecret == "" || cfg.JWTSecret == "" {
+		if data, err := os.ReadFile(envPath); err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				if cfg.JWTSecret == "" && strings.HasPrefix(line, "JWT_SECRET=") {
+					cfg.JWTSecret = strings.TrimPrefix(line, "JWT_SECRET=")
+				}
+				if jwtRefreshSecret == "" && strings.HasPrefix(line, "JWT_REFRESH_SECRET=") {
+					jwtRefreshSecret = strings.TrimPrefix(line, "JWT_REFRESH_SECRET=")
+				}
+			}
+		}
+	}
+	if cfg.JWTSecret == "" {
+		cfg.JWTSecret = generateSecret(32)
+	}
+	if jwtRefreshSecret == "" {
+		jwtRefreshSecret = generateSecret(32)
 	}
 
 	envContent := fmt.Sprintf(`DATABASE_URL=%s
@@ -41,15 +71,16 @@ NODE_ENV=production
 PORT=%d
 API_HOST=%s
 VITE_API_URL=http://%s:%d
-`, cfg.DatabaseURL(), cfg.JWTSecret, jwtRefreshSecret, cfg.LicenseKey, cfg.Port, serverHost, apiURLHost, cfg.Port)
+COMPANY_NAME=%s
+ADMIN_EMAIL=%s
+ADMIN_PASSWORD=%s
+`, cfg.DatabaseURL(), cfg.JWTSecret, jwtRefreshSecret, cfg.LicenseKey, cfg.Port, serverHost, apiURLHost, cfg.Port,
+		cfg.CompanyName, cfg.AdminEmail, cfg.AdminPass)
 
-	envPath := filepath.Join(cfg.InstallPath, ".env")
 	if err := os.WriteFile(envPath, []byte(envContent), 0o600); err != nil {
 		return fmt.Errorf("write .env: %w", err)
 	}
-
-	fmt.Println("  Running database migrations...")
-	return prismacli.RunMigrateDeploy(cfg.InstallPath, cfg.DatabaseURL())
+	return nil
 }
 
 func createDatabase(cfg *config.InstallConfig) error {
@@ -78,7 +109,12 @@ func generateSecret(length int) string {
 
 func Seed(cfg *config.InstallConfig) error {
 	seedPath := filepath.Join(cfg.InstallPath, "packages/db/prisma/seed.ts")
-	return tsxcli.RunScript(cfg.InstallPath, seedPath, cfg.DatabaseURL())
+	return tsxcli.RunScript(cfg.InstallPath, seedPath, cfg.DatabaseURL(), map[string]string{
+		"COMPANY_NAME":    cfg.CompanyName,
+		"ADMIN_EMAIL":     cfg.AdminEmail,
+		"ADMIN_PASSWORD":  cfg.AdminPass,
+		"LICENSE_KEY":     cfg.LicenseKey,
+	})
 }
 
 func StartService(cfg *config.InstallConfig) {
