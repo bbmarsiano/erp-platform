@@ -7,6 +7,50 @@
 
 ---
 
+## Известни изисквания и ограничения
+
+| Компонент | Изискване | Бележка |
+|-----------|-----------|---------|
+| Node.js | v20 или v22 LTS | v24 има ESM проблеми с някои пакети |
+| PostgreSQL | v14–v17 | v18 (Postgres.app) работи |
+| pnpm | v9.x | Инсталирай с `sudo npm install -g pnpm@9.15.0` |
+| Homebrew | Опционален | Нужен само ако installer трябва да инсталира PostgreSQL |
+| Xcode CLI Tools | Опционален | Нужен за Homebrew; на macOS 26 може да не работи |
+| Парола | Без `!` символ | zsh интерпретира `!` специално в команди |
+
+---
+
+## Важни стъпки след инсталация (ръчни)
+
+След като installer завърши, трябва да изпълниш тези стъпки ръчно:
+
+### 1. Генерирай Prisma Client
+```bash
+cd ~/Applications/DFlowERP  # или /opt/dflow-erp на Linux
+npx prisma@5.22.0 generate --schema packages/db/prisma/schema.prisma
+```
+✅ Без тази стъпка сървърът не може да се свърже с базата данни.
+
+### 2. Стартирай сървъра
+```bash
+node apps/api/dist/server.js
+```
+
+### 3. Отвори в браузър
+- Chrome или Firefox: `http://localhost:3001`
+- Safari: може да не работи с localhost
+- Hard refresh ако виждаш празна страница: `Cmd+Shift+R`
+
+### 4. Ако seed данните не са създадени
+Ако не можеш да се логнеш, пусни seed ръчно:
+```bash
+cd ~/Applications/DFlowERP
+COMPANY_NAME="Твоята Компания" ADMIN_EMAIL="admin@company.com" ADMIN_PASSWORD="парола123" LICENSE_KEY="DEMO-0000-0000-0000" DATABASE_URL="postgresql://dflow:dflow_secure_pass@localhost:5432/dflow_erp" npx tsx@4.19.3 packages/db/prisma/seed.ts
+```
+⚠️ Паролата не трябва да съдържа `!` символ при изпълнение от командния ред.
+
+---
+
 ## Минимални системни изисквания
 
 | Компонент | Минимум | Препоръчано |

@@ -116,7 +116,79 @@ make build-dev
 
 ---
 
-## Отстраняване на проблеми
+## Известни проблеми и решения
+
+### 1. `bad CPU type in executable`
+**Причина:** Свален е грешният installer binary.
+**Решение:**
+- Apple Silicon (M1/M2/M3): `dflow-installer-darwin-arm64`
+- Intel Mac: `dflow-installer-darwin-amd64`
+- Провери: `uname -m` → `arm64` или `x86_64`
+
+### 2. `PostgreSQL setup failed: exec: "brew": executable file not found`
+**Причина:** Homebrew не е инсталиран.
+**Решение:** Инсталирай PostgreSQL директно от https://postgresapp.com
+После добави към PATH:
+```bash
+echo 'export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"' >> ~/.zprofile
+source ~/.zprofile
+```
+
+### 3. `Cannot find module '.prisma/client/default'`
+**Причина:** Prisma Client не е генериран след инсталацията.
+**Решение:**
+```bash
+cd ~/Applications/DFlowERP
+npx prisma@5.22.0 generate --schema packages/db/prisma/schema.prisma
+```
+
+### 4. `EADDRINUSE: address already in use :::3001`
+**Причина:** Вече върви процес на порт 3001.
+**Решение:**
+```bash
+lsof -ti :3001 | xargs kill -9
+```
+
+### 5. Празна страница на `http://localhost:3001`
+**Причина:** Browser cache.
+**Решение:** Hard refresh с `Cmd+Shift+R` или отвори в Incognito.
+**Забележка:** Safari може да не работи с localhost — използвай Chrome или Firefox.
+
+### 6. `Invalid credentials` при login
+**Причина:** Seed данните не са създадени с wizard данните.
+**Решение:** Пусни seed ръчно (виж SERVER_INSTALL.md → Стъпка 4).
+
+### 7. `zsh: command not found: node`
+**Причина:** Node.js не е в PATH.
+**Решение:**
+```bash
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zprofile
+source ~/.zprofile
+```
+
+### 8. `permission denied` при `npm install -g pnpm`
+**Причина:** Няма права за глобална инсталация.
+**Решение:**
+```bash
+sudo npm install -g pnpm@9.15.0
+```
+
+### 9. Парола с `!` символ не работи в командния ред
+**Причина:** zsh интерпретира `!` като history expansion.
+**Решение:** Използвай парола без `!` при ръчно изпълнение на команди.
+В wizard-а можеш да въведеш `!` без проблем.
+
+### 10. `Failed loading module: wms` (и останалите)
+**Причина:** Стар engine пакет без компилирани модули.
+**Решение:** Свали последния installer от GitHub Releases.
+
+### 11. Node.js версия несъвместимост
+**Причина:** Node.js v24 има ESM проблеми.
+**Решение:** Инсталирай Node.js v22 LTS от https://nodejs.org
+
+---
+
+## Отстраняване на проблеми (кратък справочник)
 
 | Проблем | Решение |
 |---------|---------|

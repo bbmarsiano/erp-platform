@@ -32,12 +32,14 @@
 
 ### Изисквания
 
-| Инструмент | Версия | Инсталация |
-|-----------|--------|-----------|
-| Node.js | 20+ | https://nodejs.org |
-| pnpm | 9+ | `npm install -g pnpm` |
-| PostgreSQL | 14+ | `brew install postgresql@16` (Mac) |
-| Go | 1.22+ | `brew install go` (само за installer) |
+| Компонент | Версия | Бележка |
+|-----------|--------|---------|
+| Node.js | **v20 или v22 LTS** | ⚠️ v24 не се поддържа |
+| PostgreSQL | 14–17 | Postgres.app работи на Mac |
+| pnpm | 9.x | `sudo npm install -g pnpm@9.15.0` |
+| Браузър | Chrome / Firefox | Safari може да не работи с localhost |
+
+За локална разработка също е нужен **Go 1.22+** (`brew install go`) — само за installer binary.
 
 ### Стъпки
 
