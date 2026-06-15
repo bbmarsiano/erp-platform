@@ -33,7 +33,7 @@ const healthRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         success: true,
         data: {
           status: 'ok',
-          version: '0.3.0',
+          version: '0.4.0',
           timestamp: new Date().toISOString(),
           loadedModules: loadedModules.map((module) => module.id)
         }
