@@ -1,4 +1,4 @@
-# DFlowERP — Инструкции за тестване v0.3.0
+# DFlowERP — Инструкции за тестване v0.4.0
 
 ## Prerequisites
 
@@ -16,7 +16,7 @@
 
 ### Windows
 1. Свали `dflow-installer-windows-amd64.exe` от
-   https://github.com/bbmarsiano/erp-platform/releases/tag/v0.3.0-installer
+   https://github.com/bbmarsiano/erp-platform/releases/tag/v0.4.0-installer
 2. Отвори CMD като Administrator
 3. `cd C:\Users\[потребител]\Downloads`
 4. `dflow-installer-windows-amd64.exe`
@@ -25,7 +25,7 @@
 
 ### Mac (Apple Silicon)
 ```bash
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.3.0-installer/dflow-installer-darwin-arm64 -o dflow-installer
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.4.0-installer/dflow-installer-darwin-arm64 -o dflow-installer
 chmod +x dflow-installer
 ./dflow-installer
 # Лиценз: DEMO-0000-0000-0000
@@ -33,14 +33,14 @@ chmod +x dflow-installer
 
 ### Mac (Intel)
 ```bash
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.3.0-installer/dflow-installer-darwin-amd64 -o dflow-installer
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.4.0-installer/dflow-installer-darwin-amd64 -o dflow-installer
 chmod +x dflow-installer
 ./dflow-installer
 ```
 
 ### Linux
 ```bash
-curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.3.0-installer/dflow-installer-linux-amd64 -o dflow-installer
+curl -L https://github.com/bbmarsiano/erp-platform/releases/download/v0.4.0-installer/dflow-installer-linux-amd64 -o dflow-installer
 chmod +x dflow-installer
 sudo ./dflow-installer
 ```
@@ -210,5 +210,5 @@ sudo npm install -g pnpm@9.15.0
 | `dflow-installer-darwin-amd64` | Mac Intel | ~7.3MB |
 | `dflow-installer-linux-amd64` | Linux 64-bit | ~7.2MB |
 
-Installer: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.3.0-installer
-Engine: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.3.0-engine
+Installer: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.4.0-installer
+Engine: https://github.com/bbmarsiano/erp-platform/releases/tag/v0.4.0-engine
