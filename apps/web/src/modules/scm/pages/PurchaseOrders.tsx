@@ -40,6 +40,11 @@ export default function PurchaseOrders() {
       <PageHeader
         title="Поръчки покупка"
         subtitle="Управление на поръчки към доставчици"
+        help={{
+          title: 'Поръчки покупка',
+          content:
+            'Управление на поръчките към доставчици. Статуси: Чернова → Изпратена → Получена. При получаване можете да създадете доставка.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова поръчка</Button> : undefined}
       />
 

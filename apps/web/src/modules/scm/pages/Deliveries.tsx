@@ -46,6 +46,11 @@ export default function Deliveries() {
       <PageHeader
         title="Доставки"
         subtitle="Документи за доставка на стока"
+        help={{
+          title: 'Доставки',
+          content:
+            'При получаване на стоки потвърдете количествата тук. Потвърдената доставка автоматично създава приходен документ в склада.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова доставка</Button> : undefined}
       />
 

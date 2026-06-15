@@ -34,6 +34,11 @@ export default function Suppliers() {
       <PageHeader
         title="Доставчици"
         subtitle="Управление на доставчици"
+        help={{
+          title: 'Доставчици',
+          content:
+            'Регистър на всички доставчици. Добавете контактна информация за лесна комуникация при поръчки.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нов доставчик</Button> : undefined}
       />
 

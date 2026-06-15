@@ -44,6 +44,11 @@ export default function WorkOrders() {
       <PageHeader
         title="Производствени нареждания"
         subtitle="Управление на производствени поръчки"
+        help={{
+          title: 'Производствени нареждания',
+          content:
+            'Нареждането стартира производствен процес по дадена рецептура. При завършване суровините се изписват и готовият продукт се заприхождава.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Ново нареждане</Button> : undefined}
       />
 

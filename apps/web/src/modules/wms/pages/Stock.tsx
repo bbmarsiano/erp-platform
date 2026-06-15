@@ -39,6 +39,11 @@ export default function Stock() {
       <PageHeader
         title="Наличности"
         subtitle="Текущи наличности по продукт и локация"
+        help={{
+          title: 'Наличности',
+          content:
+            'Показва текущите количества по продукт и локация. Червено означава под минималната наличност — трябва да направите поръчка.'
+        }}
         action={
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button

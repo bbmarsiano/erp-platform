@@ -41,6 +41,11 @@ export default function Issues() {
       <PageHeader
         title="Експедиции"
         subtitle="Документи за изписване на стока"
+        help={{
+          title: 'Изпращане',
+          content:
+            'Изходните документи записват изпратени стоки от склада. При потвърждение наличностите се намаляват автоматично.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова експедиция</Button> : undefined}
       />
 

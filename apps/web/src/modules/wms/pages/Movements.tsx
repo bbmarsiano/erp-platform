@@ -31,7 +31,15 @@ export default function Movements() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <PageHeader title="Движения" subtitle="История на всички складови движения" />
+      <PageHeader
+        title="Движения"
+        subtitle="История на всички складови движения"
+        help={{
+          title: 'Движения',
+          content:
+            'Пълна история на всички складови движения — входове, изходи, трансфери и корекции. Използвайте за одит и проследяване.'
+        }}
+      />
 
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Зареждане...</div>

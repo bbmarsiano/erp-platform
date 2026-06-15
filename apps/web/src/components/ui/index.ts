@@ -1,5 +1,6 @@
 export { BackButton } from './BackButton'
 export { PageHeader } from './PageHeader'
+export { HelpTooltip } from './HelpTooltip'
 export { Card } from './Card'
 export { Button } from './Button'
 export { StatusBadge } from './StatusBadge'

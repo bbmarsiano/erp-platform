@@ -23,6 +23,11 @@ export default function Registers() {
       <PageHeader
         title="Каси"
         subtitle="Управление на POS каси"
+        help={{
+          title: 'Каси',
+          content:
+            'Управление на физическите каси. Всяка каса е свързана с конкретен склад и локация. Необходима е поне една активна каса за да работи POS терминалът.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова каса</Button> : undefined}
       />
 

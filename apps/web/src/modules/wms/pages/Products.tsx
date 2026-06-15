@@ -195,6 +195,11 @@ export default function Products() {
       <PageHeader
         title="Продукти"
         subtitle="Управление на продуктовия каталог с баркодове"
+        help={{
+          title: 'Продукти',
+          content:
+            'Продуктовият каталог съдържа всички артикули в системата. Можете да добавите баркод за бързо сканиране при продажба или приемане.'
+        }}
         action={
           <div style={{ display: 'flex', gap: 8 }}>
             <Button

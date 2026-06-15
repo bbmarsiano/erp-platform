@@ -147,6 +147,11 @@ export default function WmsReports() {
       <PageHeader
         title="Справки"
         subtitle="Складово стопанство — анализи и отчети"
+        help={{
+          title: 'Справки — WMS',
+          content:
+            'Анализи на складовата дейност. Изберете период и раздел: Движения, Наличности или Приходи. Експортирайте в Excel с бутона горе вдясно.'
+        }}
         action={
         <button
           onClick={exportExcel}

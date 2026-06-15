@@ -171,6 +171,11 @@ function ReportHeader({ subtitle, onExport }: { subtitle: string; onExport: () =
     <PageHeader
       title="Справки"
       subtitle={subtitle}
+      help={{
+        title: 'Справки — SCM',
+        content:
+          'Анализи на доставките — поръчки по период, активност на доставчиците и история на доставките с Excel export.'
+      }}
       action={
         <button
           onClick={onExport}

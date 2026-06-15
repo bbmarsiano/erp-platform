@@ -40,6 +40,11 @@ export default function Policies() {
       <PageHeader
         title="Политики"
         subtitle="Управление на политики за архивиране"
+        help={{
+          title: 'Политики за архивиране',
+          content:
+            'Политиката определя кога автоматично да се архивират данните. Препоръчва се дневно архивиране за защита от загуба на данни.'
+        }}
         action={<Button onClick={() => setShowForm((x) => !x)}>{showForm ? 'Отказ' : 'Нова политика'}</Button>}
       />
       {showForm ? (

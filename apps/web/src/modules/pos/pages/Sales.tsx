@@ -20,7 +20,15 @@ export default function Sales() {
   const rows = (sales.data ?? []) as Array<any>
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <PageHeader title="Продажби" subtitle="История на продажби" />
+      <PageHeader
+        title="Продажби"
+        subtitle="История на продажби"
+        help={{
+          title: 'История на продажбите',
+          content:
+            'Списък на всички завършени продажби. Кликнете на продажба за да видите детайлите и да принтирате касова бележка.'
+        }}
+      />
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>

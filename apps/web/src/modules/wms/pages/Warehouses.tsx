@@ -28,6 +28,11 @@ export default function Warehouses() {
       <PageHeader
         title="Складове"
         subtitle="Управление на складове и адреси"
+        help={{
+          title: 'Складове',
+          content:
+            'Складовете са физически места за съхранение на стоки. Всеки склад може да има множество локации (напр. A-01, B-02) за точно проследяване.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нов склад</Button> : undefined}
       />
 

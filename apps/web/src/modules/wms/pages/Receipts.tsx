@@ -41,6 +41,11 @@ export default function Receipts() {
       <PageHeader
         title="Приходни"
         subtitle="Документи за приемане на стока"
+        help={{
+          title: 'Приемане',
+          content:
+            'Приходните документи записват получени стоки в склада. Създайте документ, добавете артикули и потвърдете за да осчетоводите прихода.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова приходна бележка</Button> : undefined}
       />
 

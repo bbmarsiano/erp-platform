@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store/auth.store'
+import { HelpTooltip } from '../../components/ui'
 
 interface User {
   id: string
@@ -124,7 +125,13 @@ export default function Users() {
         }}
       >
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>Потребители</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>Потребители</h1>
+            <HelpTooltip
+              title="Потребители"
+              content="Управление на достъпа до системата. Ролите определят какво може да прави всеки потребител: SUPER_ADMIN има пълен достъп, READONLY само преглежда данни."
+            />
+          </div>
           <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
             Управление на потребителски акаунти и роли
           </p>

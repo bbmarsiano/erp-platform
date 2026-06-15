@@ -118,6 +118,11 @@ export default function PosReports() {
       <PageHeader
         title="Справки"
         subtitle="Точка на продажба — анализи и отчети"
+        help={{
+          title: 'Справки — POS',
+          content:
+            'Анализи на продажбите — приход по период, топ артикули по количество и стойност с Excel export.'
+        }}
         action={
           <button
             onClick={exportExcel}

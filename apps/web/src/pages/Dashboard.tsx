@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Warehouse, Truck, Factory, ShoppingCart, HardDrive } from 'lucide-react'
+import { Warehouse, Truck, Factory, ShoppingCart, HardDrive, X } from 'lucide-react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
 import { formatCurrency } from '../lib/currency'
+import { HelpTooltip } from '../components/ui'
 
 interface DashboardStats {
   wms: { warehouses: number; stockItems: number; draftReceipts: number; lowStock: number }
@@ -34,6 +35,12 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('dflow_welcome_dismissed'))
+
+  const dismissWelcome = () => {
+    localStorage.setItem('dflow_welcome_dismissed', '1')
+    setShowWelcome(false)
+  }
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -234,20 +241,72 @@ export default function Dashboard() {
 
   return (
     <div>
+      {showWelcome && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)',
+            border: '1px solid #ddd6fe',
+            borderRadius: 12,
+            padding: '16px 20px',
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 28 }}>👋</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#4c1d95', marginBottom: 2 }}>
+                Добре дошли в DFlowERP!
+              </div>
+              <div style={{ fontSize: 13, color: '#6d28d9' }}>
+                Нов потребител? Разгледайте ръководството за употреба или кликнете{' '}
+                <a href="/help" style={{ color: '#7c3aed', fontWeight: 600 }}>
+                  Помощ
+                </a>{' '}
+                в горния десен ъгъл.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={dismissWelcome}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#8b5cf6',
+              flexShrink: 0
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1
-              style={{
-                fontSize: 26,
-                fontWeight: 800,
-                margin: '0 0 4px',
-                color: '#0f172a',
-                letterSpacing: '-0.5px'
-              }}
-            >
-              {greeting()}, {user?.firstName ?? user?.email?.split('@')[0]} 👋
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <h1
+                style={{
+                  fontSize: 26,
+                  fontWeight: 800,
+                  margin: 0,
+                  color: '#0f172a',
+                  letterSpacing: '-0.5px'
+                }}
+              >
+                {greeting()}, {user?.firstName ?? user?.email?.split('@')[0]} 👋
+              </h1>
+              <HelpTooltip
+                title="Табло"
+                content="Таблото показва обобщена информация за всички модули. Червените числа означават предупреждения — например артикули под минимум или поръчки в изчакване."
+                position="bottom"
+              />
+            </div>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>
               {new Date().toLocaleDateString('bg-BG', {
                 weekday: 'long',

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
 import { APP_VERSION } from '../version'
+import { HelpTooltip } from '../components/ui'
 
 type SettingsTab = 'profile' | 'system' | 'license' | 'company'
 
@@ -308,7 +309,13 @@ export default function Settings() {
 
   return (
     <div style={{ padding: '32px', maxWidth: 800 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 600, margin: '0 0 24px' }}>Настройки</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>Настройки</h1>
+        <HelpTooltip
+          title="Настройки"
+          content="Профил — лични данни. Фирма — данни за касови бележки и фактури. Лиценз — информация за абонамента. Система — техническа информация."
+        />
+      </div>
 
       <div
         style={{

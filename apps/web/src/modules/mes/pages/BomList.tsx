@@ -24,6 +24,11 @@ export default function BomList() {
       <PageHeader
         title="Рецептури (BOM)"
         subtitle="Управление на рецептури за производство"
+        help={{
+          title: 'Рецептури (BOM)',
+          content:
+            'Рецептурата описва от какви суровини и в какви количества се произвежда даден продукт. Кликнете на рецептура за да видите и редактирате компонентите.'
+        }}
         action={!showForm ? <Button onClick={() => setShowForm(true)}>Нова рецептура</Button> : undefined}
       />
 

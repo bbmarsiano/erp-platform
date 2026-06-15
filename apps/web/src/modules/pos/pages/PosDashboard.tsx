@@ -318,7 +318,15 @@ export default function PosDashboard() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <PageHeader title="POS терминал" subtitle="Терминал за продажби" />
+      <PageHeader
+        title="POS терминал"
+        subtitle="Терминал за продажби"
+        help={{
+          title: 'Касов терминал',
+          content:
+            'Изберете каса, добавете продукти (клик или баркод скенер), изберете метод на плащане и завършете продажбата. Можете да издадете касова бележка или фактура.'
+        }}
+      />
       <div style={{ display: 'grid', gridTemplateColumns: '60% 40%', gap: 14, marginTop: 14 }}>
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>

@@ -102,6 +102,10 @@ export default function MesReports() {
       <PageHeader
         title="Справки"
         subtitle="Производство — анализи и отчети"
+        help={{
+          title: 'Справки — MES',
+          content: 'Анализи на производствената дейност — нареждания по период и обобщение на рецептурите.'
+        }}
         action={
           <button
             onClick={exportExcel}
