@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BookOpen } from 'lucide-react'
 import { api } from '../../lib/api'
 import { APP_VERSION } from '../../version'
 
@@ -7,6 +8,7 @@ const pageTitles: Record<string, string> = {
   '/dashboard': 'Табло',
   '/users': 'Потребители',
   '/settings': 'Настройки',
+  '/help': 'Помощ',
   '/wms': 'Складово стопанство',
   '/scm': 'Верига на доставките',
   '/mes': 'Производство',
@@ -31,6 +33,7 @@ export function TopBar({
   showHamburger: boolean
 }) {
   const location = useLocation()
+  const navigate = useNavigate()
   const [companyName, setCompanyName] = useState('')
 
   useEffect(() => {
@@ -106,7 +109,38 @@ export function TopBar({
           </span>
         </div>
       </div>
-      <span style={{ fontSize: 11, color: '#d1d5db', fontFamily: 'monospace' }}>v{APP_VERSION}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={() => navigate('/help')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '4px 10px',
+            background: 'none',
+            border: '1px solid #e5e7eb',
+            borderRadius: 6,
+            cursor: 'pointer',
+            fontSize: 12,
+            color: '#6b7280',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#7c3aed'
+            e.currentTarget.style.color = '#7c3aed'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = '#e5e7eb'
+            e.currentTarget.style.color = '#6b7280'
+          }}
+        >
+          <BookOpen size={13} />
+          Помощ
+        </button>
+        <span style={{ fontSize: 11, color: '#d1d5db', fontFamily: 'monospace' }}>v{APP_VERSION}</span>
+      </div>
     </div>
   )
 }

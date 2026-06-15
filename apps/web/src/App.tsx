@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
+import Help from './pages/Help'
 import Users from './pages/users/Users'
 import BackupRouter from './modules/backup/BackupRouter'
 import PosRouter from './modules/pos/PosRouter'
@@ -89,6 +90,16 @@ export default function App() {
             <PrivateRoute>
               <AppShell>
                 <Settings />
+              </AppShell>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <PrivateRoute>
+              <AppShell>
+                <Help />
               </AppShell>
             </PrivateRoute>
           }
