@@ -2,6 +2,15 @@ import { prisma } from '@dflow/db'
 import bcrypt from 'bcryptjs'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { validateLicense } from '../services/license.service'
+
+const ALL_MODULE_FEATURES = [
+  'module:wms',
+  'module:scm',
+  'module:mes',
+  'module:pos',
+  'module:backup'
+]
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -51,7 +60,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
                       tenantId: { type: 'string' }
                     }
                   },
-                  allowedVersion: { type: ['string', 'null'] }
+                  allowedVersion: { type: ['string', 'null'] },
+                  licensedFeatures: { type: 'array', items: { type: 'string' } }
                 }
               }
             }
@@ -115,27 +125,25 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       })
 
       let allowedVersion: string | null = null
+      let licensedFeatures: string[] = []
+
       try {
         const licenseKey = process.env.LICENSE_KEY
         const licenseServerUrl = process.env.LICENSE_SERVER_URL
         const licenseServerKey = process.env.LICENSE_SERVER_KEY
-        if (licenseKey && licenseServerUrl && licenseServerKey) {
-          const licResp = await fetch(
-            `${licenseServerUrl}/functions/v1/validate-license`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${licenseServerKey}`
-              },
-              body: JSON.stringify({ key: licenseKey })
-            }
-          )
-          const licData = (await licResp.json()) as { valid?: boolean; allowedVersion?: string | null }
-          if (licData.valid) allowedVersion = licData.allowedVersion ?? null
+        if (licenseKey && licenseServerUrl) {
+          const result = await validateLicense(licenseKey, licenseServerUrl, licenseServerKey || '')
+          if (result.valid) {
+            allowedVersion = result.allowedVersion
+            licensedFeatures = result.features
+          }
         }
       } catch {
         /* ignore license check errors */
+      }
+
+      if (!licensedFeatures.length) {
+        licensedFeatures = [...ALL_MODULE_FEATURES]
       }
 
       return reply.send({
@@ -151,7 +159,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             role: user.role,
             tenantId: user.tenantId
           },
-          allowedVersion
+          allowedVersion,
+          licensedFeatures
         }
       })
     }

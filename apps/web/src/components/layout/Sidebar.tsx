@@ -37,6 +37,14 @@ interface NavGroup {
   basePath: string
 }
 
+const MODULE_FEATURE_MAP: Record<string, string> = {
+  wms: 'module:wms',
+  scm: 'module:scm',
+  mes: 'module:mes',
+  pos: 'module:pos',
+  backup: 'module:backup'
+}
+
 const navGroups: NavGroup[] = [
   {
     id: 'wms',
@@ -148,9 +156,16 @@ export function Sidebar({
   const location = useLocation()
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
   const logout = useAuthStore((s) => s.logout)
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+
+  const visibleGroups = navGroups.filter((group) => {
+    const featureKey = MODULE_FEATURE_MAP[group.id]
+    if (!featureKey) return true
+    return licensedFeatures.length === 0 || licensedFeatures.includes(featureKey)
+  })
 
   useEffect(() => {
     api
@@ -160,9 +175,9 @@ export function Sidebar({
   }, [])
 
   useEffect(() => {
-    const active = navGroups.find((g) => location.pathname.startsWith(g.basePath))
+    const active = visibleGroups.find((g) => location.pathname.startsWith(g.basePath))
     if (active) setExpandedGroup(active.id)
-  }, [location.pathname])
+  }, [location.pathname, visibleGroups])
 
   const handleLogout = () => {
     logout()
@@ -283,7 +298,7 @@ export function Sidebar({
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 16px' }} />
 
-        {navGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const isGroupActive = location.pathname.startsWith(group.basePath)
           const isExpanded = expandedGroup === group.id
           const gIcon = groupIcons[group.id]

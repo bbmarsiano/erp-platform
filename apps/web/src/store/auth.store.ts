@@ -16,6 +16,7 @@ interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   allowedVersion: string | null
+  licensedFeatures: string[]
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
@@ -29,16 +30,19 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       allowedVersion: null,
+      licensedFeatures: [],
       isAuthenticated: false,
 
       login: async (email: string, password: string) => {
         const response = await api.post('/api/auth/login', { email, password })
-        const { accessToken, refreshToken, user, allowedVersion } = response.data.data
+        const { accessToken, refreshToken, user, allowedVersion, licensedFeatures } =
+          response.data.data
         set({
           user,
           accessToken,
           refreshToken,
           allowedVersion: allowedVersion ?? null,
+          licensedFeatures: licensedFeatures ?? [],
           isAuthenticated: true
         })
       },
@@ -49,6 +53,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           allowedVersion: null,
+          licensedFeatures: [],
           isAuthenticated: false
         })
       },
@@ -64,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         user: state.user,
         allowedVersion: state.allowedVersion,
+        licensedFeatures: state.licensedFeatures,
         isAuthenticated: state.isAuthenticated
       })
     }

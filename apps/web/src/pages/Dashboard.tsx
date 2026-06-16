@@ -14,6 +14,14 @@ interface DashboardStats {
   backup: { activePolicies: number; lastBackup: string | null; failedThisWeek: number }
 }
 
+const MODULE_FEATURE_MAP: Record<string, string> = {
+  wms: 'module:wms',
+  scm: 'module:scm',
+  mes: 'module:mes',
+  pos: 'module:pos',
+  backup: 'module:backup'
+}
+
 const moduleIcons: Record<string, React.ReactNode> = {
   wms: <Warehouse size={20} color="white" />,
   scm: <Truck size={20} color="white" />,
@@ -32,6 +40,7 @@ const moduleColors: Record<string, { gradient: string; accent: string; text: str
 
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user)
+  const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -232,6 +241,12 @@ export default function Dashboard() {
     }
   ]
 
+  const visibleModules = modules.filter((mod) => {
+    const featureKey = MODULE_FEATURE_MAP[mod.id]
+    if (!featureKey) return true
+    return licensedFeatures.length === 0 || licensedFeatures.includes(featureKey)
+  })
+
   const greeting = () => {
     const h = new Date().getHours()
     if (h < 12) return 'Добро утро'
@@ -356,7 +371,7 @@ export default function Dashboard() {
             gap: 20
           }}
         >
-          {modules.map((mod, idx) => {
+          {visibleModules.map((mod, idx) => {
             const colors = moduleColors[mod.id]
             return (
               <div
