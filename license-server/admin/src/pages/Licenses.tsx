@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LicenseKey, supabase } from '../lib/supabase'
 
+const MODULE_BADGES: Record<string, { label: string; bg: string; color: string }> = {
+  'module:wms': { label: 'WMS', bg: '#e0e7ff', color: '#3730a3' },
+  'module:scm': { label: 'SCM', bg: '#d1fae5', color: '#065f46' },
+  'module:mes': { label: 'MES', bg: '#fce7f3', color: '#9d174d' },
+  'module:pos': { label: 'POS', bg: '#e0f2fe', color: '#0c4a6e' },
+  'module:backup': { label: 'Backup', bg: '#dcfce7', color: '#14532d' }
+}
+
 export default function Licenses() {
   const [licenses, setLicenses] = useState<LicenseKey[]>([])
   const [editingVersion, setEditingVersion] = useState<{ id: string; value: string } | null>(null)
@@ -35,6 +43,17 @@ export default function Licenses() {
             <th align="left">Изтича</th>
             <th align="left">Последна валидация</th>
             <th align="left">Инсталации</th>
+            <th
+              style={{
+                padding: '11px 16px',
+                textAlign: 'left',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#6b7280'
+              }}
+            >
+              Модули
+            </th>
             <th align="left">Обновление</th>
             <th align="left">Статус</th>
             <th align="left">Действие</th>
@@ -52,6 +71,33 @@ export default function Licenses() {
               <td>{new Date(license.expires_at).toLocaleDateString('bg-BG')}</td>
               <td>{license.last_validated_at ? new Date(license.last_validated_at).toLocaleString('bg-BG') : '-'}</td>
               <td>{license.install_count}</td>
+              <td style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  {(license.features || []).map((feature: string) => {
+                    const badge = MODULE_BADGES[feature]
+                    if (!badge) return null
+                    return (
+                      <span
+                        key={feature}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 20,
+                          fontSize: 10,
+                          fontWeight: 700,
+                          background: badge.bg,
+                          color: badge.color,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {badge.label}
+                      </span>
+                    )
+                  })}
+                  {(!license.features || license.features.length === 0) && (
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>—</span>
+                  )}
+                </div>
+              </td>
               <td style={{ padding: '12px 16px' }}>
                 {editingVersion?.id === license.id ? (
                   <div style={{ display: 'flex', gap: 6 }}>

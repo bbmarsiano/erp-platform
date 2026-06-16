@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/passwordgate.tsx","./src/lib/supabase.ts","./src/pages/dashboard.tsx","./src/pages/generatelicense.tsx","./src/pages/licenses.tsx","./src/pages/tenants.tsx"],"version":"5.9.3"}
