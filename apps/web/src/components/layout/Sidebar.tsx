@@ -37,14 +37,6 @@ interface NavGroup {
   basePath: string
 }
 
-const MODULE_FEATURE_MAP: Record<string, string> = {
-  wms: 'module:wms',
-  scm: 'module:scm',
-  mes: 'module:mes',
-  pos: 'module:pos',
-  backup: 'module:backup'
-}
-
 const navGroups: NavGroup[] = [
   {
     id: 'wms',
@@ -161,11 +153,21 @@ export function Sidebar({
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
 
-  const visibleGroups = navGroups.filter((group) => {
-    const featureKey = MODULE_FEATURE_MAP[group.id]
+  const isModuleLicensed = (moduleId: string): boolean => {
+    const featureMap: Record<string, string> = {
+      wms: 'module:wms',
+      scm: 'module:scm',
+      mes: 'module:mes',
+      pos: 'module:pos',
+      backup: 'module:backup'
+    }
+    const featureKey = featureMap[moduleId]
     if (!featureKey) return true
-    return licensedFeatures.length === 0 || licensedFeatures.includes(featureKey)
-  })
+    if (!licensedFeatures || licensedFeatures.length === 0) return true
+    return licensedFeatures.includes(featureKey)
+  }
+
+  const visibleGroups = navGroups.filter((group) => isModuleLicensed(group.id))
 
   useEffect(() => {
     api
@@ -298,7 +300,7 @@ export function Sidebar({
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 16px' }} />
 
-        {visibleGroups.map((group) => {
+        {navGroups.filter((group) => isModuleLicensed(group.id)).map((group) => {
           const isGroupActive = location.pathname.startsWith(group.basePath)
           const isExpanded = expandedGroup === group.id
           const gIcon = groupIcons[group.id]

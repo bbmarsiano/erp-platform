@@ -14,14 +14,6 @@ interface DashboardStats {
   backup: { activePolicies: number; lastBackup: string | null; failedThisWeek: number }
 }
 
-const MODULE_FEATURE_MAP: Record<string, string> = {
-  wms: 'module:wms',
-  scm: 'module:scm',
-  mes: 'module:mes',
-  pos: 'module:pos',
-  backup: 'module:backup'
-}
-
 const moduleIcons: Record<string, React.ReactNode> = {
   wms: <Warehouse size={20} color="white" />,
   scm: <Truck size={20} color="white" />,
@@ -45,6 +37,20 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('dflow_welcome_dismissed'))
+
+  const isModuleLicensed = (moduleId: string): boolean => {
+    const featureMap: Record<string, string> = {
+      wms: 'module:wms',
+      scm: 'module:scm',
+      mes: 'module:mes',
+      pos: 'module:pos',
+      backup: 'module:backup'
+    }
+    const featureKey = featureMap[moduleId]
+    if (!featureKey) return true
+    if (!licensedFeatures || licensedFeatures.length === 0) return true
+    return licensedFeatures.includes(featureKey)
+  }
 
   const dismissWelcome = () => {
     localStorage.setItem('dflow_welcome_dismissed', '1')
@@ -241,11 +247,7 @@ export default function Dashboard() {
     }
   ]
 
-  const visibleModules = modules.filter((mod) => {
-    const featureKey = MODULE_FEATURE_MAP[mod.id]
-    if (!featureKey) return true
-    return licensedFeatures.length === 0 || licensedFeatures.includes(featureKey)
-  })
+  const visibleModules = modules.filter((mod) => isModuleLicensed(mod.id))
 
   const greeting = () => {
     const h = new Date().getHours()

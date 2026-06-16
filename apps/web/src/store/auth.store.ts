@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         user: state.user,
         allowedVersion: state.allowedVersion,
-        licensedFeatures: state.licensedFeatures,
+        licensedFeatures: state.licensedFeatures ?? [],
         isAuthenticated: state.isAuthenticated
       })
     }
