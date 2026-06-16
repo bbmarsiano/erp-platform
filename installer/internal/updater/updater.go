@@ -62,13 +62,34 @@ func Run(licenseServerURL, licenseKey, githubRepo string) error {
 	color.Green("✓ Backup записан: %s", backupPath)
 
 	color.Cyan("\n[4/5] Изтегляне на v%s...", allowedVersion)
-	_, err = engine.Download(githubRepo, allowedVersion)
+	zipPath, installPath, err := engine.DownloadZip(githubRepo, allowedVersion)
 	if err != nil {
 		color.Red("✗ Изтеглянето неуспя. Rollback...")
 		rollback(backupPath, dbURL)
 		return fmt.Errorf("download failed: %w", err)
 	}
 	color.Green("✓ Engine v%s изтеглен", allowedVersion)
+
+	// Remove old engine directories (keep .env, backups, node_modules)
+	dirsToRemove := []string{"apps", "modules", "packages", "scripts"}
+	for _, dir := range dirsToRemove {
+		dirPath := filepath.Join(installPath, dir)
+		if _, err := os.Stat(dirPath); err == nil {
+			fmt.Printf("  Removing old %s...\n", dir)
+			if err := os.RemoveAll(dirPath); err != nil {
+				color.Red("✗ Неуспешно премахване на %s. Rollback...", dir)
+				rollback(backupPath, dbURL)
+				return fmt.Errorf("failed to remove %s: %w", dir, err)
+			}
+		}
+	}
+
+	fmt.Println("  Extracting...")
+	if err := engine.ExtractAndInstall(zipPath, allowedVersion, installPath); err != nil {
+		color.Red("✗ Извличането неуспя. Rollback...")
+		rollback(backupPath, dbURL)
+		return fmt.Errorf("extract failed: %w", err)
+	}
 
 	color.Cyan("\n[5/5] Прилагане на миграции...")
 	if err := runMigrations(installPath, dbURL); err != nil {
@@ -162,12 +183,16 @@ func runMigrations(installPath, dbURL string) error {
 
 func rollback(backupPath, dbURL string) {
 	color.Yellow("Rollback: възстановяване от backup %s...", backupPath)
+	// Drop and recreate schema to avoid duplicate errors
+	cleanCmd := exec.Command("psql", dbURL, "--no-password", "-c",
+		"DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+	cleanCmd.Run()
+
 	cmd := exec.Command("psql", dbURL, "-f", backupPath, "--no-password")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		color.Red("Rollback неуспешен: %v", err)
-		color.Red("Ръчно възстановяване: psql $DATABASE_URL -f %s", backupPath)
 	} else {
 		color.Green("✓ Rollback успешен")
 	}

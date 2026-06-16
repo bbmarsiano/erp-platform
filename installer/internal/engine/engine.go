@@ -35,8 +35,35 @@ func Download(repo, version string) (string, error) {
 	}
 
 	fmt.Println("  Extracting...")
+	if err := ExtractAndInstall(zipPath, version, installPath); err != nil {
+		return "", err
+	}
+
+	return installPath, nil
+}
+
+func DownloadZip(repo, version string) (zipPath, installPath string, err error) {
+	url := fmt.Sprintf(RELEASE_URL, repo, "v"+version+"-engine", version)
+	installPath = getInstallPath()
+
+	fmt.Printf("  Downloading engine from:\n  %s\n", url)
+
+	if err := os.MkdirAll(installPath, 0o755); err != nil {
+		return "", "", fmt.Errorf("create install dir: %w", err)
+	}
+
+	zipPath = filepath.Join(os.TempDir(), fmt.Sprintf("dflow-engine-%s.zip", version))
+
+	if err := downloadWithProgress(url, zipPath); err != nil {
+		return "", "", fmt.Errorf("download failed: %w", err)
+	}
+
+	return zipPath, installPath, nil
+}
+
+func ExtractAndInstall(zipPath, version, installPath string) error {
 	if err := extractZip(zipPath, installPath); err != nil {
-		return "", fmt.Errorf("extraction failed: %w", err)
+		return fmt.Errorf("extraction failed: %w", err)
 	}
 
 	// The ZIP extracts to a subdirectory dflow-engine-VERSION/
@@ -45,7 +72,7 @@ func Download(repo, version string) (string, error) {
 	if _, err := os.Stat(extractedDir); err == nil {
 		// Move all files from subdirectory to installPath
 		if err := moveContents(extractedDir, installPath); err != nil {
-			return "", fmt.Errorf("move contents: %w", err)
+			return fmt.Errorf("move contents: %w", err)
 		}
 		_ = os.RemoveAll(extractedDir)
 	}
@@ -53,10 +80,10 @@ func Download(repo, version string) (string, error) {
 	// Install Node.js dependencies
 	fmt.Println("  Installing dependencies (this may take a few minutes)...")
 	if err := installDeps(installPath); err != nil {
-		return "", fmt.Errorf("install deps: %w", err)
+		return fmt.Errorf("install deps: %w", err)
 	}
 
-	return installPath, nil
+	return nil
 }
 
 func installDeps(installPath string) error {
