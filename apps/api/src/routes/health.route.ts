@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { loadedModules } from '../plugins/moduleLoader'
 
 const healthRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get(
@@ -20,7 +19,9 @@ const healthRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
                   status: { type: 'string' },
                   version: { type: 'string' },
                   timestamp: { type: 'string' },
-                  loadedModules: { type: 'array', items: { type: 'string' } }
+                  loadedModules: { type: 'array', items: { type: 'string' } },
+                  skippedModules: { type: 'array', items: { type: 'string' } },
+                  licensedFeatures: { type: 'array', items: { type: 'string' } }
                 }
               }
             }
@@ -35,7 +36,9 @@ const healthRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           status: 'ok',
           version: '0.4.0',
           timestamp: new Date().toISOString(),
-          loadedModules: loadedModules.map((module) => module.id)
+          loadedModules: fastify.loadedModules,
+          skippedModules: fastify.skippedModules,
+          licensedFeatures: fastify.licensedFeatures
         }
       })
     }

@@ -13,11 +13,46 @@ import healthRoute from './routes/health.route'
 import publicRoute from './routes/public.route'
 import authRoute from './routes/auth.route'
 import usersRoute from './routes/users.route'
+import { validateLicense } from './services/license.service'
 
 dotenv.config({ path: '../../.env' })
 
+const ALL_MODULE_FEATURES = [
+  'module:wms',
+  'module:scm',
+  'module:mes',
+  'module:pos',
+  'module:backup'
+]
+
 const buildServer = async (): Promise<FastifyInstance> => {
   const app = Fastify({ logger: true })
+
+  const licenseKey = process.env.LICENSE_KEY || ''
+  const licenseServerUrl = process.env.LICENSE_SERVER_URL || ''
+  const licenseServerKey = process.env.LICENSE_SERVER_KEY || ''
+
+  let allowedFeatures: string[] = []
+  try {
+    if (licenseKey && licenseServerUrl) {
+      const result = await validateLicense(licenseKey, licenseServerUrl, licenseServerKey)
+      if (result.valid) {
+        allowedFeatures = result.features || []
+        app.log.info({ features: allowedFeatures }, 'License validated')
+      }
+    }
+  } catch (err) {
+    app.log.warn({ err }, 'License validation failed — loading all modules')
+  }
+
+  if (!allowedFeatures.length) {
+    allowedFeatures = [...ALL_MODULE_FEATURES]
+  }
+
+  app.decorate('loadedModules', [] as string[])
+  app.decorate('skippedModules', [] as string[])
+  app.decorate('licensedFeatures', allowedFeatures)
+
   await app.register(sensible)
   await app.register(corsPlugin)
   await app.register(helmet, {
@@ -25,7 +60,7 @@ const buildServer = async (): Promise<FastifyInstance> => {
   })
   await app.register(jwtPlugin)
   await app.register(swaggerPlugin)
-  await app.register(moduleLoaderPlugin)
+  await app.register(moduleLoaderPlugin, { features: allowedFeatures })
   await app.register(healthRoute, { prefix: '/api' })
   await app.register(publicRoute, { prefix: '/api' })
   await app.register(authRoute, { prefix: '/api' })

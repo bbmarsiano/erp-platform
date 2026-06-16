@@ -8,14 +8,22 @@ function generateKey(): string {
   return `${seg()}-${seg()}-${seg()}-${seg()}`
 }
 
-const allFeatures = ['module:wms', 'module:scm', 'module:mes', 'module:pos', 'module:backup']
+const allModules = [
+  { id: 'module:wms', label: '📦 WMS — Складово стопанство' },
+  { id: 'module:scm', label: '🚚 SCM — Верига на доставките' },
+  { id: 'module:mes', label: '🏭 MES — Производство' },
+  { id: 'module:pos', label: '🛒 POS — Точка на продажба' },
+  { id: 'module:backup', label: '💾 Backup — Архивиране' }
+]
 
 export default function GenerateLicense() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [tenantId, setTenantId] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [maxUsers, setMaxUsers] = useState(10)
-  const [features, setFeatures] = useState<string[]>(allFeatures)
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    allModules.map((m) => m.id)
+  )
   const [generated, setGenerated] = useState('')
 
   useEffect(() => {
@@ -28,19 +36,13 @@ export default function GenerateLicense() {
     void load()
   }, [])
 
-  const toggleFeature = (feature: string) => {
-    setFeatures((current) =>
-      current.includes(feature) ? current.filter((f) => f !== feature) : [...current, feature]
-    )
-  }
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const key = generateKey()
     await supabase.from('license_keys').insert({
       tenant_id: tenantId,
       key,
-      features,
+      features: selectedFeatures,
       max_users: maxUsers,
       expires_at: new Date(expiresAt).toISOString()
     })
@@ -72,18 +74,74 @@ export default function GenerateLicense() {
           <input type="number" min={1} value={maxUsers} onChange={(e) => setMaxUsers(Number(e.target.value))} style={{ display: 'block' }} />
         </label>
 
-        <div>
-          <div>Features</div>
-          {allFeatures.map((feature) => (
-            <label key={feature} style={{ display: 'block' }}>
-              <input
-                type="checkbox"
-                checked={features.includes(feature)}
-                onChange={() => toggleFeature(feature)}
-              />{' '}
-              {feature}
-            </label>
-          ))}
+        <div style={{ marginBottom: 16 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#374151',
+              marginBottom: 8
+            }}
+          >
+            Модули
+          </label>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => setSelectedFeatures(allModules.map((m) => m.id))}
+              style={{
+                fontSize: 11,
+                padding: '3px 10px',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                cursor: 'pointer',
+                background: 'white'
+              }}
+            >
+              Избери всички
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedFeatures([])}
+              style={{
+                fontSize: 11,
+                padding: '3px 10px',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                cursor: 'pointer',
+                background: 'white'
+              }}
+            >
+              Изчисти
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {allModules.map((mod) => (
+              <label
+                key={mod.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  fontSize: 13
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedFeatures.includes(mod.id)}
+                  onChange={(e) =>
+                    setSelectedFeatures((prev) =>
+                      e.target.checked ? [...prev, mod.id] : prev.filter((f) => f !== mod.id)
+                    )
+                  }
+                  style={{ width: 15, height: 15, accentColor: '#7c3aed' }}
+                />
+                {mod.label}
+              </label>
+            ))}
+          </div>
         </div>
 
         <button type="submit">Generate</button>
@@ -97,4 +155,3 @@ export default function GenerateLicense() {
     </div>
   )
 }
-
