@@ -12,6 +12,13 @@ const MODULE_BADGES: Record<string, { label: string; bg: string; color: string }
 export default function Licenses() {
   const [licenses, setLicenses] = useState<LicenseKey[]>([])
   const [editingVersion, setEditingVersion] = useState<{ id: string; value: string } | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const copyKey = (id: string, key: string) => {
+    navigator.clipboard.writeText(key)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
   const refetch = useCallback(async () => {
     const { data } = await supabase
@@ -29,8 +36,6 @@ export default function Licenses() {
     await supabase.from('license_keys').update({ is_active: false }).eq('id', id)
     await refetch()
   }
-
-  const masked = (key: string) => `${key.slice(0, 4)}****`
 
   return (
     <div>
@@ -62,9 +67,29 @@ export default function Licenses() {
         <tbody>
           {licenses.map((license) => (
             <tr key={license.id}>
-              <td>
-                <button onClick={() => void navigator.clipboard.writeText(license.key)} title="Копирай ключ">
-                  {masked(license.key)}
+              <td style={{ padding: '12px 16px' }}>
+                <button
+                  onClick={() => copyKey(license.id, license.key)}
+                  title={`Копирай: ${license.key}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '4px 10px',
+                    background: copiedId === license.id ? '#dcfce7' : '#f8fafc',
+                    border: `1px solid ${copiedId === license.id ? '#86efac' : '#e5e7eb'}`,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: copiedId === license.id ? '#15803d' : '#374151',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  {copiedId === license.id
+                    ? '✓ Копирано!'
+                    : `${license.key.substring(0, 4)}-****-****-****`}
                 </button>
               </td>
               <td>{license.tenant?.name ?? '-'}</td>
