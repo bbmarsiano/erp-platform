@@ -27,6 +27,7 @@ export interface LicenseKey {
   last_validated_at: string | null
   install_count: number
   allowed_version: string | null
+  billing_type?: 'annual' | 'lifetime'
   created_at: string
   tenant?: Tenant
 }

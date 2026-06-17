@@ -6,6 +6,158 @@ import { HelpTooltip } from '../components/ui'
 
 type SettingsTab = 'profile' | 'system' | 'license' | 'company'
 
+interface LicenseInfo {
+  valid?: boolean
+  key?: string
+  features?: string[]
+  expiresAt?: string | null
+  maxUsers?: number
+  daysRemaining?: number
+  billingType?: string | null
+  isLifetime?: boolean
+}
+
+const MODULE_LABELS: Record<string, string> = {
+  'module:wms': 'WMS',
+  'module:scm': 'SCM',
+  'module:mes': 'MES',
+  'module:pos': 'POS',
+  'module:backup': 'Backup'
+}
+
+function LicenseSettings() {
+  const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null)
+
+  useEffect(() => {
+    api
+      .get('/api/license/info')
+      .then((r) => setLicenseInfo(r.data.data))
+      .catch(() => setLicenseInfo(null))
+  }, [])
+
+  const isLifetime = licenseInfo?.billingType === 'lifetime' || licenseInfo?.isLifetime
+  const isExpiringSoon =
+    !isLifetime && licenseInfo?.daysRemaining != null && licenseInfo.daysRemaining < 30
+
+  const rows = [
+    {
+      label: 'Лиценз ключ',
+      value: licenseInfo?.key ? `${licenseInfo.key.substring(0, 4)}-****-****-****` : '—'
+    },
+    { label: 'Статус', value: licenseInfo?.valid ? '✅ Активен' : '❌ Неактивен' },
+    { label: 'Тип', value: isLifetime ? '♾️ Lifetime' : '📅 Годишен (SaaS)' },
+    ...(!isLifetime
+      ? [
+          {
+            label: 'Изтича на',
+            value: licenseInfo?.expiresAt
+              ? new Date(licenseInfo.expiresAt).toLocaleDateString('bg-BG')
+              : '—'
+          }
+        ]
+      : []),
+    { label: 'Максимален брой потребители', value: licenseInfo?.maxUsers || '—' }
+  ]
+
+  return (
+    <div
+      style={{
+        background: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
+        padding: 24
+      }}
+    >
+      <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 20px' }}>Информация за лиценза</h2>
+
+      {isLifetime && (
+        <div
+          style={{
+            padding: '12px 16px',
+            marginBottom: 20,
+            background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+            border: '1px solid #86efac',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}
+        >
+          <span style={{ fontSize: 20 }}>♾️</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#15803d' }}>Lifetime лиценз</div>
+            <div style={{ fontSize: 12, color: '#166534' }}>
+              Безсрочен лиценз — всички бъдещи версии са включени
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isExpiringSoon && !isLifetime && (
+        <div
+          style={{
+            padding: '12px 16px',
+            marginBottom: 20,
+            background: '#fef9c3',
+            border: '1px solid #fde047',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10
+          }}
+        >
+          <span style={{ fontSize: 20 }}>⚠️</span>
+          <div style={{ fontSize: 13, color: '#854d0e' }}>
+            Лицензът изтича след <strong>{licenseInfo?.daysRemaining} дни</strong>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '10px 0',
+              borderBottom: '1px solid #f3f4f6'
+            }}
+          >
+            <span style={{ fontSize: 13, color: '#6b7280' }}>{row.label}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{row.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Активни модули</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {(licenseInfo?.features || []).map((f) => (
+            <span
+              key={f}
+              style={{
+                padding: '4px 12px',
+                borderRadius: 20,
+                background: '#f0fdf4',
+                color: '#166534',
+                fontSize: 12,
+                fontWeight: 700,
+                border: '1px solid #86efac'
+              }}
+            >
+              {MODULE_LABELS[f] || f}
+            </span>
+          ))}
+          {!licenseInfo?.features?.length && (
+            <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CompanySettings() {
   const [form, setForm] = useState({
     name: '',
@@ -454,77 +606,7 @@ export default function Settings() {
         </div>
       )}
 
-      {activeTab === 'license' && (
-        <div
-          style={{
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: 10,
-            padding: 24
-          }}
-        >
-          <h2 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 20px' }}>Информация за лиценза</h2>
-          <div style={{ display: 'grid', gap: 12, fontSize: 14 }}>
-            {[
-              { label: 'Лиценз ключ', value: 'DEMO-0000-0000-0000' },
-              {
-                label: 'Статус',
-                value: (
-                  <span
-                    style={{
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      background: '#dcfce7',
-                      color: '#166534'
-                    }}
-                  >
-                    Активен
-                  </span>
-                )
-              },
-              {
-                label: 'Активни модули',
-                value: (
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {['WMS', 'SCM', 'MES', 'POS', 'Backup'].map((m) => (
-                      <span
-                        key={m}
-                        style={{
-                          padding: '2px 8px',
-                          borderRadius: 20,
-                          fontSize: 11,
-                          background: '#dbeafe',
-                          color: '#1e40af'
-                        }}
-                      >
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                )
-              }
-            ].map(({ label, value }) => (
-              <div
-                key={label}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '10px 12px',
-                  background: '#f9fafb',
-                  borderRadius: 8,
-                  border: '1px solid #e5e7eb'
-                }}
-              >
-                <span style={{ fontWeight: 500, color: '#374151' }}>{label}</span>
-                <span>{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {activeTab === 'license' && <LicenseSettings />}
 
       {activeTab === 'company' && <CompanySettings />}
     </div>

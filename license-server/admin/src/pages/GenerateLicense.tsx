@@ -8,6 +8,12 @@ function generateKey(): string {
   return `${seg()}-${seg()}-${seg()}-${seg()}`
 }
 
+const lifetimeExpiryDate = () => {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + 100)
+  return d
+}
+
 const allModules = [
   { id: 'module:wms', label: '📦 WMS — Складово стопанство' },
   { id: 'module:scm', label: '🚚 SCM — Верига на доставките' },
@@ -21,6 +27,7 @@ export default function GenerateLicense() {
   const [tenantId, setTenantId] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [maxUsers, setMaxUsers] = useState(10)
+  const [billingType, setBillingType] = useState<'annual' | 'lifetime'>('annual')
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
     allModules.map((m) => m.id)
   )
@@ -39,12 +46,19 @@ export default function GenerateLicense() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
     const key = generateKey()
+    const finalExpiry =
+      billingType === 'lifetime'
+        ? lifetimeExpiryDate().toISOString()
+        : new Date(expiresAt).toISOString()
+
     await supabase.from('license_keys').insert({
       tenant_id: tenantId,
       key,
       features: selectedFeatures,
       max_users: maxUsers,
-      expires_at: new Date(expiresAt).toISOString()
+      expires_at: finalExpiry,
+      billing_type: billingType,
+      allowed_version: null
     })
     setGenerated(key)
   }
@@ -64,10 +78,98 @@ export default function GenerateLicense() {
           </select>
         </label>
 
-        <label>
-          Изтича на
-          <input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} required style={{ display: 'block' }} />
-        </label>
+        <div style={{ marginBottom: 16 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#374151',
+              marginBottom: 8
+            }}
+          >
+            Тип лиценз
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { id: 'annual', label: '📅 Годишен (SaaS)', desc: 'Срочен с контролирани updates' },
+              { id: 'lifetime', label: '♾️ Lifetime', desc: 'Безсрочен, всички updates включени' }
+            ].map((bt) => (
+              <button
+                key={bt.id}
+                type="button"
+                onClick={() => setBillingType(bt.id as 'annual' | 'lifetime')}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  border: `2px solid ${billingType === bt.id ? '#7c3aed' : '#e5e7eb'}`,
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  background: billingType === bt.id ? '#f5f3ff' : 'white'
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: billingType === bt.id ? '#7c3aed' : '#374151'
+                  }}
+                >
+                  {bt.label}
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{bt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {billingType === 'annual' ? (
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: 6
+              }}
+            >
+              Дата на изтичане
+            </label>
+            <input
+              type="date"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                border: '1.5px solid #e5e7eb',
+                borderRadius: 8,
+                fontSize: 13
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '12px 16px',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: 10
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#15803d' }}>♾️ Lifetime лиценз</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              Валиден до: {lifetimeExpiryDate().toLocaleDateString('bg-BG')}
+            </div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              ✅ Всички бъдещи updates се прилагат автоматично
+            </div>
+          </div>
+        )}
 
         <label>
           Max users

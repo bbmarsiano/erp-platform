@@ -51,7 +51,10 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    if (new Date(license.expires_at) < new Date()) {
+
+    const isLifetime = license.billing_type === 'lifetime'
+
+    if (!isLifetime && new Date(license.expires_at) < new Date()) {
       await supabase.from('validation_log').insert({
         license_key: key, ip_address: ip, user_agent: ua,
         result: 'expired', reason: 'Expired'
@@ -69,14 +72,22 @@ serve(async (req) => {
     await supabase.from('validation_log').insert({
       license_key: key, ip_address: ip, user_agent: ua, result: 'valid'
     })
+
+    const daysRemaining = isLifetime
+      ? 99999
+      : Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
     return new Response(
       JSON.stringify({
         valid: true,
         features: license.features,
-        expiresAt: license.expires_at,
+        expiresAt: isLifetime ? null : license.expires_at,
         tenant: license.tenant.name,
         maxUsers: license.max_users,
         plan: license.tenant.plan,
+        billingType: license.billing_type ?? 'annual',
+        isLifetime,
+        daysRemaining,
         allowedVersion: license.allowed_version ?? null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

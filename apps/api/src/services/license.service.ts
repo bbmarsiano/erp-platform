@@ -6,6 +6,9 @@ export interface LicenseResult {
   tenant: string | null
   maxUsers: number
   daysRemaining: number
+  billingType?: string | null
+  isLifetime?: boolean
+  plan?: string | null
 }
 
 export async function validateLicense(
@@ -26,7 +29,12 @@ export async function validateLicense(
     throw new Error(`License server returned ${response.status}`)
   }
 
-  const data = (await response.json()) as Partial<LicenseResult> & { valid?: boolean }
+  const data = (await response.json()) as Partial<LicenseResult> & {
+    valid?: boolean
+    billingType?: string | null
+    isLifetime?: boolean
+    plan?: string | null
+  }
   return {
     valid: data.valid ?? false,
     features: data.features ?? [],
@@ -34,6 +42,9 @@ export async function validateLicense(
     expiresAt: data.expiresAt ?? null,
     tenant: data.tenant ?? null,
     maxUsers: data.maxUsers ?? 0,
-    daysRemaining: data.daysRemaining ?? 0
+    daysRemaining: data.daysRemaining ?? 0,
+    billingType: data.billingType ?? null,
+    isLifetime: data.isLifetime ?? data.billingType === 'lifetime',
+    plan: data.plan ?? null
   }
 }
