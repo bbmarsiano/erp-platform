@@ -49,11 +49,6 @@ export default function Licenses() {
     void refetch()
   }, [refetch])
 
-  const deactivate = async (id: string) => {
-    await supabase.from('license_keys').update({ is_active: false }).eq('id', id)
-    await refetch()
-  }
-
   return (
     <div>
       <PageHeader
@@ -225,14 +220,25 @@ export default function Licenses() {
               />
             </Td>
             <Td>
-              <Button
-                size="sm"
-                variant="danger"
-                disabled={!license.is_active}
-                onClick={() => void deactivate(license.id)}
-              >
-                Деактивирай
-              </Button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await supabase
+                    .from('license_keys')
+                    .update({ is_active: !license.is_active })
+                    .eq('id', license.id)
+                  void refetch()
+                }}
+                style={{
+                  padding: '5px 12px', border: 'none', borderRadius: 6,
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                  fontFamily: 'inherit',
+                  background: license.is_active ? '#fee2e2' : '#dcfce7',
+                  color:      license.is_active ? '#dc2626' : '#059669',
+                  transition: 'all 0.15s',
+                }}>
+                {license.is_active ? 'Деактивирай' : 'Активирай'}
+              </button>
             </Td>
           </TableRow>
         ))}
