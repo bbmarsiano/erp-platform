@@ -178,13 +178,12 @@ export function Sidebar({
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => {
-      const next = new Set(prev)
-      if (next.has(groupId)) {
+      if (prev.has(groupId)) {
+        const next = new Set(prev)
         next.delete(groupId)
-      } else {
-        next.add(groupId)
+        return next
       }
-      return next
+      return new Set([groupId])
     })
   }
 
@@ -196,12 +195,12 @@ export function Sidebar({
   }, [])
 
   useEffect(() => {
-    navGroups.forEach((group) => {
-      if (location.pathname.startsWith(group.basePath)) {
-        setExpandedGroups((prev) => new Set([...prev, group.id]))
+    visibleGroups.forEach((group) => {
+      if (location.pathname.startsWith(`/${group.id}`)) {
+        setExpandedGroups(new Set([group.id]))
       }
     })
-  }, [location.pathname])
+  }, [location.pathname, visibleGroups])
 
   const handleLogout = () => {
     logout()
