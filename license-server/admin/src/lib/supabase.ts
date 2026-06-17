@@ -28,6 +28,9 @@ export interface LicenseKey {
   install_count: number
   allowed_version: string | null
   billing_type?: 'annual' | 'lifetime'
+  price_paid?: number | null
+  currency?: string | null
+  max_installs?: number
   created_at: string
   tenant?: Tenant
 }

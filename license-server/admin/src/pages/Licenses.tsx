@@ -47,7 +47,17 @@ export default function Licenses() {
             <th align="left">Клиент</th>
             <th align="left">Изтича</th>
             <th align="left">Последна валидация</th>
-            <th align="left">Инсталации</th>
+            <th
+              style={{
+                padding: '11px 16px',
+                textAlign: 'left',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#6b7280'
+              }}
+            >
+              Инсталации
+            </th>
             <th
               style={{
                 padding: '11px 16px',
@@ -58,6 +68,17 @@ export default function Licenses() {
               }}
             >
               Модули
+            </th>
+            <th
+              style={{
+                padding: '11px 16px',
+                textAlign: 'left',
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#6b7280'
+              }}
+            >
+              Цена
             </th>
             <th align="left">Обновление</th>
             <th align="left">Статус</th>
@@ -95,7 +116,23 @@ export default function Licenses() {
               <td>{license.tenant?.name ?? '-'}</td>
               <td>{new Date(license.expires_at).toLocaleDateString('bg-BG')}</td>
               <td>{license.last_validated_at ? new Date(license.last_validated_at).toLocaleString('bg-BG') : '-'}</td>
-              <td>{license.install_count}</td>
+              <td style={{ padding: '12px 16px' }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color:
+                      (license.install_count ?? 0) >= (license.max_installs ?? 3)
+                        ? '#dc2626'
+                        : '#374151'
+                  }}
+                >
+                  {license.install_count ?? 0} / {license.max_installs ?? 3}
+                </span>
+                {(license.install_count ?? 0) >= (license.max_installs ?? 3) && (
+                  <div style={{ fontSize: 10, color: '#dc2626' }}>⚠ лимит</div>
+                )}
+              </td>
               <td style={{ padding: '12px 16px' }}>
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                   {(license.features || []).map((feature: string) => {
@@ -122,6 +159,18 @@ export default function Licenses() {
                     <span style={{ fontSize: 11, color: '#9ca3af' }}>—</span>
                   )}
                 </div>
+              </td>
+              <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                {license.price_paid != null ? (
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                    {license.price_paid} {license.currency || 'EUR'}
+                    <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>
+                      {license.billing_type === 'lifetime' ? 'еднократно' : '/год'}
+                    </div>
+                  </span>
+                ) : (
+                  <span style={{ color: '#9ca3af', fontSize: 11 }}>—</span>
+                )}
               </td>
               <td style={{ padding: '12px 16px' }}>
                 {editingVersion?.id === license.id ? (

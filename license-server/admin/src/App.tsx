@@ -3,12 +3,14 @@ import Dashboard from './pages/Dashboard'
 import Tenants from './pages/Tenants'
 import Licenses from './pages/Licenses'
 import GenerateLicense from './pages/GenerateLicense'
+import Pricing from './pages/Pricing'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/tenants', label: 'Tenants' },
   { to: '/licenses', label: 'Licenses' },
-  { to: '/generate', label: 'GenerateLicense' }
+  { to: '/generate', label: 'GenerateLicense' },
+  { to: '/pricing', label: '💰 Ценова конфигурация' }
 ]
 
 export default function App() {
@@ -44,6 +46,7 @@ export default function App() {
           <Route path="/tenants" element={<Tenants />} />
           <Route path="/licenses" element={<Licenses />} />
           <Route path="/generate" element={<GenerateLicense />} />
+          <Route path="/pricing" element={<Pricing />} />
         </Routes>
       </main>
     </div>

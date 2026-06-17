@@ -27,6 +27,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 function LicenseSettings() {
   const [licenseInfo, setLicenseInfo] = useState<LicenseInfo | null>(null)
+  const [keyRevealed, setKeyRevealed] = useState(false)
 
   useEffect(() => {
     api
@@ -39,10 +40,54 @@ function LicenseSettings() {
   const isExpiringSoon =
     !isLifetime && licenseInfo?.daysRemaining != null && licenseInfo.daysRemaining < 30
 
-  const rows = [
+  const rows: { label: string; value: React.ReactNode }[] = [
     {
       label: 'Лиценз ключ',
-      value: licenseInfo?.key ? `${licenseInfo.key.substring(0, 4)}-****-****-****` : '—'
+      value: licenseInfo?.key ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontFamily: 'monospace', fontSize: 13 }}>
+            {keyRevealed
+              ? licenseInfo.key
+              : `${licenseInfo.key.substring(0, 4)}-****-****-****`}
+          </span>
+          <button
+            type="button"
+            onClick={() => setKeyRevealed((r) => !r)}
+            style={{
+              background: 'none',
+              border: '1px solid #e5e7eb',
+              borderRadius: 5,
+              padding: '2px 8px',
+              cursor: 'pointer',
+              fontSize: 11,
+              color: '#6b7280',
+              fontFamily: 'inherit'
+            }}
+          >
+            {keyRevealed ? '🔒 Скрий' : '👁 Покажи'}
+          </button>
+          {keyRevealed && (
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(licenseInfo.key || '')}
+              style={{
+                background: 'none',
+                border: '1px solid #e5e7eb',
+                borderRadius: 5,
+                padding: '2px 8px',
+                cursor: 'pointer',
+                fontSize: 11,
+                color: '#6b7280',
+                fontFamily: 'inherit'
+              }}
+            >
+              📋 Копирай
+            </button>
+          )}
+        </div>
+      ) : (
+        '—'
+      )
     },
     { label: 'Статус', value: licenseInfo?.valid ? '✅ Активен' : '❌ Неактивен' },
     { label: 'Тип', value: isLifetime ? '♾️ Lifetime' : '📅 Годишен (SaaS)' },

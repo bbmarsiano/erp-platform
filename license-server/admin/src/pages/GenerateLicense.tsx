@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { supabase, Tenant } from '../lib/supabase'
+import { calculateLicensePrice, type PricingConfig } from '../lib/pricing'
 
 function generateKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -32,6 +33,8 @@ export default function GenerateLicense() {
     allModules.map((m) => m.id)
   )
   const [generated, setGenerated] = useState('')
+  const [pricing, setPricing] = useState<PricingConfig | null>(null)
+  const [maxInstalls, setMaxInstalls] = useState(3)
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +45,19 @@ export default function GenerateLicense() {
     }
     void load()
   }, [])
+
+  useEffect(() => {
+    supabase
+      .from('pricing_config')
+      .select('config')
+      .eq('id', 'default')
+      .single()
+      .then(({ data }) => {
+        if (data) setPricing(data.config as PricingConfig)
+      })
+  }, [])
+
+  const price = pricing ? calculateLicensePrice(pricing, billingType, maxUsers) : null
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -58,7 +74,10 @@ export default function GenerateLicense() {
       max_users: maxUsers,
       expires_at: finalExpiry,
       billing_type: billingType,
-      allowed_version: null
+      allowed_version: null,
+      price_paid: price?.total ?? null,
+      currency: price?.currency ?? 'EUR',
+      max_installs: maxInstalls
     })
     setGenerated(key)
   }
@@ -176,6 +195,38 @@ export default function GenerateLicense() {
           <input type="number" min={1} value={maxUsers} onChange={(e) => setMaxUsers(Number(e.target.value))} style={{ display: 'block' }} />
         </label>
 
+        <div>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#374151',
+              marginBottom: 6
+            }}
+          >
+            Макс. инсталации
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={maxInstalls}
+            onChange={(e) => setMaxInstalls(Number(e.target.value))}
+            style={{
+              width: '100%',
+              padding: '9px 12px',
+              border: '1.5px solid #e5e7eb',
+              borderRadius: 8,
+              fontSize: 13,
+              boxSizing: 'border-box'
+            }}
+          />
+          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+            Брой машини на които може да се инсталира
+          </div>
+        </div>
+
         <div style={{ marginBottom: 16 }}>
           <label
             style={{
@@ -245,6 +296,70 @@ export default function GenerateLicense() {
             ))}
           </div>
         </div>
+
+        {price && (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)',
+              border: '1px solid #ddd6fe',
+              borderRadius: 12,
+              padding: '16px 20px',
+              marginBottom: 20
+            }}
+          >
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95', marginBottom: 10 }}>
+              💰 Прайс калкулатор
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#6b7280' }}>Базова цена (до 10 потребители)</span>
+                <span style={{ fontWeight: 600 }}>
+                  {price.base} {price.currency}
+                </span>
+              </div>
+              {price.usersExtra > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: '#6b7280' }}>Допълнителни потребители ({maxUsers})</span>
+                  <span style={{ fontWeight: 600 }}>
+                    +{price.usersExtra} {price.currency}
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: '#4c1d95',
+                  borderTop: '1px solid #ddd6fe',
+                  paddingTop: 8,
+                  marginTop: 4
+                }}
+              >
+                <span>Общо</span>
+                <span>
+                  {price.total} {price.currency}
+                  {price.suffix}
+                </span>
+              </div>
+            </div>
+            {billingType === 'annual' && pricing && (
+              <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 8 }}>
+                💡 Lifetime еквивалент:{' '}
+                {pricing.lifetime.base +
+                  (price.usersExtra > 0
+                    ? maxUsers > 50
+                      ? pricing.lifetime.users_51_plus
+                      : maxUsers > 25
+                        ? pricing.lifetime.users_26_50
+                        : pricing.lifetime.users_11_25
+                    : 0)}{' '}
+                {price.currency} (изплаща се за ~3 год.)
+              </div>
+            )}
+          </div>
+        )}
 
         <button type="submit">Generate</button>
       </form>
