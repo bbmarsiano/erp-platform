@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -151,23 +151,42 @@ export function Sidebar({
   const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
   const logout = useAuthStore((s) => s.logout)
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  const isModuleLicensed = (moduleId: string): boolean => {
-    const featureMap: Record<string, string> = {
-      wms: 'module:wms',
-      scm: 'module:scm',
-      mes: 'module:mes',
-      pos: 'module:pos',
-      backup: 'module:backup'
-    }
-    const featureKey = featureMap[moduleId]
-    if (!featureKey) return true
-    if (!licensedFeatures || licensedFeatures.length === 0) return true
-    return licensedFeatures.includes(featureKey)
+  const isModuleLicensed = useMemo(
+    () =>
+      (moduleId: string): boolean => {
+        const featureMap: Record<string, string> = {
+          wms: 'module:wms',
+          scm: 'module:scm',
+          mes: 'module:mes',
+          pos: 'module:pos',
+          backup: 'module:backup'
+        }
+        const featureKey = featureMap[moduleId]
+        if (!featureKey) return true
+        if (!licensedFeatures || licensedFeatures.length === 0) return true
+        return licensedFeatures.includes(featureKey)
+      },
+    [licensedFeatures]
+  )
+
+  const visibleGroups = useMemo(
+    () => navGroups.filter((group) => isModuleLicensed(group.id)),
+    [isModuleLicensed]
+  )
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
   }
-
-  const visibleGroups = navGroups.filter((group) => isModuleLicensed(group.id))
 
   useEffect(() => {
     api
@@ -177,9 +196,12 @@ export function Sidebar({
   }, [])
 
   useEffect(() => {
-    const active = visibleGroups.find((g) => location.pathname.startsWith(g.basePath))
-    if (active) setExpandedGroup(active.id)
-  }, [location.pathname, visibleGroups])
+    navGroups.forEach((group) => {
+      if (location.pathname.startsWith(group.basePath)) {
+        setExpandedGroups((prev) => new Set([...prev, group.id]))
+      }
+    })
+  }, [location.pathname])
 
   const handleLogout = () => {
     logout()
@@ -300,15 +322,15 @@ export function Sidebar({
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 16px' }} />
 
-        {navGroups.filter((group) => isModuleLicensed(group.id)).map((group) => {
+        {visibleGroups.map((group) => {
           const isGroupActive = location.pathname.startsWith(group.basePath)
-          const isExpanded = expandedGroup === group.id
+          const isExpanded = expandedGroups.has(group.id)
           const gIcon = groupIcons[group.id]
 
           return (
             <div key={group.id}>
               <div
-                onClick={() => setExpandedGroup(isExpanded ? null : group.id)}
+                onClick={() => toggleGroup(group.id)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
