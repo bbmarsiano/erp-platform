@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { PricingConfig } from '../lib/pricing'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 
 export default function Pricing() {
   const [config, setConfig] = useState<PricingConfig | null>(null)
@@ -29,7 +32,11 @@ export default function Pricing() {
     setTimeout(() => setSaved(false), 3000)
   }
 
-  if (!config) return <div style={{ padding: 32, color: '#9ca3af' }}>Зареждане...</div>
+  if (!config) {
+    return (
+      <div style={{ padding: 32, color: '#9ca3af', textAlign: 'center' }}>Зареждане...</div>
+    )
+  }
 
   const fieldStyle: React.CSSProperties = {
     padding: '8px 12px',
@@ -114,22 +121,13 @@ export default function Pricing() {
   )
 
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 800 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
-        Ценова конфигурация
-      </h1>
-      <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 24px' }}>
-        Промените влизат в сила при следващото генериране на лиценз
-      </p>
+    <div style={{ maxWidth: 800 }}>
+      <PageHeader
+        title="Ценова конфигурация"
+        subtitle="Промените влизат в сила при следващото генериране на лиценз"
+      />
 
-      <div
-        style={{
-          background: 'white',
-          border: '1px solid #e5e7eb',
-          borderRadius: 12,
-          padding: 24
-        }}
-      >
+      <Card>
         <div
           style={{
             display: 'grid',
@@ -158,15 +156,7 @@ export default function Pricing() {
         {section('Grace Period при изтекъл лиценз')}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 12,
-                fontWeight: 600,
-                color: '#374151',
-                marginBottom: 6
-              }}
-            >
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
               Grace Period (дни)
             </label>
             <input
@@ -181,15 +171,7 @@ export default function Pricing() {
             />
           </div>
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 12,
-                fontWeight: 600,
-                color: '#374151',
-                marginBottom: 6
-              }}
-            >
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
               Режим след grace period
             </label>
             <select
@@ -207,25 +189,10 @@ export default function Pricing() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={saving}
-          style={{
-            padding: '10px 24px',
-            background: saving ? '#9ca3af' : '#7c3aed',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
-            fontFamily: 'inherit'
-          }}
-        >
+        <Button type="button" onClick={() => void save()} disabled={saving} size="lg">
           {saving ? 'Запазване...' : saved ? '✓ Запазено!' : 'Запази настройките'}
-        </button>
-      </div>
+        </Button>
+      </Card>
     </div>
   )
 }

@@ -68,7 +68,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'var(--font)',
         position: 'relative',
         overflow: 'hidden'
       }}
