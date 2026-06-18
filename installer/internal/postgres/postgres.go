@@ -1,13 +1,18 @@
 package postgres
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 
 	"github.com/bbmarsiano/erp-platform/installer/internal/config"
+	_ "github.com/lib/pq"
 )
+
+var commonPorts = []string{"5432", "5433", "5434"}
 
 func EnsureInstalled() (*config.PgConfig, error) {
 	if cfg, err := detectRunning(); err == nil {
@@ -19,7 +24,34 @@ func EnsureInstalled() (*config.PgConfig, error) {
 	if err := install(); err != nil {
 		return nil, err
 	}
-	return defaultConfig(), nil
+
+	port, err := DetectPort()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := defaultConfig()
+	cfg.Port = port
+	return cfg, nil
+}
+
+// DetectPort tries common PostgreSQL ports and returns the first that responds.
+func DetectPort() (int, error) {
+	for _, portStr := range commonPorts {
+		connStr := fmt.Sprintf("host=localhost port=%s user=postgres sslmode=disable", portStr)
+		db, err := sql.Open("postgres", connStr)
+		if err != nil {
+			continue
+		}
+		if err := db.Ping(); err == nil {
+			_ = db.Close()
+			fmt.Printf("  Found PostgreSQL on port %s\n", portStr)
+			port, _ := strconv.Atoi(portStr)
+			return port, nil
+		}
+		_ = db.Close()
+	}
+	return 0, fmt.Errorf("PostgreSQL not found on ports 5432, 5433, 5434")
 }
 
 func detectRunning() (*config.PgConfig, error) {
@@ -28,7 +60,15 @@ func detectRunning() (*config.PgConfig, error) {
 		return nil, fmt.Errorf("psql not found")
 	}
 	_ = out
-	return defaultConfig(), nil
+
+	port, err := DetectPort()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := defaultConfig()
+	cfg.Port = port
+	return cfg, nil
 }
 
 func install() error {
@@ -72,4 +112,3 @@ func defaultConfig() *config.PgConfig {
 		DBName:   "dflow_erp",
 	}
 }
-

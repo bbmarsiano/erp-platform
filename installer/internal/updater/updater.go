@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bbmarsiano/erp-platform/installer/internal/config"
 	"github.com/bbmarsiano/erp-platform/installer/internal/engine"
 	"github.com/bbmarsiano/erp-platform/installer/internal/license"
 	"github.com/bbmarsiano/erp-platform/installer/internal/prismacli"
@@ -52,7 +53,8 @@ func Run(licenseServerURL, licenseKey, githubRepo string) error {
 	if err != nil {
 		return fmt.Errorf("не може да се прочете DATABASE_URL: %w", err)
 	}
-	color.Green("✓ База данни конфигурирана")
+	pgPort := config.ExtractPortFromDatabaseURL(dbURL)
+	color.Green("✓ База данни конфигурирана (port %d)", pgPort)
 
 	color.Cyan("\n[3/5] Backup на базата данни...")
 	backupPath, err := backupDatabase(dbURL, installPath, CURRENT_VERSION)
@@ -167,7 +169,22 @@ func backupDatabase(dbURL, installPath, version string) (string, error) {
 	timestamp := time.Now().Format("20060102-150405")
 	backupFile := filepath.Join(backupDir, fmt.Sprintf("backup-v%s-%s.sql", version, timestamp))
 
-	cmd := exec.Command("pg_dump", dbURL, "-f", backupFile, "--no-password")
+	host, port, user, password, dbname, err := config.ParseDatabaseURL(dbURL)
+	if err != nil {
+		return "", fmt.Errorf("parse DATABASE_URL: %w", err)
+	}
+
+	cmd := exec.Command("pg_dump",
+		"-h", host,
+		"-p", port,
+		"-U", user,
+		"-d", dbname,
+		"-f", backupFile,
+		"--no-password",
+	)
+	if password != "" {
+		cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -183,12 +200,26 @@ func runMigrations(installPath, dbURL string) error {
 
 func rollback(backupPath, dbURL string) {
 	color.Yellow("Rollback: възстановяване от backup %s...", backupPath)
-	// Drop and recreate schema to avoid duplicate errors
-	cleanCmd := exec.Command("psql", dbURL, "--no-password", "-c",
-		"DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
-	cleanCmd.Run()
 
-	cmd := exec.Command("psql", dbURL, "-f", backupPath, "--no-password")
+	host, port, user, password, dbname, err := config.ParseDatabaseURL(dbURL)
+	if err != nil {
+		color.Red("Rollback неуспешен: не може да се прочете DATABASE_URL: %v", err)
+		return
+	}
+
+	psqlArgs := []string{"-h", host, "-p", port, "-U", user, "-d", dbname, "--no-password"}
+	env := os.Environ()
+	if password != "" {
+		env = append(env, "PGPASSWORD="+password)
+	}
+
+	cleanCmd := exec.Command("psql", append(psqlArgs, "-c",
+		"DROP SCHEMA public CASCADE; CREATE SCHEMA public;")...)
+	cleanCmd.Env = env
+	_ = cleanCmd.Run()
+
+	cmd := exec.Command("psql", append(psqlArgs, "-f", backupPath)...)
+	cmd.Env = env
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

@@ -84,11 +84,12 @@ ADMIN_PASSWORD=%s
 }
 
 func createDatabase(cfg *config.InstallConfig) error {
+	port := fmt.Sprintf("%d", cfg.PgConfig.Port)
 	cmds := [][]string{
-		{"psql", "-U", "postgres", "-c",
+		{"psql", "-h", "localhost", "-p", port, "-U", "postgres", "-c",
 			fmt.Sprintf("CREATE USER %s WITH PASSWORD '%s';",
 				cfg.PgConfig.User, cfg.PgConfig.Password)},
-		{"psql", "-U", "postgres", "-c",
+		{"psql", "-h", "localhost", "-p", port, "-U", "postgres", "-c",
 			fmt.Sprintf("CREATE DATABASE %s OWNER %s;",
 				cfg.PgConfig.DBName, cfg.PgConfig.User)},
 	}
