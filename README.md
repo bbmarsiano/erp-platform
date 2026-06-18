@@ -3,7 +3,9 @@
 **Модулна, самостоятелно хоствана ERP платформа с български интерфейс.**
 Изградена с Node.js, React и PostgreSQL. Продавана чрез времеви лицензи.
 
-## Какво е включено в v0.2.0
+---
+
+## Какво е включено в v0.5.0
 
 | Модул | Статус | Описание |
 |-------|--------|----------|
@@ -16,32 +18,63 @@
 | Потребители | ✅ | CRUD, роли, промяна на парола |
 | Справки | ✅ | BI табла с графики, период филтри, Excel export |
 | Баркод скенер | ✅ | USB/Bluetooth + камера, POS и WMS интеграция |
+| Help система | ✅ | Вградено ръководство BG/EN с търсене |
+| Лицензен контрол | ✅ | Модулни лицензи, lifetime/annual, grace period |
+
+---
 
 ## Tech Stack
 
 | Компонент | Технология |
 |-----------|-----------|
-| Backend | Node.js 20 + Fastify 4 + TypeScript |
+| Backend | Node.js 22 + Fastify 4 + TypeScript |
 | Frontend | React 18 + Vite + TypeScript |
 | Database | PostgreSQL 14+ + Prisma ORM |
 | Monorepo | pnpm workspaces |
 | Installer | Go 1.22 (cross-platform binary) |
-| License Server | Supabase Edge Functions |
 
-## Бързо стартиране (локална разработка)
+---
 
-### Изисквания
+## Системни изисквания
 
 | Компонент | Версия | Бележка |
 |-----------|--------|---------|
-| Node.js | **v20 или v22 LTS** | ⚠️ v24 не се поддържа |
-| PostgreSQL | 14–17 | Postgres.app работи на Mac |
+| Node.js | **v22 LTS** | ⚠️ v24 не се поддържа |
+| PostgreSQL | 14–16 | Поддържа портове 5432, 5433, 5434 |
 | pnpm | 9.x | `sudo npm install -g pnpm@9.15.0` |
 | Браузър | Chrome / Firefox | Safari може да не работи с localhost |
 
-За локална разработка също е нужен **Go 1.22+** (`brew install go`) — само за installer binary.
+---
 
-### Стъпки
+## Installer (препоръчан начин)
+
+Свали installer за твоята платформа от
+[GitHub Releases — v0.5.0-installer](https://github.com/bbmarsiano/erp-platform/releases/tag/v0.5.0-installer):
+
+| Платформа | Файл |
+|-----------|------|
+| Windows 64-bit | `dflow-installer-windows-amd64.exe` |
+| Mac Apple Silicon | `dflow-installer-darwin-arm64` |
+| Mac Intel | `dflow-installer-darwin-amd64` |
+| Linux 64-bit | `dflow-installer-linux-amd64` |
+
+```bash
+# Mac / Linux
+chmod +x dflow-installer-darwin-arm64
+./dflow-installer-darwin-arm64
+
+# Windows — стартирай като Administrator
+dflow-installer-windows-amd64.exe
+```
+
+### Demo лиценз
+```
+DEMO-0000-0000-0000
+```
+
+---
+
+## Бързо стартиране (локална разработка)
 
 ```bash
 # 1. Клонирай
@@ -78,6 +111,8 @@ pnpm dev
 
 **Demo вход:** `admin@dflowerp.com` / `admin123`
 
+---
+
 ## Deployment модел
 
 ```
@@ -88,29 +123,9 @@ pnpm dev
 
 [Служители]
     └── Браузър → http://[SERVER-IP]:3001
-
-[Лицензен сървър — твоят cloud]
-    └── Supabase (validate-license Edge Function)
 ```
 
-## Installer
-
-```bash
-# Свали от GitHub Releases:
-# https://github.com/bbmarsiano/erp-platform/releases/tag/v0.2.0-installer
-
-# Windows
-dflow-installer-windows-amd64.exe
-
-# Mac (Apple Silicon)
-chmod +x dflow-installer-darwin-arm64 && ./dflow-installer-darwin-arm64
-
-# Linux
-chmod +x dflow-installer-linux-amd64 && sudo ./dflow-installer-linux-amd64
-
-# Тест на wizard UI (без инсталация)
-cd installer && make build-dev && ./dist/dflow-installer-dev --wizard-only
-```
+---
 
 ## Структура на проекта
 
@@ -129,9 +144,10 @@ erp-platform/
 │   ├── pos/              # Точка на продажба
 │   └── backup/           # Архивиране
 ├── installer/            # Go cross-platform installer
-├── license-server/       # Supabase лицензен сървър
 └── scripts/              # Build скриптове
 ```
+
+---
 
 ## Модулни интеграции
 
@@ -139,17 +155,13 @@ erp-platform/
 - **MES → WMS:** Завършено нареждане консумира материали и добавя готова продукция
 - **POS → WMS:** Продажба намалява наличността в реално време
 
-## License Server (Supabase)
+---
 
-```bash
-cd license-server/admin
-pnpm install
-pnpm dev
-# http://localhost:5174
-```
+## Документация
 
-## Demo лиценз
-
-```
-DEMO-0000-0000-0000
-```
+| Файл | Описание |
+|------|---------|
+| `SERVER_INSTALL.md` | Ръчна инсталация на Linux сървър |
+| `TESTING.md` | Инструкции за тестване |
+| `docs/manual/bg/manual.md` | Ръководство за употреба (БГ) |
+| `docs/manual/en/manual.md` | User Manual (EN) |
