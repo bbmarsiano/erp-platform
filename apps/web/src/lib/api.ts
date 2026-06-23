@@ -18,9 +18,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const requestUrl = error.config?.url ?? ''
-    const isLoginRequest = typeof requestUrl === 'string' && requestUrl.includes('auth/login')
+    const isAuthRequest =
+      typeof requestUrl === 'string' &&
+      (requestUrl.includes('auth/login') || requestUrl.includes('auth/refresh'))
 
-    if (error.response?.status === 401 && !isLoginRequest) {
+    if (error.response?.status === 401 && !isAuthRequest) {
       useAuthStore.getState().logout()
     }
     return Promise.reject(error)

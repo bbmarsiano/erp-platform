@@ -12,6 +12,7 @@ import AppShell from './components/layout/AppShell'
 import MesRouter from './modules/mes/MesRouter'
 import WmsRouter from './modules/wms/WmsRouter'
 import ScmRouter from './modules/scm/ScmRouter'
+import { SessionWarning } from './components/SessionWarning'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -19,8 +20,11 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
   return (
     <BrowserRouter>
+      {isAuthenticated && <SessionWarning />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
