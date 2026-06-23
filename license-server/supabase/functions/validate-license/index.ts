@@ -53,6 +53,7 @@ serve(async (req) => {
     }
 
     const isLifetime = license.billing_type === 'lifetime'
+    const isTrial = license.billing_type === 'trial'
 
     if (!isLifetime && new Date(license.expires_at) < new Date()) {
       await supabase.from('validation_log').insert({
@@ -79,13 +80,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        valid: true,
+        valid: daysRemaining > 0 || isLifetime,
         features: license.features,
         expiresAt: isLifetime ? null : license.expires_at,
         tenant: license.tenant.name,
         maxUsers: license.max_users,
         plan: license.tenant.plan,
         billingType: license.billing_type ?? 'annual',
+        isTrial,
         isLifetime,
         daysRemaining,
         allowedVersion: license.allowed_version ?? null

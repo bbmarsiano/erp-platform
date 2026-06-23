@@ -8,6 +8,7 @@ export interface LicenseResult {
   daysRemaining: number
   billingType?: string | null
   isLifetime?: boolean
+  isTrial?: boolean
   plan?: string | null
 }
 
@@ -33,6 +34,7 @@ export async function validateLicense(
     valid?: boolean
     billingType?: string | null
     isLifetime?: boolean
+    isTrial?: boolean
     plan?: string | null
   }
   return {
@@ -45,6 +47,7 @@ export async function validateLicense(
     daysRemaining: data.daysRemaining ?? 0,
     billingType: data.billingType ?? null,
     isLifetime: data.isLifetime ?? data.billingType === 'lifetime',
+    isTrial: data.isTrial ?? data.billingType === 'trial',
     plan: data.plan ?? null
   }
 }
