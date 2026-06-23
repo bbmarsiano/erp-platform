@@ -87,7 +87,7 @@ const exportRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 
       const exportData = {
         exportedAt: new Date().toISOString(),
-        version: '0.5.0',
+        version: '0.5.1',
         format: 'DFlowERP-Export-v1',
         tenant: {
           name: tenant?.name,
