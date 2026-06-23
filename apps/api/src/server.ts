@@ -14,6 +14,7 @@ import publicRoute from './routes/public.route'
 import authRoute from './routes/auth.route'
 import usersRoute from './routes/users.route'
 import licenseRoute from './routes/license.route'
+import exportRoute from './routes/export.route'
 import { validateLicense } from './services/license.service'
 
 dotenv.config({ path: '../../.env' })
@@ -67,6 +68,7 @@ const buildServer = async (): Promise<FastifyInstance> => {
   await app.register(authRoute, { prefix: '/api' })
   await app.register(usersRoute, { prefix: '/api' })
   await app.register(licenseRoute, { prefix: '/api' })
+  await app.register(exportRoute, { prefix: '/api' })
 
   const webDistPath = join(__dirname, '../../web/dist')
   if (existsSync(webDistPath)) {

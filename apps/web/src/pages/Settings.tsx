@@ -3,8 +3,9 @@ import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
 import { APP_VERSION } from '../version'
 import { HelpTooltip } from '../components/ui'
+import ExportData from './settings/ExportData'
 
-type SettingsTab = 'profile' | 'system' | 'license' | 'company'
+type SettingsTab = 'profile' | 'system' | 'license' | 'company' | 'export'
 
 interface LicenseInfo {
   valid?: boolean
@@ -501,7 +502,8 @@ export default function Settings() {
     { id: 'profile' as const, label: 'Профил' },
     { id: 'system' as const, label: 'Система' },
     { id: 'license' as const, label: 'Лиценз' },
-    { id: 'company' as const, label: 'Фирма' }
+    { id: 'company' as const, label: 'Фирма' },
+    { id: 'export' as const, label: '📤 Експорт на данни' }
   ]
 
   return (
@@ -510,8 +512,14 @@ export default function Settings() {
         <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>Настройки</h1>
         <HelpTooltip
           title="Настройки"
-          content="Профил — лични данни. Фирма — данни за касови бележки и фактури. Лиценз — информация за абонамента. Система — техническа информация."
+          content="Профил — лични данни. Фирма — данни за касови бележки и фактури. Лиценз — информация за абонамента. Експорт — изтегляне на данни в Excel/JSON/CSV. Система — техническа информация."
         />
+        {activeTab === 'export' && (
+          <HelpTooltip
+            title="Експорт на данни"
+            content="Изтеглете всички ваши данни в Excel, JSON или CSV формат. Съвместимо с SAP, Odoo и всяко друго ERP. Гарантирано право на преносимост по GDPR Чл. 20."
+          />
+        )}
       </div>
 
       <div
@@ -654,6 +662,8 @@ export default function Settings() {
       {activeTab === 'license' && <LicenseSettings />}
 
       {activeTab === 'company' && <CompanySettings />}
+
+      {activeTab === 'export' && <ExportData />}
     </div>
   )
 }
