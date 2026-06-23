@@ -135,7 +135,7 @@ const warehousesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
         return reply.status(404).send(createErrorResponse('Warehouse not found', 'WAREHOUSE_NOT_FOUND', 404))
       }
       const data = await prisma.location.findMany({
-        where: { warehouseId: params.id, isActive: true },
+        where: { warehouseId: params.id },
         orderBy: { code: 'asc' }
       })
       return createSuccessResponse(data)
@@ -156,7 +156,9 @@ const warehousesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
       const params = request.params as { id: string }
       const body = request.body as {
         code: string
-        name: string
+        name?: string
+        type?: string
+        description?: string
         zone?: string
         locationType?: 'STORAGE' | 'RECEIVING' | 'DISPATCH' | 'QUARANTINE' | 'PRODUCTION'
       }
@@ -171,8 +173,8 @@ const warehousesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
           data: {
             warehouseId: params.id,
             code: body.code,
-            name: body.name,
-            zone: body.zone,
+            name: body.description || body.name || body.code,
+            zone: body.type || body.zone,
             locationType: body.locationType ?? 'STORAGE'
           }
         })

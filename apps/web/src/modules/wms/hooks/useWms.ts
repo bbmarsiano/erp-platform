@@ -17,12 +17,38 @@ export const useCreateWarehouse = () => {
   })
 }
 
+export const useUpdateWarehouse = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { id: string; name?: string; address?: string; isActive?: boolean }) =>
+      api.put(`/api/wms/warehouses/${args.id}`, args).then((r) => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wms', 'warehouses'] })
+  })
+}
+
 export const useWarehouseLocations = (warehouseId?: string) =>
   useQuery({
     enabled: Boolean(warehouseId),
-    queryKey: ['wms', 'warehouses', warehouseId, 'locations'],
+    queryKey: ['wms', 'locations', warehouseId],
     queryFn: () => api.get(`/api/wms/warehouses/${warehouseId}/locations`).then((r) => r.data.data)
   })
+
+export const useCreateLocation = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { warehouseId: string; code: string; type: string; description?: string }) =>
+      api
+        .post(`/api/wms/warehouses/${args.warehouseId}/locations`, {
+          code: args.code,
+          type: args.type,
+          description: args.description
+        })
+        .then((r) => r.data.data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['wms', 'locations', vars.warehouseId] })
+    }
+  })
+}
 
 // Stock
 export const useStock = (warehouseId?: string) =>
