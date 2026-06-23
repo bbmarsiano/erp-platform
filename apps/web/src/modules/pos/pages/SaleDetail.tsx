@@ -16,7 +16,7 @@ export default function SaleDetail() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <BackButton to="/pos/sales" />
-      <PageHeader title={`Касова бележка ${sale?.saleNo ?? ''}`} />
+      <PageHeader title={`Стокова разписка ${sale?.saleNo ?? ''}`} />
       <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
         <div>Каса: {sale?.cashRegister?.name ?? '-'}</div>
         <div>Метод: {sale?.paymentMethod ? paymentLabels[sale.paymentMethod] ?? sale.paymentMethod : '-'}</div>
