@@ -8,7 +8,8 @@
     "db:generate": "pnpm --filter @dflow/db db:generate",
     "db:migrate": "pnpm --filter @dflow/db db:migrate",
     "db:studio": "pnpm --filter @dflow/db db:studio",
-    "db:seed": "pnpm --filter @dflow/db db:seed"
+    "db:seed": "pnpm --filter @dflow/db db:seed",
+    "db:seed:metalkonstrukt": "pnpm --filter @dflow/db db:seed:metalkonstrukt"
   },
   "engines": {
     "node": ">=20.0.0"
