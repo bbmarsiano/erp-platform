@@ -264,7 +264,7 @@ async function sendTrialEmail(email: string, name: string, key: string) {
     .btn {
       display: block;
       background: #7c3aed;
-      color: #ffffff;
+      color: #ffffff !important;
       text-decoration: none;
       text-align: center;
       padding: 13px 24px;
@@ -353,7 +353,7 @@ async function sendTrialEmail(email: string, name: string, key: string) {
         </div>
       </div>
 
-      <a href="https://dflowhub.com/download" class="btn">Свали DFlowERP</a>
+      <a href="https://dflowhub.com/download" class="btn" style="color:#ffffff !important;text-decoration:none;">Свали DFlowERP</a>
 
       <p class="help">
         Въпроси? Разгледайте
