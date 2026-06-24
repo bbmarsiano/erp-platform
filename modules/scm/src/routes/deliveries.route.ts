@@ -46,7 +46,11 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
     const params = request.params as { id: string }
     const delivery = await prisma.delivery.findFirst({
       where: { id: params.id, tenantId: request.user.tenantId },
-      include: { lines: true, purchaseOrder: true, warehouse: true }
+      include: {
+        lines: { include: { product: true, location: true } },
+        purchaseOrder: { include: { supplier: true } },
+        warehouse: true
+      }
     })
     if (!delivery) {
       return reply.status(404).send(createErrorResponse('Delivery not found', 'DELIVERY_NOT_FOUND', 404))
@@ -74,7 +78,8 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
         quantity: body.quantity,
         lotNumber: body.lotNumber,
         expiryDate: body.expiryDate ? new Date(body.expiryDate) : undefined
-      }
+      },
+      include: { product: true, location: true }
     })
     return createSuccessResponse(line)
   })

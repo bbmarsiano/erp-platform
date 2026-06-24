@@ -40,7 +40,8 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             price: { type: 'number' },
             description: { type: 'string' },
             initialStock: { type: 'number' },
-            warehouseId: { type: 'string' }
+            warehouseId: { type: 'string' },
+            locationId: { type: 'string' }
           }
         }
       },
@@ -57,6 +58,7 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         description?: string
         initialStock?: number
         warehouseId?: string
+        locationId?: string
       }
 
       const existing = await prisma.product.findFirst({
@@ -121,13 +123,20 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
           return reply.status(400).send({ success: false, error: 'Складът не е намерен' })
         }
 
-        const location = await prisma.location.findFirst({
-          where: { warehouseId: body.warehouseId, isActive: true },
-          orderBy: { code: 'asc' }
-        })
+        const location = body.locationId
+          ? await prisma.location.findFirst({
+              where: { id: body.locationId, warehouseId: body.warehouseId, isActive: true }
+            })
+          : await prisma.location.findFirst({
+              where: { warehouseId: body.warehouseId, isActive: true },
+              orderBy: { code: 'asc' }
+            })
 
-        if (location) {
-          const existing = await prisma.stockItem.findFirst({
+        if (!location) {
+          return reply.status(400).send({ success: false, error: 'Локацията не е намерена' })
+        }
+
+        const existing = await prisma.stockItem.findFirst({
             where: {
               tenantId: request.user.tenantId,
               productId: product.id,
@@ -166,7 +175,6 @@ const productsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
               createdBy: request.user.id
             }
           })
-        }
       }
 
       return reply.status(201).send({ success: true, data: product })

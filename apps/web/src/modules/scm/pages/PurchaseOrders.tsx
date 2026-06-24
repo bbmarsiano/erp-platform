@@ -101,7 +101,9 @@ export default function PurchaseOrders() {
                 <tr key={o.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                   <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{o.orderNo}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13 }}>{o.supplier?.name}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{o.warehouse?.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                    {o.warehouse ? `${o.warehouse.code} — ${o.warehouse.name}` : '—'}
+                  </td>
                   <td style={{ padding: '12px 16px' }}>
                     <StatusBadge label={st.label} bg={st.bg} color={st.color} />
                   </td>

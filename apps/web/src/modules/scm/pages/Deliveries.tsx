@@ -27,6 +27,24 @@ export default function Deliveries() {
   const rows = useMemo(() => (deliveries.data ?? []) as Array<any>, [deliveries.data])
   const orderOptions = (orders.data ?? []) as Array<any>
 
+  const handleOrderChange = (orderId: string) => {
+    if (!orderId) {
+      setForm((prev) => ({ ...prev, purchaseOrderId: '', supplierName: '', warehouseId: '' }))
+      return
+    }
+    const order = orderOptions.find((o) => o.id === orderId)
+    if (order) {
+      setForm((prev) => ({
+        ...prev,
+        purchaseOrderId: orderId,
+        warehouseId: order.warehouseId || prev.warehouseId,
+        supplierName: order.supplier?.name || prev.supplierName
+      }))
+    } else {
+      setForm((prev) => ({ ...prev, purchaseOrderId: orderId }))
+    }
+  }
+
   const onCreate = async () => {
     if (!form.warehouseId) return
     const created = await createDelivery.mutateAsync({
@@ -58,7 +76,7 @@ export default function Deliveries() {
         <Card style={{ marginBottom: 20 }}>
           <FormRow columns={4}>
             <FormField label="Поръчка">
-              <Select value={form.purchaseOrderId} onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })}>
+              <Select value={form.purchaseOrderId} onChange={(e) => handleOrderChange(e.target.value)}>
                 <option value="">Без поръчка</option>
                 {orderOptions.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -108,7 +126,9 @@ export default function Deliveries() {
                   <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 13 }}>{d.deliveryNo}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.purchaseOrder?.orderNo ?? '—'}</td>
                   <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.supplierName ?? '—'}</td>
-                  <td style={{ padding: '12px 16px', fontSize: 13 }}>{d.warehouse?.name ?? '—'}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13 }}>
+                    {d.warehouse ? `${d.warehouse.code} — ${d.warehouse.name}` : '—'}
+                  </td>
                   <td style={{ padding: '12px 16px' }}>
                     <StatusBadge label={st.label} bg={st.bg} color={st.color} />
                   </td>

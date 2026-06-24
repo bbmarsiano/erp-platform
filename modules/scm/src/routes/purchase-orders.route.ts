@@ -39,7 +39,7 @@ const purchaseOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance)
     const params = request.params as { id: string }
     const order = await prisma.purchaseOrder.findFirst({
       where: { id: params.id, tenantId: request.user.tenantId },
-      include: { lines: true, supplier: true, warehouse: true }
+      include: { lines: { include: { product: true } }, supplier: true, warehouse: true }
     })
     if (!order) {
       return reply.status(404).send(createErrorResponse('Purchase order not found', 'PO_NOT_FOUND', 404))
@@ -90,7 +90,8 @@ const purchaseOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance)
         quantity: body.quantity,
         unitPrice: body.unitPrice,
         unit: body.unit
-      }
+      },
+      include: { product: true }
     })
     return createSuccessResponse(line)
   })

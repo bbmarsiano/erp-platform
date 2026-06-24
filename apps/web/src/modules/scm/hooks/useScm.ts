@@ -49,8 +49,18 @@ export const useAddPurchaseOrderLine = () => {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (args: { id: string; productId: string; quantity: number; unitPrice?: number; unit?: string }) =>
-      api.post(`/api/scm/orders/${args.id}/lines`, args).then((r) => r.data.data),
-    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['scm', 'orders', vars.id] })
+      api
+        .post(`/api/scm/orders/${args.id}/lines`, {
+          productId: args.productId,
+          quantity: args.quantity,
+          unitPrice: args.unitPrice,
+          unit: args.unit
+        })
+        .then((r) => r.data.data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['scm', 'orders', vars.id] })
+      qc.invalidateQueries({ queryKey: ['scm', 'orders'] })
+    }
   })
 }
 
@@ -102,7 +112,16 @@ export const useAddDeliveryLine = () => {
       quantity: number
       lotNumber?: string
       expiryDate?: string
-    }) => api.post(`/api/scm/deliveries/${args.id}/lines`, args).then((r) => r.data.data),
+    }) =>
+      api
+        .post(`/api/scm/deliveries/${args.id}/lines`, {
+          productId: args.productId,
+          locationId: args.locationId,
+          quantity: args.quantity,
+          lotNumber: args.lotNumber,
+          expiryDate: args.expiryDate
+        })
+        .then((r) => r.data.data),
     onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['scm', 'deliveries', vars.id] })
   })
 }

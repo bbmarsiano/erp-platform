@@ -7,7 +7,7 @@ import { PageHeader } from '../../../components/ui/PageHeader'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { formatCurrency } from '../../../lib/currency'
-import { useWarehouses } from '../hooks/useWms'
+import { useWarehouses, useWarehouseLocations } from '../hooks/useWms'
 
 interface Product {
   id: string
@@ -35,7 +35,8 @@ const emptyForm = {
   description: '',
   initialStock: 0,
   stockAdjustment: 0,
-  warehouseId: ''
+  warehouseId: '',
+  locationId: ''
 }
 
 export default function Products() {
@@ -54,6 +55,17 @@ export default function Products() {
   })
 
   const { data: warehouses = [] } = useWarehouses()
+  const warehouseLocations = useWarehouseLocations(form.warehouseId || undefined)
+  const locations = (warehouseLocations.data ?? []) as Array<{
+    id: string
+    code: string
+    name: string
+    locationType?: string
+  }>
+
+  const handleWarehouseChange = (warehouseId: string) => {
+    setForm((prev) => ({ ...prev, warehouseId, locationId: '' }))
+  }
 
   const filtered = products.filter(
     (p) =>
@@ -73,7 +85,8 @@ export default function Products() {
         price: data.price ? Number(data.price) : null,
         description: data.description || null,
         initialStock: Number(data.initialStock),
-        warehouseId: data.warehouseId || null
+        warehouseId: data.warehouseId || null,
+        locationId: data.locationId || null
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wms', 'products'] })
@@ -117,7 +130,8 @@ export default function Products() {
       description: product.description || '',
       initialStock: 0,
       stockAdjustment: 0,
-      warehouseId: ''
+      warehouseId: '',
+      locationId: ''
     })
     setShowForm(true)
     setFormError('')
@@ -137,6 +151,10 @@ export default function Products() {
     }
     if (!editingProduct && form.initialStock > 0 && !form.warehouseId) {
       setFormError('Изберете склад за началната наличност')
+      return
+    }
+    if (!editingProduct && form.initialStock > 0 && form.warehouseId && locations.length > 0 && !form.locationId) {
+      setFormError('Изберете локация за началната наличност')
       return
     }
     if (editingProduct && form.stockAdjustment !== 0 && !form.warehouseId) {
@@ -456,13 +474,13 @@ export default function Products() {
                   </label>
                   <select
                     value={form.warehouseId}
-                    onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}
+                    onChange={(e) => handleWarehouseChange(e.target.value)}
                     style={{ ...inputStyle, background: 'white', cursor: 'pointer' }}
                   >
                     <option value="">— Изберете склад —</option>
-                    {(warehouses as Array<{ id: string; name: string }>).map((w) => (
+                    {(warehouses as Array<{ id: string; code: string; name: string }>).map((w) => (
                       <option key={w.id} value={w.id}>
-                        {w.name}
+                        {w.code} — {w.name}
                       </option>
                     ))}
                   </select>
@@ -506,17 +524,37 @@ export default function Products() {
                 </label>
                 <select
                   value={form.warehouseId}
-                  onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))}
+                  onChange={(e) => handleWarehouseChange(e.target.value)}
                   style={{ ...inputStyle, background: 'white', cursor: 'pointer' }}
                 >
                   <option value="">— Изберете склад —</option>
-                  {(warehouses as Array<{ id: string; name: string }>).map((w) => (
+                  {(warehouses as Array<{ id: string; code: string; name: string }>).map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name}
+                      {w.code} — {w.name}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+          )}
+
+          {!editingProduct && form.warehouseId && locations.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Локация
+              </label>
+              <select
+                value={form.locationId}
+                onChange={(e) => setForm((f) => ({ ...f, locationId: e.target.value }))}
+                style={{ ...inputStyle, background: 'white', cursor: 'pointer', width: '100%' }}
+              >
+                <option value="">— Избери локация —</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.code} — {loc.name || loc.locationType}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

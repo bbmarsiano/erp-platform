@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { BackButton, Button, PageHeader } from '../../../components/ui'
-import { useStock } from '../../wms/hooks/useWms'
+import { api } from '../../../lib/api'
+import { formatCurrency } from '../../../lib/currency'
 import { useAddPurchaseOrderLine, usePurchaseOrder, useSendPurchaseOrder } from '../hooks/useScm'
+
+type ProductOption = { id: string; code: string; name: string; price?: number | null; unit?: string }
 
 export default function PurchaseOrderDetail() {
   const { id = '' } = useParams()
@@ -10,18 +14,32 @@ export default function PurchaseOrderDetail() {
   const addLine = useAddPurchaseOrderLine()
   const sendOrder = useSendPurchaseOrder()
   const order = orderQuery.data as any
-  const stock = useStock(order?.warehouseId)
-  const products = useMemo(() => {
-    const rows = (stock.data ?? []) as Array<any>
-    const m = new Map<string, any>()
-    rows.forEach((r) => m.set(r.product.id, r.product))
-    return Array.from(m.values())
-  }, [stock.data])
+
+  const productsQuery = useQuery({
+    queryKey: ['wms', 'products'],
+    queryFn: () => api.get('/api/wms/products').then((r) => r.data.data as ProductOption[])
+  })
+  const products = (productsQuery.data ?? []).filter((p: any) => p.isActive !== false)
+
   const [line, setLine] = useState({ productId: '', quantity: 1, unitPrice: 0 })
+
+  const handleProductChange = (productId: string) => {
+    const product = products.find((p) => p.id === productId)
+    setLine((prev) => ({
+      ...prev,
+      productId,
+      unitPrice: product?.price != null ? Number(product.price) : 0
+    }))
+  }
 
   const onAdd = async () => {
     if (!line.productId || !line.quantity) return
-    await addLine.mutateAsync({ id, productId: line.productId, quantity: Number(line.quantity), unitPrice: Number(line.unitPrice) || undefined })
+    await addLine.mutateAsync({
+      id,
+      productId: line.productId,
+      quantity: Number(line.quantity),
+      unitPrice: Number(line.unitPrice) || undefined
+    })
     setLine({ productId: '', quantity: 1, unitPrice: 0 })
   }
 
@@ -46,17 +64,17 @@ export default function PurchaseOrderDetail() {
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
               <th style={{ padding: 8 }}>Продукт</th>
               <th style={{ padding: 8 }}>Количество</th>
-              <th style={{ padding: 8 }}>Получено</th>
               <th style={{ padding: 8 }}>Цена</th>
             </tr>
           </thead>
           <tbody>
             {(order?.lines ?? []).map((l: any) => (
               <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 8 }}>{l.productId}</td>
+                <td style={{ padding: 8 }}>
+                  {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+                </td>
                 <td style={{ padding: 8 }}>{l.quantity}</td>
-                <td style={{ padding: 8 }}>{l.receivedQty}</td>
-                <td style={{ padding: 8 }}>{l.unitPrice ?? '—'}</td>
+                <td style={{ padding: 8 }}>{l.unitPrice != null ? formatCurrency(l.unitPrice) : '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -64,7 +82,7 @@ export default function PurchaseOrderDetail() {
 
         {order?.status === 'DRAFT' ? (
           <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 120px 120px auto', gap: 8, alignItems: 'end' }}>
-            <select value={line.productId} onChange={(e) => setLine({ ...line, productId: e.target.value })} style={{ padding: 8 }}>
+            <select value={line.productId} onChange={(e) => handleProductChange(e.target.value)} style={{ padding: 8 }}>
               <option value="">Изберете продукт</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -72,9 +90,22 @@ export default function PurchaseOrderDetail() {
                 </option>
               ))}
             </select>
-            <input type="number" value={line.quantity} onChange={(e) => setLine({ ...line, quantity: Number(e.target.value) })} style={{ padding: 8 }} />
-            <input type="number" value={line.unitPrice} onChange={(e) => setLine({ ...line, unitPrice: Number(e.target.value) })} style={{ padding: 8 }} />
-            <Button onClick={onAdd} disabled={addLine.isPending}>
+            <input
+              type="number"
+              min={1}
+              value={line.quantity}
+              onChange={(e) => setLine({ ...line, quantity: Number(e.target.value) })}
+              style={{ padding: 8 }}
+            />
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={line.unitPrice}
+              onChange={(e) => setLine({ ...line, unitPrice: Number(e.target.value) })}
+              style={{ padding: 8 }}
+            />
+            <Button onClick={onAdd} disabled={addLine.isPending || !line.productId || !line.quantity}>
               Добави ред
             </Button>
           </div>
@@ -83,4 +114,3 @@ export default function PurchaseOrderDetail() {
     </div>
   )
 }
-

@@ -75,8 +75,12 @@ export default function DeliveryDetail() {
           <tbody>
             {(delivery?.lines ?? []).map((l: any) => (
               <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 8 }}>{l.productId}</td>
-                <td style={{ padding: 8 }}>{l.locationId}</td>
+                <td style={{ padding: 8 }}>
+                  {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+                </td>
+                <td style={{ padding: 8 }}>
+                  {l.location ? `${l.location.code} — ${l.location.name}` : l.locationId}
+                </td>
                 <td style={{ padding: 8 }}>{l.quantity}</td>
                 <td style={{ padding: 8 }}>{l.lotNumber ?? '—'}</td>
               </tr>
