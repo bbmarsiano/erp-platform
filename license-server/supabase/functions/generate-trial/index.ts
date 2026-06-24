@@ -110,120 +110,268 @@ async function sendTrialEmail(email: string, name: string, key: string) {
   const resendKey = Deno.env.get('RESEND_API_KEY')!
 
   const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: Inter, system-ui, sans-serif; background: #f6f8fa;
-          margin: 0; padding: 40px 20px; }
-        .container { max-width: 560px; margin: 0 auto; background: white;
-          border-radius: 16px; overflow: hidden;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-        .header { background: linear-gradient(135deg, #7c3aed, #4f46e5);
-          padding: 32px; text-align: center; }
-        .logo { font-size: 24px; font-weight: 900; color: white;
-          letter-spacing: -0.5px; }
-        .tagline { font-size: 13px; color: rgba(255,255,255,0.7);
-          margin-top: 4px; }
-        .body { padding: 32px; }
-        .greeting { font-size: 18px; font-weight: 700; color: #0f172a;
-          margin-bottom: 12px; }
-        .text { font-size: 14px; color: #6b7280; line-height: 1.7;
-          margin-bottom: 16px; }
-        .key-box { background: #f5f3ff; border: 2px dashed #7c3aed;
-          border-radius: 12px; padding: 20px; text-align: center;
-          margin: 24px 0; }
-        .key-label { font-size: 12px; font-weight: 600; color: #7c3aed;
-          text-transform: uppercase; letter-spacing: 0.1em;
-          margin-bottom: 8px; }
-        .key { font-size: 22px; font-weight: 900; color: #4c1d95;
-          font-family: monospace; letter-spacing: 0.1em; }
-        .key-note { font-size: 11px; color: #9ca3af; margin-top: 8px; }
-        .steps { background: #f8fafc; border-radius: 10px; padding: 20px;
-          margin: 20px 0; }
-        .steps-title { font-size: 13px; font-weight: 700; color: #374151;
-          margin-bottom: 12px; }
-        .step { display: flex; gap: 10px; margin-bottom: 10px;
-          font-size: 13px; color: #374151; }
-        .step-num { width: 22px; height: 22px; background: #7c3aed;
-          color: white; border-radius: 50%; display: flex;
-          align-items: center; justify-content: center;
-          font-size: 11px; font-weight: 700; flex-shrink: 0; }
-        .btn { display: block; background: #7c3aed; color: white;
-          text-decoration: none; text-align: center; padding: 14px 24px;
-          border-radius: 10px; font-weight: 700; font-size: 14px;
-          margin: 24px 0; }
-        .trial-badge { display: inline-block; background: #dcfce7;
-          color: #166534; padding: 4px 12px; border-radius: 20px;
-          font-size: 12px; font-weight: 700; margin-bottom: 16px; }
-        .footer { padding: 20px 32px; background: #f8fafc;
-          border-top: 1px solid #e5e7eb; text-align: center;
-          font-size: 11px; color: #9ca3af; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <div class="logo">⚡ DFlowERP</div>
-          <div class="tagline">ERP за вашия бизнес</div>
-        </div>
-        <div class="body">
-          <div class="trial-badge">✅ 14-дневен безплатен trial</div>
-          <div class="greeting">Здравейте, ${name}!</div>
-          <p class="text">
-            Вашият безплатен trial лиценз за DFlowERP е готов.
-            Имате <strong>14 дни пълен достъп</strong> до всички модули —
-            без ограничения, без кредитна карта.
-          </p>
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DFlowERP Trial</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f3ff;
+      padding: 40px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 540px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+    .header {
+      padding: 28px 40px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .logo-mark {
+      width: 28px;
+      height: 28px;
+      background: #7c3aed;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: white;
+      line-height: 1;
+    }
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.3px;
+    }
+    .body {
+      padding: 36px 40px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #7c3aed;
+      background: #f5f3ff;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .greeting {
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.4px;
+      margin-bottom: 10px;
+    }
+    .intro {
+      font-size: 14px;
+      color: #6b7280;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+    .intro strong {
+      color: #111827;
+      font-weight: 600;
+    }
+    .key-box {
+      background: #fafafa;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 22px 24px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .key-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .key-value {
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: 0.08em;
+    }
+    .key-note {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 8px;
+    }
+    .divider {
+      height: 1px;
+      background: #f3f4f6;
+      margin: 28px 0;
+    }
+    .steps-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 16px;
+    }
+    .step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      background: #7c3aed;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      text-align: center;
+      line-height: 20px;
+      margin-top: 1px;
+    }
+    .step-text {
+      font-size: 13px;
+      color: #4b5563;
+      line-height: 1.6;
+    }
+    .step-text a {
+      color: #7c3aed;
+      text-decoration: none;
+    }
+    .btn {
+      display: block;
+      background: #7c3aed;
+      color: #ffffff;
+      text-decoration: none;
+      text-align: center;
+      padding: 13px 24px;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 28px;
+      letter-spacing: -0.1px;
+    }
+    .help {
+      font-size: 13px;
+      color: #9ca3af;
+      line-height: 1.6;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .help a {
+      color: #7c3aed;
+      text-decoration: none;
+    }
+    .footer {
+      padding: 18px 40px;
+      background: #fafafa;
+      border-top: 1px solid #f3f4f6;
+      text-align: center;
+      font-size: 11px;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+    .footer a {
+      color: #9ca3af;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
 
-          <div class="key-box">
-            <div class="key-label">Вашият лицензен ключ</div>
-            <div class="key">${key}</div>
-            <div class="key-note">Валиден 14 дни от активацията</div>
-          </div>
+    <div class="header">
+      <span class="logo">
+        <span class="logo-mark">D</span>
+        <span class="logo-text">DFlowERP</span>
+      </span>
+    </div>
 
-          <div class="steps">
-            <div class="steps-title">Как да започнете:</div>
-            <div class="step">
-              <div class="step-num">1</div>
-              <div>Свалете installer за вашата платформа от
-                <a href="https://dflowhub.com/download">dflowhub.com/download</a>
-              </div>
-            </div>
-            <div class="step">
-              <div class="step-num">2</div>
-              <div>Стартирайте installer и въведете лицензния ключ по-горе</div>
-            </div>
-            <div class="step">
-              <div class="step-num">3</div>
-              <div>Попълнете данните на фирмата и задайте администраторска парола</div>
-            </div>
-            <div class="step">
-              <div class="step-num">4</div>
-              <div>Отворете браузър на <strong>http://localhost:3001</strong>
-                и влезте в системата</div>
-            </div>
-          </div>
+    <div class="body">
+      <div class="badge">14-дневен безплатен trial</div>
+      <div class="greeting">Здравейте, ${name}!</div>
+      <p class="intro">
+        Вашият trial лиценз е готов. Имате <strong>14 дни пълен достъп</strong>
+        до всички модули — WMS, SCM, MES, POS и Backup —
+        без ограничения и без кредитна карта.
+      </p>
 
-          <a href="https://dflowhub.com/download" class="btn">
-            ⬇️ Свали DFlowERP
-          </a>
+      <div class="key-box">
+        <div class="key-label">Лицензен ключ</div>
+        <div class="key-value">${key}</div>
+        <div class="key-note">Валиден 14 дни от активацията</div>
+      </div>
 
-          <p class="text">
-            Нуждаете се от помощ? Разгледайте
-            <a href="https://dflowhub.com/docs">документацията</a>
-            или се свържете с нас на
-            <a href="mailto:support@dflowhub.com">support@dflowhub.com</a>
-          </p>
-        </div>
-        <div class="footer">
-          © 2025 DFlowERP · <a href="https://dflowhub.com">dflowhub.com</a>
-          <br>Получавате този имейл защото поискахте безплатен trial.
+      <div class="divider"></div>
+
+      <div class="steps-title">Как да започнете</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          Свалете installer от
+          <a href="https://dflowhub.com/download">dflowhub.com/download</a>
         </div>
       </div>
-    </body>
-    </html>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Стартирайте installer и въведете лицензния ключ</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Попълнете данните на фирмата и задайте администраторска парола</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          Отворете браузър на
+          <a href="http://localhost:3001">localhost:3001</a>
+          и влезте в системата
+        </div>
+      </div>
+
+      <a href="https://dflowhub.com/download" class="btn">Свали DFlowERP</a>
+
+      <p class="help">
+        Въпроси? Разгледайте
+        <a href="https://dflowhub.com/docs">документацията</a>
+        или пишете на
+        <a href="mailto:support@dflowhub.com">support@dflowhub.com</a>
+      </p>
+    </div>
+
+    <div class="footer">
+      © 2025 DFlowERP &nbsp;·&nbsp;
+      <a href="https://dflowhub.com">dflowhub.com</a><br>
+      Получавате този имейл защото поискахте безплатен trial.
+    </div>
+
+  </div>
+</body>
+</html>
   `
 
   const res = await fetch('https://api.resend.com/emails', {
@@ -233,9 +381,9 @@ async function sendTrialEmail(email: string, name: string, key: string) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'DFlowERP <noreply@dflowhub.com>',
+      from: 'DFlowERP <onboarding@resend.dev>',
       to: [email],
-      subject: '⚡ Вашият DFlowERP trial лиценз е готов',
+      subject: 'Вашият DFlowERP trial лиценз е готов',
       html
     })
   })
