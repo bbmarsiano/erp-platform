@@ -117,7 +117,15 @@ const receiptsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       const params = request.params as { id: string }
       const receipt = await prisma.goodsReceipt.findFirst({
         where: { id: params.id, tenantId: request.user.tenantId },
-        include: { lines: true }
+        include: {
+          warehouse: true,
+          lines: {
+            include: {
+              product: true,
+              location: true
+            }
+          }
+        }
       })
       if (!receipt) {
         return reply.status(404).send(createErrorResponse('Receipt not found', 'RECEIPT_NOT_FOUND', 404))

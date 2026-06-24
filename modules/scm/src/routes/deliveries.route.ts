@@ -48,7 +48,7 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
       where: { id: params.id, tenantId: request.user.tenantId },
       include: {
         lines: { include: { product: true, location: true } },
-        purchaseOrder: { include: { supplier: true } },
+        purchaseOrder: { include: { supplier: true, lines: { include: { product: true } } } },
         warehouse: true
       }
     })

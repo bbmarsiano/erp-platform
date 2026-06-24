@@ -116,7 +116,15 @@ const issuesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       const params = request.params as { id: string }
       const issue = await prisma.goodsIssue.findFirst({
         where: { id: params.id, tenantId: request.user.tenantId },
-        include: { lines: true }
+        include: {
+          warehouse: true,
+          lines: {
+            include: {
+              product: true,
+              location: true
+            }
+          }
+        }
       })
       if (!issue) {
         return reply.status(404).send(createErrorResponse('Issue not found', 'ISSUE_NOT_FOUND', 404))

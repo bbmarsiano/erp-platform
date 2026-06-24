@@ -17,6 +17,8 @@ type IssueLine = {
   locationId: string
   quantity: number
   lotNumber?: string
+  product?: { code?: string; name?: string }
+  location?: { code?: string; name?: string }
 }
 
 export default function IssueDetail() {
@@ -44,7 +46,9 @@ export default function IssueDetail() {
       productId: l.productId,
       locationId: l.locationId,
       quantity: l.quantity,
-      lotNumber: l.lotNumber ?? undefined
+      lotNumber: l.lotNumber ?? undefined,
+      product: l.product,
+      location: l.location
     }))
     return localLines ?? base
   }, [issue?.lines, localLines])
@@ -65,6 +69,22 @@ export default function IssueDetail() {
     const locs = (locationsQuery.data ?? []) as Array<any>
     return locs.map((l) => ({ id: l.id, code: l.code, name: l.name }))
   }, [locationsQuery.data])
+
+  const formatProduct = (line: { productId: string; product?: { code?: string; name?: string } }) => {
+    if (line.product?.code || line.product?.name) {
+      return `${line.product.code ?? ''}${line.product.code && line.product.name ? ' — ' : ''}${line.product.name ?? ''}`.trim()
+    }
+    const p = products.find((x) => x.id === line.productId)
+    return p?.code ? `${p.code} — ${p.name ?? line.productId}` : line.productId
+  }
+
+  const formatLocation = (line: { locationId: string; location?: { code?: string; name?: string } }) => {
+    if (line.location?.code || line.location?.name) {
+      return `${line.location.code ?? ''}${line.location.code && line.location.name ? ' — ' : ''}${line.location.name ?? ''}`.trim()
+    }
+    const loc = locations.find((x) => x.id === line.locationId)
+    return loc ? `${loc.code} — ${loc.name}` : line.locationId
+  }
 
   const addLine = () => {
     if (!newLine.productId || !newLine.locationId || !newLine.quantity || newLine.quantity <= 0) return
@@ -155,8 +175,8 @@ export default function IssueDetail() {
             ) : (
               lines.map((l, idx) => (
                 <tr key={`${l.productId}-${l.locationId}-${idx}`} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: 10, fontFamily: 'monospace' }}>{l.productId}</td>
-                  <td style={{ padding: 10, fontFamily: 'monospace' }}>{l.locationId}</td>
+                  <td style={{ padding: 10 }}>{formatProduct(l)}</td>
+                  <td style={{ padding: 10 }}>{formatLocation(l)}</td>
                   <td style={{ padding: 10, fontWeight: 700 }}>{l.quantity}</td>
                   <td style={{ padding: 10 }}>{l.lotNumber ?? '—'}</td>
                 </tr>

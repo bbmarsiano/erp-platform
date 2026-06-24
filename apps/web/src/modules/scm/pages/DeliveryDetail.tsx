@@ -19,6 +19,12 @@ export default function DeliveryDetail() {
     return Array.from(m.values())
   }, [stock.data])
 
+  const availableProducts = useMemo(() => {
+    if (!delivery?.purchaseOrderId || !delivery?.purchaseOrder?.lines?.length) return products
+    const poProductIds = new Set(delivery.purchaseOrder.lines.map((l: any) => l.productId))
+    return products.filter((p) => poProductIds.has(p.id))
+  }, [delivery?.purchaseOrderId, delivery?.purchaseOrder?.lines, products])
+
   const [line, setLine] = useState({ productId: '', locationId: '', quantity: 1, lotNumber: '' })
   const [lastReceipt, setLastReceipt] = useState<string | null>(null)
 
@@ -92,7 +98,7 @@ export default function DeliveryDetail() {
           <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 120px 1fr auto', gap: 8, alignItems: 'end' }}>
             <select value={line.productId} onChange={(e) => setLine({ ...line, productId: e.target.value })} style={{ padding: 8 }}>
               <option value="">Изберете продукт</option>
-              {products.map((p) => (
+              {availableProducts.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.code} — {p.name}
                 </option>
