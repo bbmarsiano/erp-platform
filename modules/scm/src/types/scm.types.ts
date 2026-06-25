@@ -23,3 +23,9 @@ export type DeliveryLineInput = {
   expiryDate?: string
 }
 
+export type DeliveryLineUpdateInput = {
+  locationId: string
+  quantity: number
+  lotNumber?: string
+}
+

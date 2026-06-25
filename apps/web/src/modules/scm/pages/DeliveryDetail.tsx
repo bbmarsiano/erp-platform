@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { BackButton, Button, Input, PageHeader, Select, StatusBadge } from '../../../components/ui'
 import { useReceipt, useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
-import { useAddDeliveryLine, useConfirmDelivery, useDelivery } from '../hooks/useScm'
+import {
+  useAddDeliveryLine,
+  useConfirmDelivery,
+  useDeleteDeliveryLine,
+  useDelivery,
+  useUpdateDeliveryLine
+} from '../hooks/useScm'
 
 const deliveryStatusMap: Record<string, { label: string; bg: string; color: string }> = {
   DRAFT: { label: 'Чернова', bg: '#fef9c3', color: '#854d0e' },
@@ -23,6 +30,18 @@ const tdStyle: React.CSSProperties = {
   fontSize: 13
 }
 
+const iconBtnStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: '#9ca3af',
+  padding: 4,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 4
+}
+
 function resolveDefaultLocationId(locs: Array<{ id: string; locationType?: string }>): string {
   if (locs.length === 1) return locs[0].id
   const receiving = locs.find((l) => l.locationType === 'RECEIVING')
@@ -33,6 +52,8 @@ export default function DeliveryDetail() {
   const { id = '' } = useParams()
   const deliveryQuery = useDelivery(id)
   const addLine = useAddDeliveryLine()
+  const updateLine = useUpdateDeliveryLine()
+  const deleteLine = useDeleteDeliveryLine()
   const confirm = useConfirmDelivery()
   const delivery = deliveryQuery.data as any
   const locations = useWarehouseLocations(delivery?.warehouseId)
@@ -70,6 +91,8 @@ export default function DeliveryDetail() {
   const [line, setLine] = useState({ productId: '', locationId: '', quantity: 1, lotNumber: '' })
   const [confirmedReceipt, setConfirmedReceipt] = useState<{ id: string; no: string } | null>(null)
   const [isFilling, setIsFilling] = useState(false)
+  const [editingLineId, setEditingLineId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ locationId: '', quantity: 1, lotNumber: '' })
 
   useEffect(() => {
     if (defaultLocationId && !line.locationId) {
@@ -152,6 +175,38 @@ export default function DeliveryDetail() {
     }
   }
 
+  const startEdit = (row: any) => {
+    setEditingLineId(row.id)
+    setEditForm({
+      locationId: row.locationId,
+      quantity: row.quantity,
+      lotNumber: row.lotNumber ?? ''
+    })
+  }
+
+  const cancelEdit = () => {
+    setEditingLineId(null)
+    setEditForm({ locationId: '', quantity: 1, lotNumber: '' })
+  }
+
+  const onSaveEdit = async () => {
+    if (!editingLineId || !editForm.locationId || !editForm.quantity) return
+    await updateLine.mutateAsync({
+      deliveryId: id,
+      itemId: editingLineId,
+      locationId: editForm.locationId,
+      quantity: Number(editForm.quantity),
+      lotNumber: editForm.lotNumber || undefined
+    })
+    cancelEdit()
+  }
+
+  const onDeleteLine = async (itemId: string) => {
+    if (!window.confirm('Изтриване на реда?')) return
+    await deleteLine.mutateAsync({ deliveryId: id, itemId })
+    if (editingLineId === itemId) cancelEdit()
+  }
+
   const canFillFromPo =
     delivery?.status === 'DRAFT' &&
     Boolean(delivery?.purchaseOrderId) &&
@@ -160,6 +215,7 @@ export default function DeliveryDetail() {
 
   const isDraft = delivery?.status === 'DRAFT'
   const deliveryLines = delivery?.lines ?? []
+  const colCount = isDraft ? 5 : 4
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -260,34 +316,126 @@ export default function DeliveryDetail() {
               <th style={thStyle}>Локация</th>
               <th style={thStyle}>Количество</th>
               <th style={thStyle}>Партида</th>
+              {isDraft ? <th style={{ ...thStyle, width: 88 }} /> : null}
             </tr>
           </thead>
           <tbody>
             {deliveryQuery.isLoading ? (
               <tr>
-                <td colSpan={4} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
+                <td colSpan={colCount} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
                   Зареждане...
                 </td>
               </tr>
             ) : deliveryLines.length === 0 && !isDraft ? (
               <tr>
-                <td colSpan={4} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
+                <td colSpan={colCount} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
                   Няма редове
                 </td>
               </tr>
             ) : (
-              deliveryLines.map((l: any) => (
-                <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={tdStyle}>
-                    {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
-                  </td>
-                  <td style={tdStyle}>
-                    {l.location ? `${l.location.code} — ${l.location.name}` : l.locationId}
-                  </td>
-                  <td style={{ ...tdStyle, fontWeight: 600 }}>{l.quantity}</td>
-                  <td style={tdStyle}>{l.lotNumber ?? '—'}</td>
-                </tr>
-              ))
+              deliveryLines.map((l: any) => {
+                const isEditing = editingLineId === l.id
+
+                if (isEditing) {
+                  return (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6', background: '#fafafa' }}>
+                      <td style={{ ...tdStyle, color: '#374151' }}>
+                        {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+                      </td>
+                      <td style={tdStyle}>
+                        <Select
+                          value={editForm.locationId}
+                          onChange={(e) => setEditForm({ ...editForm, locationId: e.target.value })}
+                        >
+                          <option value="">Изберете локация</option>
+                          {warehouseLocations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.code} — {loc.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </td>
+                      <td style={tdStyle}>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={editForm.quantity}
+                          onChange={(e) => setEditForm({ ...editForm, quantity: Number(e.target.value) })}
+                        />
+                      </td>
+                      <td style={tdStyle}>
+                        <Input
+                          placeholder="Партида"
+                          value={editForm.lotNumber}
+                          onChange={(e) => setEditForm({ ...editForm, lotNumber: e.target.value })}
+                        />
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <Button
+                            size="sm"
+                            onClick={onSaveEdit}
+                            disabled={updateLine.isPending || !editForm.locationId || !editForm.quantity}
+                          >
+                            {updateLine.isPending ? '...' : 'Запази'}
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={cancelEdit} disabled={updateLine.isPending}>
+                            Отказ
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                }
+
+                return (
+                  <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={tdStyle}>
+                      {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+                    </td>
+                    <td style={tdStyle}>
+                      {l.location ? `${l.location.code} — ${l.location.name}` : l.locationId}
+                    </td>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>{l.quantity}</td>
+                    <td style={tdStyle}>{l.lotNumber ?? '—'}</td>
+                    {isDraft ? (
+                      <td style={tdStyle}>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            title="Редактирай"
+                            style={iconBtnStyle}
+                            onClick={() => startEdit(l)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#2563eb'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = '#9ca3af'
+                            }}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Изтрий"
+                            style={iconBtnStyle}
+                            onClick={() => onDeleteLine(l.id)}
+                            disabled={deleteLine.isPending}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.color = '#ef4444'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.color = '#9ca3af'
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
+                  </tr>
+                )
+              })
             )}
           </tbody>
           {isDraft ? (
@@ -325,17 +473,16 @@ export default function DeliveryDetail() {
                   />
                 </td>
                 <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <Input
-                      placeholder="Партида"
-                      value={line.lotNumber}
-                      onChange={(e) => setLine({ ...line, lotNumber: e.target.value })}
-                      style={{ flex: 1 }}
-                    />
-                    <Button onClick={onAdd} disabled={addLine.isPending || !line.productId || !line.locationId}>
-                      {addLine.isPending ? '...' : 'Добави ред'}
-                    </Button>
-                  </div>
+                  <Input
+                    placeholder="Партида"
+                    value={line.lotNumber}
+                    onChange={(e) => setLine({ ...line, lotNumber: e.target.value })}
+                  />
+                </td>
+                <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                  <Button onClick={onAdd} disabled={addLine.isPending || !line.productId || !line.locationId}>
+                    {addLine.isPending ? '...' : 'Добави ред'}
+                  </Button>
                 </td>
               </tr>
             </tfoot>

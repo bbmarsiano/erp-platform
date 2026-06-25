@@ -3,7 +3,7 @@ import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 import { listDeliveries } from '../services/delivery.service'
-import type { DeliveryLineInput } from '../types/scm.types'
+import type { DeliveryLineInput, DeliveryLineUpdateInput } from '../types/scm.types'
 
 const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/deliveries', { preHandler: [authenticate], schema: { tags: ['SCM'] } }, async (request) => {
@@ -82,6 +82,63 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
       include: { product: true, location: true }
     })
     return createSuccessResponse(line)
+  })
+
+  fastify.put('/deliveries/:id/items/:itemId', { preHandler: [authenticate] }, async (request, reply) => {
+    const params = request.params as { id: string; itemId: string }
+    const body = request.body as DeliveryLineUpdateInput
+
+    const delivery = await prisma.delivery.findFirst({
+      where: { id: params.id, tenantId: request.user.tenantId }
+    })
+    if (!delivery) {
+      return reply.status(404).send(createErrorResponse('Delivery not found', 'DELIVERY_NOT_FOUND', 404))
+    }
+    if (delivery.status !== 'DRAFT') {
+      return reply.status(400).send(createErrorResponse('Only draft deliveries can be edited', 'INVALID_STATUS', 400))
+    }
+
+    const existing = await prisma.deliveryLine.findFirst({
+      where: { id: params.itemId, deliveryId: delivery.id }
+    })
+    if (!existing) {
+      return reply.status(404).send(createErrorResponse('Delivery line not found', 'DELIVERY_LINE_NOT_FOUND', 404))
+    }
+
+    const updated = await prisma.deliveryLine.update({
+      where: { id: params.itemId },
+      data: {
+        locationId: body.locationId,
+        quantity: body.quantity,
+        lotNumber: body.lotNumber ?? null
+      },
+      include: { product: true, location: true }
+    })
+    return createSuccessResponse(updated)
+  })
+
+  fastify.delete('/deliveries/:id/items/:itemId', { preHandler: [authenticate] }, async (request, reply) => {
+    const params = request.params as { id: string; itemId: string }
+
+    const delivery = await prisma.delivery.findFirst({
+      where: { id: params.id, tenantId: request.user.tenantId }
+    })
+    if (!delivery) {
+      return reply.status(404).send(createErrorResponse('Delivery not found', 'DELIVERY_NOT_FOUND', 404))
+    }
+    if (delivery.status !== 'DRAFT') {
+      return reply.status(400).send(createErrorResponse('Only draft deliveries can be edited', 'INVALID_STATUS', 400))
+    }
+
+    const existing = await prisma.deliveryLine.findFirst({
+      where: { id: params.itemId, deliveryId: delivery.id }
+    })
+    if (!existing) {
+      return reply.status(404).send(createErrorResponse('Delivery line not found', 'DELIVERY_LINE_NOT_FOUND', 404))
+    }
+
+    await prisma.deliveryLine.delete({ where: { id: params.itemId } })
+    return createSuccessResponse({ deleted: true })
   })
 
   fastify.post('/deliveries/:id/confirm', { preHandler: [authenticate] }, async (request, reply) => {

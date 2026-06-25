@@ -126,6 +126,36 @@ export const useAddDeliveryLine = () => {
   })
 }
 
+export const useUpdateDeliveryLine = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: {
+      deliveryId: string
+      itemId: string
+      locationId: string
+      quantity: number
+      lotNumber?: string
+    }) =>
+      api
+        .put(`/api/scm/deliveries/${args.deliveryId}/items/${args.itemId}`, {
+          locationId: args.locationId,
+          quantity: args.quantity,
+          lotNumber: args.lotNumber
+        })
+        .then((r) => r.data.data),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['scm', 'deliveries', vars.deliveryId] })
+  })
+}
+
+export const useDeleteDeliveryLine = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: { deliveryId: string; itemId: string }) =>
+      api.delete(`/api/scm/deliveries/${args.deliveryId}/items/${args.itemId}`).then((r) => r.data.data),
+    onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ['scm', 'deliveries', vars.deliveryId] })
+  })
+}
+
 export const useConfirmDelivery = () => {
   const qc = useQueryClient()
   return useMutation({
