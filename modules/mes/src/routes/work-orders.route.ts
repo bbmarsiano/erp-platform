@@ -13,6 +13,65 @@ async function resolveBomId(tenantId: string, productId: string, bomId?: string)
   return bom?.id
 }
 
+async function findStockLocationForProduct(tenantId: string, productId: string): Promise<string | null> {
+  const stock = await prisma.stockItem.findFirst({
+    where: { tenantId, productId, quantity: { gt: 0 } },
+    orderBy: { quantity: 'desc' }
+  })
+  return stock?.locationId ?? null
+}
+
+async function createConsumptionLine(
+  workOrderId: string,
+  productId: string,
+  tenantId: string,
+  plannedQty: number,
+  fallbackWarehouseId?: string
+) {
+  let locationId = await findStockLocationForProduct(tenantId, productId)
+  if (!locationId && fallbackWarehouseId) {
+    const fallback = await prisma.location.findFirst({
+      where: { warehouseId: fallbackWarehouseId, isActive: true },
+      orderBy: { code: 'asc' }
+    })
+    locationId = fallback?.id ?? null
+  }
+  if (!locationId) return
+
+  await prisma.materialConsumption.create({
+    data: {
+      workOrderId,
+      productId,
+      locationId,
+      plannedQty,
+      consumedQty: 0
+    }
+  })
+}
+
+async function syncConsumptionLocations(order: {
+  id: string
+  tenantId: string
+  status: string
+  warehouseId: string
+}) {
+  if (order.status === 'COMPLETED' || order.status === 'CANCELLED') return
+
+  const consumptions = await prisma.materialConsumption.findMany({
+    where: { workOrderId: order.id }
+  })
+
+  for (const c of consumptions) {
+    const stockLocationId = await findStockLocationForProduct(order.tenantId, c.productId)
+    if (stockLocationId && stockLocationId !== c.locationId) {
+      await prisma.materialConsumption.update({
+        where: { id: c.id },
+        data: { locationId: stockLocationId }
+      })
+    }
+  }
+}
+
 async function ensureWorkOrderConsumptions(order: {
   id: string
   tenantId: string
@@ -20,40 +79,36 @@ async function ensureWorkOrderConsumptions(order: {
   bomId: string | null
   warehouseId: string
   plannedQty: number
+  status: string
 }) {
   const count = await prisma.materialConsumption.count({ where: { workOrderId: order.id } })
-  if (count > 0) return
 
-  const bomId = await resolveBomId(order.tenantId, order.productId, order.bomId ?? undefined)
-  if (!bomId) return
+  if (count === 0) {
+    const bomId = await resolveBomId(order.tenantId, order.productId, order.bomId ?? undefined)
+    if (!bomId) return
 
-  const bom = await prisma.billOfMaterials.findFirst({
-    where: { id: bomId, tenantId: order.tenantId },
-    include: { items: true }
-  })
-  if (!bom?.items.length) return
-
-  const defaultLocation = await prisma.location.findFirst({
-    where: { warehouseId: order.warehouseId, isActive: true },
-    orderBy: { code: 'asc' }
-  })
-  if (!defaultLocation) return
-
-  for (const item of bom.items) {
-    await prisma.materialConsumption.create({
-      data: {
-        workOrderId: order.id,
-        productId: item.componentId,
-        locationId: defaultLocation.id,
-        plannedQty: item.quantity * order.plannedQty,
-        consumedQty: 0
-      }
+    const bom = await prisma.billOfMaterials.findFirst({
+      where: { id: bomId, tenantId: order.tenantId },
+      include: { items: true }
     })
+    if (!bom?.items.length) return
+
+    for (const item of bom.items) {
+      await createConsumptionLine(
+        order.id,
+        item.componentId,
+        order.tenantId,
+        item.quantity * order.plannedQty,
+        order.warehouseId
+      )
+    }
+
+    if (!order.bomId) {
+      await prisma.workOrder.update({ where: { id: order.id }, data: { bomId } })
+    }
   }
 
-  if (!order.bomId) {
-    await prisma.workOrder.update({ where: { id: order.id }, data: { bomId } })
-  }
+  await syncConsumptionLocations(order)
 }
 
 const workOrderInclude = {
@@ -102,23 +157,15 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
         include: { items: true }
       })
       if (bom) {
-        const defaultLocation = await prisma.location.findFirst({
-          where: { warehouseId: body.warehouseId, isActive: true },
-          orderBy: { code: 'asc' }
-        })
-        if (defaultLocation) {
           for (const item of bom.items) {
-            await prisma.materialConsumption.create({
-              data: {
-                workOrderId: created.id,
-                productId: item.componentId,
-                locationId: defaultLocation.id,
-                plannedQty: item.quantity * body.plannedQty,
-                consumedQty: 0
-              }
-            })
+            await createConsumptionLine(
+              created.id,
+              item.componentId,
+              request.user.tenantId,
+              item.quantity * body.plannedQty,
+              body.warehouseId
+            )
           }
-        }
       }
     }
 
@@ -189,75 +236,129 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
 
   fastify.post('/orders/:id/complete', { preHandler: [authenticate] }, async (request, reply) => {
     const params = request.params as { id: string }
-    const order = await prisma.workOrder.findFirst({
-      where: { id: params.id, tenantId: request.user.tenantId },
-      include: { product: true, consumptions: { include: { product: true } } }
-    })
-    if (!order) return reply.status(404).send(createErrorResponse('Work order not found', 'WO_NOT_FOUND', 404))
-    if (order.status !== 'IN_PROGRESS') {
-      return reply.status(400).send(createErrorResponse('Invalid status', 'INVALID_STATUS', 400))
-    }
+    console.log('[MES complete] workOrderId:', params.id)
 
-    await prisma.$transaction(async (tx) => {
-      for (const c of order.consumptions) {
-        const stockItem = await tx.stockItem.findFirst({
-          where: { tenantId: request.user.tenantId, productId: c.productId, locationId: c.locationId }
-        })
-        if (!stockItem || stockItem.quantity < c.plannedQty) {
-          throw new Error(`Недостатъчна наличност: ${c.product.name}`)
-        }
-        await tx.stockItem.update({ where: { id: stockItem.id }, data: { quantity: { decrement: c.plannedQty } } })
-        await tx.stockMovement.create({
-          data: {
-            tenantId: request.user.tenantId,
-            productId: c.productId,
-            movementType: 'OUT',
-            quantity: c.plannedQty,
-            fromLocationId: c.locationId,
-            referenceType: 'WORK_ORDER',
-            referenceId: order.id,
-            note: `Производство: ${order.orderNo}`
-          }
-        })
-        await tx.materialConsumption.update({ where: { id: c.id }, data: { consumedQty: c.plannedQty } })
+    try {
+      const order = await prisma.workOrder.findFirst({
+        where: { id: params.id, tenantId: request.user.tenantId },
+        include: { product: true, consumptions: { include: { product: true, location: true } } }
+      })
+      if (!order) return reply.status(404).send(createErrorResponse('Work order not found', 'WO_NOT_FOUND', 404))
+      if (order.status !== 'IN_PROGRESS') {
+        return reply.status(400).send(createErrorResponse('Invalid status', 'INVALID_STATUS', 400))
       }
 
-      const existing = await tx.stockItem.findFirst({
-        where: { tenantId: request.user.tenantId, productId: order.productId, locationId: order.outputLocationId }
-      })
-      if (existing) {
-        await tx.stockItem.update({ where: { id: existing.id }, data: { quantity: { increment: order.plannedQty } } })
-      } else {
-        await tx.stockItem.create({
-          data: {
+      console.log('[MES complete] consumptions:', JSON.stringify(order.consumptions))
+
+      await prisma.$transaction(async (tx) => {
+        for (const c of order.consumptions) {
+          const stockRows = await tx.stockItem.findMany({
+            where: {
+              tenantId: request.user.tenantId,
+              productId: c.productId,
+              locationId: c.locationId,
+              lotNumber: null
+            },
+            orderBy: { quantity: 'desc' }
+          })
+          const available = stockRows.reduce((sum, row) => sum + row.quantity, 0)
+
+          if (available < c.plannedQty) {
+            const productCode = c.product?.code ?? c.productId
+            const locationCode = c.location?.code ?? c.locationId
+            throw new Error(
+              `Недостатъчна наличност: ${productCode} в ${locationCode} (налично: ${available}, необходимо: ${c.plannedQty})`
+            )
+          }
+
+          let remaining = c.plannedQty
+          for (const stockItem of stockRows) {
+            if (remaining <= 0) break
+            const deduct = Math.min(stockItem.quantity, remaining)
+            await tx.stockItem.update({
+              where: { id: stockItem.id },
+              data: { quantity: { decrement: deduct } }
+            })
+            remaining -= deduct
+          }
+
+          await tx.stockMovement.create({
+            data: {
+              tenantId: request.user.tenantId,
+              productId: c.productId,
+              movementType: 'OUT',
+              quantity: c.plannedQty,
+              fromLocationId: c.locationId,
+              referenceType: 'WORK_ORDER',
+              referenceId: order.id,
+              note: `Производство: ${order.orderNo}`
+            }
+          })
+          await tx.materialConsumption.update({ where: { id: c.id }, data: { consumedQty: c.plannedQty } })
+        }
+
+        const outputStockRows = await tx.stockItem.findMany({
+          where: {
             tenantId: request.user.tenantId,
             productId: order.productId,
             locationId: order.outputLocationId,
-            quantity: order.plannedQty
+            lotNumber: null
+          },
+          orderBy: { quantity: 'desc' }
+        })
+
+        if (outputStockRows.length > 0) {
+          await tx.stockItem.update({
+            where: { id: outputStockRows[0].id },
+            data: { quantity: { increment: order.plannedQty } }
+          })
+        } else {
+          await tx.stockItem.create({
+            data: {
+              tenantId: request.user.tenantId,
+              productId: order.productId,
+              locationId: order.outputLocationId,
+              quantity: order.plannedQty,
+              lotNumber: null
+            }
+          })
+        }
+
+        await tx.stockMovement.create({
+          data: {
+            tenantId: request.user.tenantId,
+            productId: order.productId,
+            movementType: 'IN',
+            quantity: order.plannedQty,
+            toLocationId: order.outputLocationId,
+            referenceType: 'WORK_ORDER',
+            referenceId: order.id,
+            note: `Произведено: ${order.orderNo}`
           }
         })
-      }
-      await tx.stockMovement.create({
-        data: {
-          tenantId: request.user.tenantId,
-          productId: order.productId,
-          movementType: 'IN',
-          quantity: order.plannedQty,
-          toLocationId: order.outputLocationId,
-          referenceType: 'WORK_ORDER',
-          referenceId: order.id,
-          note: `Произведено: ${order.orderNo}`
-        }
+
+        await tx.workOrder.update({
+          where: { id: order.id },
+          data: { status: 'COMPLETED', producedQty: order.plannedQty, actualEnd: new Date() }
+        })
       })
 
-      await tx.workOrder.update({
+      const completed = await prisma.workOrder.findUnique({
         where: { id: order.id },
-        data: { status: 'COMPLETED', producedQty: order.plannedQty, actualEnd: new Date() }
+        include: workOrderInclude
       })
-    })
-
-    const completed = await prisma.workOrder.findUnique({ where: { id: order.id } })
-    return createSuccessResponse(completed)
+      return createSuccessResponse(completed)
+    } catch (error) {
+      const message = (error as Error).message
+      console.error('[MES complete] error:', error)
+      if (message.includes('Недостатъчна наличност')) {
+        return reply.status(400).send(createErrorResponse(message, 'INSUFFICIENT_STOCK', 400))
+      }
+      if (message === 'WO_NOT_FOUND' || message === 'INVALID_STATUS') {
+        return reply.status(400).send(createErrorResponse(message, message, 400))
+      }
+      return reply.status(500).send(createErrorResponse(message || 'Work order complete failed', 'WO_COMPLETE_FAILED', 500))
+    }
   })
 
   fastify.post('/orders/:id/cancel', { preHandler: [authenticate] }, async (request, reply) => {
