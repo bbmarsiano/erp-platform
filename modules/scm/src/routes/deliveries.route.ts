@@ -125,38 +125,59 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
         })
 
         for (const line of delivery.lines) {
-          if (line.lotNumber) {
+          const lotNumber = line.lotNumber ?? null
+
+          if (lotNumber) {
             await tx.stockItem.upsert({
               where: {
                 productId_locationId_lotNumber: {
                   productId: line.productId,
                   locationId: line.locationId,
-                  lotNumber: line.lotNumber
+                  lotNumber
                 }
               },
-              update: { quantity: { increment: line.quantity }, expiryDate: line.expiryDate },
+              update: {
+                quantity: { increment: line.quantity },
+                expiryDate: line.expiryDate ?? undefined
+              },
               create: {
                 tenantId: request.user.tenantId,
                 productId: line.productId,
                 locationId: line.locationId,
                 quantity: line.quantity,
-                lotNumber: line.lotNumber,
-                expiryDate: line.expiryDate
+                lotNumber,
+                expiryDate: line.expiryDate ?? undefined
               }
             })
           } else {
-            const existing = await tx.stockItem.findFirst({
+            const existingRows = await tx.stockItem.findMany({
               where: {
                 tenantId: request.user.tenantId,
                 productId: line.productId,
                 locationId: line.locationId,
                 lotNumber: null
-              }
+              },
+              orderBy: { quantity: 'desc' }
             })
-            if (existing) {
+
+            if (existingRows.length > 0) {
+              const [primary, ...duplicates] = existingRows
+              if (duplicates.length > 0) {
+                const mergedQty = duplicates.reduce((sum, row) => sum + row.quantity, 0)
+                await tx.stockItem.update({
+                  where: { id: primary.id },
+                  data: { quantity: { increment: mergedQty } }
+                })
+                await tx.stockItem.deleteMany({
+                  where: { id: { in: duplicates.map((row) => row.id) } }
+                })
+              }
               await tx.stockItem.update({
-                where: { id: existing.id },
-                data: { quantity: { increment: line.quantity }, expiryDate: line.expiryDate }
+                where: { id: primary.id },
+                data: {
+                  quantity: { increment: line.quantity },
+                  expiryDate: line.expiryDate ?? undefined
+                }
               })
             } else {
               await tx.stockItem.create({
@@ -166,7 +187,7 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
                   locationId: line.locationId,
                   quantity: line.quantity,
                   lotNumber: null,
-                  expiryDate: line.expiryDate
+                  expiryDate: line.expiryDate ?? undefined
                 }
               })
             }
