@@ -5,6 +5,65 @@ import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 import { listWorkOrders } from '../services/production.service'
 import type { WorkOrderCreateInput } from '../types/mes.types'
 
+async function resolveBomId(tenantId: string, productId: string, bomId?: string) {
+  if (bomId) return bomId
+  const bom = await prisma.billOfMaterials.findFirst({
+    where: { tenantId, productId, isActive: true }
+  })
+  return bom?.id
+}
+
+async function ensureWorkOrderConsumptions(order: {
+  id: string
+  tenantId: string
+  productId: string
+  bomId: string | null
+  warehouseId: string
+  plannedQty: number
+}) {
+  const count = await prisma.materialConsumption.count({ where: { workOrderId: order.id } })
+  if (count > 0) return
+
+  const bomId = await resolveBomId(order.tenantId, order.productId, order.bomId ?? undefined)
+  if (!bomId) return
+
+  const bom = await prisma.billOfMaterials.findFirst({
+    where: { id: bomId, tenantId: order.tenantId },
+    include: { items: true }
+  })
+  if (!bom?.items.length) return
+
+  const defaultLocation = await prisma.location.findFirst({
+    where: { warehouseId: order.warehouseId, isActive: true },
+    orderBy: { code: 'asc' }
+  })
+  if (!defaultLocation) return
+
+  for (const item of bom.items) {
+    await prisma.materialConsumption.create({
+      data: {
+        workOrderId: order.id,
+        productId: item.componentId,
+        locationId: defaultLocation.id,
+        plannedQty: item.quantity * order.plannedQty,
+        consumedQty: 0
+      }
+    })
+  }
+
+  if (!order.bomId) {
+    await prisma.workOrder.update({ where: { id: order.id }, data: { bomId } })
+  }
+}
+
+const workOrderInclude = {
+  product: true,
+  warehouse: true,
+  bom: { include: { items: { include: { component: true } } } },
+  outputLocation: true,
+  consumptions: { include: { product: true, location: true } }
+} as const
+
 const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/orders', { preHandler: [authenticate], schema: { tags: ['MES'] } }, async (request) => {
     const query = request.query as { status?: string }
@@ -19,13 +78,14 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const count = await prisma.workOrder.count({ where: { tenantId: request.user.tenantId, createdAt: { gte: todayStart } } })
     const orderNo = `WO-${dateStr}-${String(count + 1).padStart(4, '0')}`
+    const bomId = await resolveBomId(request.user.tenantId, body.productId, body.bomId)
 
     const created = await prisma.workOrder.create({
       data: {
         tenantId: request.user.tenantId,
         orderNo,
         productId: body.productId,
-        bomId: body.bomId,
+        bomId,
         warehouseId: body.warehouseId,
         outputLocationId: body.outputLocationId,
         plannedQty: body.plannedQty,
@@ -36,9 +96,9 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
       }
     })
 
-    if (body.bomId) {
+    if (bomId) {
       const bom = await prisma.billOfMaterials.findFirst({
-        where: { id: body.bomId, tenantId: request.user.tenantId },
+        where: { id: bomId, tenantId: request.user.tenantId },
         include: { items: true }
       })
       if (bom) {
@@ -67,14 +127,16 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
 
   fastify.get('/orders/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const params = request.params as { id: string }
+    const existing = await prisma.workOrder.findFirst({
+      where: { id: params.id, tenantId: request.user.tenantId }
+    })
+    if (!existing) return reply.status(404).send(createErrorResponse('Work order not found', 'WO_NOT_FOUND', 404))
+
+    await ensureWorkOrderConsumptions(existing)
+
     const order = await prisma.workOrder.findFirst({
       where: { id: params.id, tenantId: request.user.tenantId },
-      include: {
-        product: true,
-        bom: { include: { items: { include: { component: true } } } },
-        outputLocation: true,
-        consumptions: { include: { product: true, location: true } }
-      }
+      include: workOrderInclude
     })
     if (!order) return reply.status(404).send(createErrorResponse('Work order not found', 'WO_NOT_FOUND', 404))
     return createSuccessResponse(order)
