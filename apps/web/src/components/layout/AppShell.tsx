@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UpdateBanner } from '../UpdateBanner'
 import { TrialBanner } from '../TrialBanner'
+import { Toast } from '../ui/Toast'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main style={{ flex: 1, padding: '28px 32px' }}>{children}</main>
       </div>
       <UpdateBanner />
+      <Toast />
     </div>
   )
 }

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
 import { api } from '../../lib/api'
+import { canAccessModule } from '../../lib/menuPermissions'
 
 interface NavItem {
   label: string
@@ -172,9 +173,16 @@ export function Sidebar({
   )
 
   const visibleGroups = useMemo(
-    () => navGroups.filter((group) => isModuleLicensed(group.id)),
-    [isModuleLicensed]
+    () =>
+      navGroups.filter(
+        (group) => isModuleLicensed(group.id) && canAccessModule(user?.role, group.id)
+      ),
+    [isModuleLicensed, user?.role]
   )
+
+  const canSeeDashboard = canAccessModule(user?.role, 'dashboard')
+  const canSeeUsers = canAccessModule(user?.role, 'users')
+  const canSeeSettings = canAccessModule(user?.role, 'settings')
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => {
@@ -269,31 +277,33 @@ export function Sidebar({
       </div>
 
       <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
-        <NavLink to="/dashboard" end style={{ textDecoration: 'none' }}>
-          {({ isActive }) => (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '9px 16px',
-                margin: '1px 8px',
-                borderRadius: 7,
-                background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
-                color: isActive ? '#a5b4fc' : 'rgba(255,255,255,0.65)',
-                fontSize: 13,
-                fontWeight: isActive ? 600 : 400,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              <LayoutDashboard size={17} color="#94a3b8" />
-              {open && <span>Табло</span>}
-            </div>
-          )}
-        </NavLink>
+        {canSeeDashboard ? (
+          <NavLink to="/dashboard" end style={{ textDecoration: 'none' }}>
+            {({ isActive }) => (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '9px 16px',
+                  margin: '1px 8px',
+                  borderRadius: 7,
+                  background: isActive ? 'rgba(99,102,241,0.2)' : 'transparent',
+                  color: isActive ? '#a5b4fc' : 'rgba(255,255,255,0.65)',
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <LayoutDashboard size={17} color="#94a3b8" />
+                {open && <span>Табло</span>}
+              </div>
+            )}
+          </NavLink>
+        ) : null}
 
-        {(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN') && (
+        {canSeeUsers ? (
           <NavLink to="/users" style={{ textDecoration: 'none' }}>
             {({ isActive }) => (
               <div
@@ -317,7 +327,7 @@ export function Sidebar({
               </div>
             )}
           </NavLink>
-        )}
+        ) : null}
 
         <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '8px 16px' }} />
 
@@ -407,24 +417,26 @@ export function Sidebar({
       </nav>
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '12px 8px' }}>
-        <NavLink to="/settings" style={{ textDecoration: 'none' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '8px 12px',
-              borderRadius: 7,
-              cursor: 'pointer',
-              color: 'rgba(255,255,255,0.5)',
-              fontSize: 12,
-              transition: 'all 0.15s'
-            }}
-          >
-            <Settings size={15} color="#6b7280" />
-            {open && <span>Настройки</span>}
-          </div>
-        </NavLink>
+        {canSeeSettings ? (
+          <NavLink to="/settings" style={{ textDecoration: 'none' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '8px 12px',
+                borderRadius: 7,
+                cursor: 'pointer',
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: 12,
+                transition: 'all 0.15s'
+              }}
+            >
+              <Settings size={15} color="#6b7280" />
+              {open && <span>Настройки</span>}
+            </div>
+          </NavLink>
+        ) : null}
 
         {open && (
           <div

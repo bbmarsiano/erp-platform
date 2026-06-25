@@ -13,10 +13,27 @@ import MesRouter from './modules/mes/MesRouter'
 import WmsRouter from './modules/wms/WmsRouter'
 import ScmRouter from './modules/scm/ScmRouter'
 import { SessionWarning } from './components/SessionWarning'
+import { RoleProtectedRoute } from './components/RoleProtectedRoute'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+function ProtectedModule({
+  moduleId,
+  children
+}: {
+  moduleId: string
+  children: React.ReactNode
+}) {
+  return (
+    <PrivateRoute>
+      <RoleProtectedRoute moduleId={moduleId}>
+        <AppShell>{children}</AppShell>
+      </RoleProtectedRoute>
+    </PrivateRoute>
+  )
 }
 
 export default function App() {
@@ -31,71 +48,57 @@ export default function App() {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <Dashboard />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="dashboard">
+              <Dashboard />
+            </ProtectedModule>
           }
         />
         <Route
           path="/wms/*"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <WmsRouter />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="wms">
+              <WmsRouter />
+            </ProtectedModule>
           }
         />
         <Route
           path="/scm/*"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <ScmRouter />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="scm">
+              <ScmRouter />
+            </ProtectedModule>
           }
         />
         <Route
           path="/mes/*"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <MesRouter />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="mes">
+              <MesRouter />
+            </ProtectedModule>
           }
         />
         <Route
           path="/pos/*"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <PosRouter />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="pos">
+              <PosRouter />
+            </ProtectedModule>
           }
         />
         <Route
           path="/users"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <Users />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="users">
+              <Users />
+            </ProtectedModule>
           }
         />
         <Route
           path="/settings"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <Settings />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="settings">
+              <Settings />
+            </ProtectedModule>
           }
         />
         <Route
@@ -111,11 +114,9 @@ export default function App() {
         <Route
           path="/backup/*"
           element={
-            <PrivateRoute>
-              <AppShell>
-                <BackupRouter />
-              </AppShell>
-            </PrivateRoute>
+            <ProtectedModule moduleId="backup">
+              <BackupRouter />
+            </ProtectedModule>
           }
         />
         <Route path="*" element={<NotFound />} />
