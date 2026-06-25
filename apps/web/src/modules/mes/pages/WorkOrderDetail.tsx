@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { BackButton, Button, PageHeader, StatusBadge } from '../../../components/ui'
 import { useCompleteWorkOrder, useReleaseWorkOrder, useStartWorkOrder, useWorkOrder } from '../hooks/useMes'
@@ -41,6 +41,11 @@ function formatQty(value: number, unit?: string): string {
   return unit ? `${value}${unit}` : String(value)
 }
 
+function getApiErrorMessage(err: unknown): string {
+  const data = (err as { response?: { data?: { error?: string; message?: string } } })?.response?.data
+  return data?.error ?? data?.message ?? (err instanceof Error ? err.message : 'Възникна грешка')
+}
+
 export default function WorkOrderDetail() {
   const { id = '' } = useParams()
   const workOrderQuery = useWorkOrder(id)
@@ -48,6 +53,22 @@ export default function WorkOrderDetail() {
   const start = useStartWorkOrder()
   const complete = useCompleteWorkOrder()
   const wo = workOrderQuery.data as any
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const runAction = async (label: string, payload: { id: string }, action: () => Promise<unknown>) => {
+    setActionError(null)
+    console.log(`[MES] ${label}`, payload)
+    try {
+      await action()
+    } catch (err) {
+      console.error(`[MES] ${label} failed`, err)
+      setActionError(getApiErrorMessage(err))
+    }
+  }
+
+  const onRelease = () => runAction('release work order', { id }, () => release.mutateAsync(id))
+  const onStart = () => runAction('start work order', { id }, () => start.mutateAsync(id))
+  const onComplete = () => runAction('complete work order', { id }, () => complete.mutateAsync(id))
 
   const status = woStatusMap[wo?.status] ?? {
     label: wo?.status ?? '—',
@@ -79,17 +100,17 @@ export default function WorkOrderDetail() {
         action={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {wo?.status === 'DRAFT' ? (
-              <Button onClick={() => release.mutate(id)} disabled={release.isPending}>
+              <Button onClick={onRelease} disabled={release.isPending}>
                 {release.isPending ? 'Пускане...' : 'Пусни'}
               </Button>
             ) : null}
             {wo?.status === 'RELEASED' ? (
-              <Button onClick={() => start.mutate(id)} disabled={start.isPending}>
+              <Button onClick={onStart} disabled={start.isPending}>
                 {start.isPending ? 'Стартиране...' : 'Започни'}
               </Button>
             ) : null}
             {wo?.status === 'IN_PROGRESS' ? (
-              <Button variant="success" onClick={() => complete.mutate(id)} disabled={complete.isPending}>
+              <Button variant="success" onClick={onComplete} disabled={complete.isPending}>
                 {complete.isPending ? 'Завършване...' : 'Завърши'}
               </Button>
             ) : null}
@@ -132,6 +153,23 @@ export default function WorkOrderDetail() {
           <span>{dateRange}</span>
         </div>
       </div>
+
+      {actionError ? (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '14px 16px',
+            border: '1px solid #fca5a5',
+            borderRadius: 10,
+            background: '#fef2f2',
+            color: '#991b1b',
+            fontSize: 14,
+            fontWeight: 500
+          }}
+        >
+          {actionError}
+        </div>
+      ) : null}
 
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '14px 16px', fontWeight: 700, fontSize: 14, borderBottom: '1px solid #e5e7eb' }}>

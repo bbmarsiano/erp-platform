@@ -166,23 +166,11 @@ const workOrdersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
   fastify.post('/orders/:id/release', { preHandler: [authenticate] }, async (request, reply) => {
     const params = request.params as { id: string }
     const order = await prisma.workOrder.findFirst({
-      where: { id: params.id, tenantId: request.user.tenantId },
-      include: { consumptions: { include: { product: true } } }
+      where: { id: params.id, tenantId: request.user.tenantId }
     })
     if (!order) return reply.status(404).send(createErrorResponse('Work order not found', 'WO_NOT_FOUND', 404))
     if (order.status !== 'DRAFT') return reply.status(400).send(createErrorResponse('Invalid status', 'INVALID_STATUS', 400))
 
-    for (const c of order.consumptions) {
-      const available = await prisma.stockItem.aggregate({
-        where: { tenantId: request.user.tenantId, productId: c.productId, locationId: c.locationId },
-        _sum: { quantity: true }
-      })
-      if ((available._sum.quantity ?? 0) < c.plannedQty) {
-        return reply
-          .status(400)
-          .send(createErrorResponse(`Недостатъчна наличност: ${c.product.name}`, 'INSUFFICIENT_STOCK', 400))
-      }
-    }
     const updated = await prisma.workOrder.update({ where: { id: order.id }, data: { status: 'RELEASED' } })
     return createSuccessResponse(updated)
   })

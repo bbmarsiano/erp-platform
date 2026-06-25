@@ -62,7 +62,7 @@ export const useCreateWorkOrder = () => {
 const statusMutation = (path: string) => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => api.post(`/api/mes/orders/${id}/${path}`).then((r) => r.data.data),
+    mutationFn: (id: string) => api.post(`/api/mes/orders/${id}/${path}`, {}).then((r) => r.data.data),
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['mes', 'orders'] })
       qc.invalidateQueries({ queryKey: ['mes', 'orders', id] })
