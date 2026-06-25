@@ -1,8 +1,33 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { BackButton, Button, PageHeader } from '../../../components/ui'
-import { useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
+import { BackButton, Button, Input, PageHeader, Select, StatusBadge } from '../../../components/ui'
+import { useReceipt, useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
 import { useAddDeliveryLine, useConfirmDelivery, useDelivery } from '../hooks/useScm'
+
+const deliveryStatusMap: Record<string, { label: string; bg: string; color: string }> = {
+  DRAFT: { label: 'Чернова', bg: '#fef9c3', color: '#854d0e' },
+  CONFIRMED: { label: 'Потвърдена', bg: '#dcfce7', color: '#166534' },
+  CANCELLED: { label: 'Анулирана', bg: '#fee2e2', color: '#991b1b' }
+}
+
+const thStyle: React.CSSProperties = {
+  padding: '11px 16px',
+  fontSize: 12,
+  fontWeight: 600,
+  color: '#6b7280',
+  textAlign: 'left'
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: '12px 16px',
+  fontSize: 13
+}
+
+function resolveDefaultLocationId(locs: Array<{ id: string; locationType?: string }>): string {
+  if (locs.length === 1) return locs[0].id
+  const receiving = locs.find((l) => l.locationType === 'RECEIVING')
+  return receiving?.id ?? ''
+}
 
 export default function DeliveryDetail() {
   const { id = '' } = useParams()
@@ -12,6 +37,8 @@ export default function DeliveryDetail() {
   const delivery = deliveryQuery.data as any
   const locations = useWarehouseLocations(delivery?.warehouseId)
   const stock = useStock(delivery?.warehouseId)
+  const linkedReceiptQuery = useReceipt(delivery?.goodsReceiptId ?? '')
+
   const products = useMemo(() => {
     const rows = (stock.data ?? []) as Array<any>
     const m = new Map<string, any>()
@@ -19,14 +46,62 @@ export default function DeliveryDetail() {
     return Array.from(m.values())
   }, [stock.data])
 
+  const warehouseLocations = useMemo(
+    () => (locations.data ?? []) as Array<{ id: string; code: string; name: string; locationType?: string }>,
+    [locations.data]
+  )
+
+  const defaultLocationId = useMemo(() => resolveDefaultLocationId(warehouseLocations), [warehouseLocations])
+
   const availableProducts = useMemo(() => {
     if (!delivery?.purchaseOrderId || !delivery?.purchaseOrder?.lines?.length) return products
     const poProductIds = new Set(delivery.purchaseOrder.lines.map((l: any) => l.productId))
     return products.filter((p) => poProductIds.has(p.id))
   }, [delivery?.purchaseOrderId, delivery?.purchaseOrder?.lines, products])
 
+  const poLineByProductId = useMemo(() => {
+    const map = new Map<string, any>()
+    for (const pl of delivery?.purchaseOrder?.lines ?? []) {
+      map.set(pl.productId, pl)
+    }
+    return map
+  }, [delivery?.purchaseOrder?.lines])
+
   const [line, setLine] = useState({ productId: '', locationId: '', quantity: 1, lotNumber: '' })
-  const [lastReceipt, setLastReceipt] = useState<string | null>(null)
+  const [confirmedReceipt, setConfirmedReceipt] = useState<{ id: string; no: string } | null>(null)
+  const [isFilling, setIsFilling] = useState(false)
+
+  useEffect(() => {
+    if (defaultLocationId && !line.locationId) {
+      setLine((prev) => ({ ...prev, locationId: defaultLocationId }))
+    }
+  }, [defaultLocationId, line.locationId])
+
+  const receiptInfo = useMemo(() => {
+    if (confirmedReceipt) return confirmedReceipt
+    if (delivery?.goodsReceiptId && linkedReceiptQuery.data) {
+      return {
+        id: delivery.goodsReceiptId,
+        no: (linkedReceiptQuery.data as any).receiptNo
+      }
+    }
+    return null
+  }, [confirmedReceipt, delivery?.goodsReceiptId, linkedReceiptQuery.data])
+
+  const status = deliveryStatusMap[delivery?.status] ?? {
+    label: delivery?.status ?? '—',
+    bg: '#f3f4f6',
+    color: '#374151'
+  }
+
+  const handleProductChange = (productId: string) => {
+    const poLine = poLineByProductId.get(productId)
+    setLine((prev) => ({
+      ...prev,
+      productId,
+      quantity: poLine ? poLine.quantity : 1
+    }))
+  }
 
   const onAdd = async () => {
     if (!line.productId || !line.locationId || !line.quantity) return
@@ -37,15 +112,54 @@ export default function DeliveryDetail() {
       quantity: Number(line.quantity),
       lotNumber: line.lotNumber || undefined
     })
-    setLine({ productId: '', locationId: '', quantity: 1, lotNumber: '' })
+    setLine({ productId: '', locationId: defaultLocationId, quantity: 1, lotNumber: '' })
+  }
+
+  const fillFromPurchaseOrder = async () => {
+    const poLines = (delivery?.purchaseOrder?.lines ?? []) as Array<any>
+    if (!poLines.length) return
+
+    const existingProductIds = new Set((delivery?.lines ?? []).map((l: any) => l.productId))
+    const locId = defaultLocationId
+    const toAdd = poLines.filter((pl) => {
+      const remaining = pl.quantity - (pl.receivedQty ?? 0)
+      return remaining > 0 && !existingProductIds.has(pl.productId)
+    })
+
+    if (!toAdd.length) return
+    if (!locId) return
+
+    setIsFilling(true)
+    try {
+      for (const pl of toAdd) {
+        const remaining = pl.quantity - (pl.receivedQty ?? 0)
+        await addLine.mutateAsync({
+          id,
+          productId: pl.productId,
+          locationId: locId,
+          quantity: remaining
+        })
+      }
+    } finally {
+      setIsFilling(false)
+    }
   }
 
   const onConfirm = async () => {
     const result = await confirm.mutateAsync(id)
-    if (result?.goodsReceiptNo) {
-      setLastReceipt(result.goodsReceiptNo)
+    if (result?.goodsReceiptNo && result?.goodsReceiptId) {
+      setConfirmedReceipt({ id: result.goodsReceiptId, no: result.goodsReceiptNo })
     }
   }
+
+  const canFillFromPo =
+    delivery?.status === 'DRAFT' &&
+    Boolean(delivery?.purchaseOrderId) &&
+    Boolean(delivery?.purchaseOrder?.lines?.length) &&
+    Boolean(defaultLocationId)
+
+  const isDraft = delivery?.status === 'DRAFT'
+  const deliveryLines = delivery?.lines ?? []
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -53,74 +167,181 @@ export default function DeliveryDetail() {
       <PageHeader
         title={`Доставка ${delivery?.deliveryNo ?? ''}`}
         action={
-          delivery?.status === 'DRAFT' ? (
-            <Button onClick={onConfirm} disabled={confirm.isPending}>
-              Потвърди доставка
-            </Button>
+          isDraft ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {delivery?.purchaseOrderId ? (
+                <Button
+                  variant="secondary"
+                  onClick={fillFromPurchaseOrder}
+                  disabled={!canFillFromPo || isFilling || addLine.isPending}
+                >
+                  {isFilling ? 'Попълване...' : 'Попълни от поръчката'}
+                </Button>
+              ) : null}
+              <Button onClick={onConfirm} disabled={confirm.isPending || deliveryLines.length === 0}>
+                {confirm.isPending ? 'Потвърждаване...' : 'Потвърди доставка'}
+              </Button>
+            </div>
           ) : undefined
         }
       />
 
-      {lastReceipt ? (
-        <div style={{ marginTop: 12, padding: 12, border: '1px solid #86efac', borderRadius: 10, background: '#f0fdf4', color: '#166534' }}>
-          ✅ Създадена приходна бележка: {lastReceipt} <Link to="/wms/receipts">към WMS</Link>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '16px 28px',
+          marginTop: 4,
+          marginBottom: 16,
+          padding: '14px 16px',
+          background: '#f8fafc',
+          border: '1px solid #e5e7eb',
+          borderRadius: 10,
+          fontSize: 13
+        }}
+      >
+        <div>
+          <span style={{ color: '#6b7280', fontWeight: 600 }}>Поръчка: </span>
+          {delivery?.purchaseOrder ? (
+            <Link
+              to={`/scm/orders/${delivery.purchaseOrder.id}`}
+              style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}
+            >
+              {delivery.purchaseOrder.orderNo}
+            </Link>
+          ) : (
+            <span>—</span>
+          )}
+        </div>
+        <div>
+          <span style={{ color: '#6b7280', fontWeight: 600 }}>Доставчик: </span>
+          <span>{delivery?.purchaseOrder?.supplier?.name ?? delivery?.supplierName ?? '—'}</span>
+        </div>
+        <div>
+          <span style={{ color: '#6b7280', fontWeight: 600 }}>Склад: </span>
+          <span>
+            {delivery?.warehouse ? `${delivery.warehouse.code} — ${delivery.warehouse.name}` : '—'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#6b7280', fontWeight: 600 }}>Статус: </span>
+          <StatusBadge label={status.label} bg={status.bg} color={status.color} />
+        </div>
+      </div>
+
+      {receiptInfo ? (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '14px 16px',
+            border: '1px solid #86efac',
+            borderRadius: 10,
+            background: '#f0fdf4',
+            color: '#166534',
+            fontSize: 14,
+            fontWeight: 500
+          }}
+        >
+          ✅ Създадена приходна бележка:{' '}
+          <Link
+            to={`/wms/receipts/${receiptInfo.id}`}
+            style={{ color: '#15803d', fontWeight: 700, textDecoration: 'underline' }}
+          >
+            {receiptInfo.no}
+          </Link>
         </div>
       ) : null}
 
-      <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14 }}>
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>Редове</div>
+      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 8 }}>Продукт</th>
-              <th style={{ padding: 8 }}>Локация</th>
-              <th style={{ padding: 8 }}>Количество</th>
-              <th style={{ padding: 8 }}>Партида</th>
+            <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+              <th style={thStyle}>Продукт</th>
+              <th style={thStyle}>Локация</th>
+              <th style={thStyle}>Количество</th>
+              <th style={thStyle}>Партида</th>
             </tr>
           </thead>
           <tbody>
-            {(delivery?.lines ?? []).map((l: any) => (
-              <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 8 }}>
-                  {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+            {deliveryQuery.isLoading ? (
+              <tr>
+                <td colSpan={4} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
+                  Зареждане...
                 </td>
-                <td style={{ padding: 8 }}>
-                  {l.location ? `${l.location.code} — ${l.location.name}` : l.locationId}
-                </td>
-                <td style={{ padding: 8 }}>{l.quantity}</td>
-                <td style={{ padding: 8 }}>{l.lotNumber ?? '—'}</td>
               </tr>
-            ))}
+            ) : deliveryLines.length === 0 && !isDraft ? (
+              <tr>
+                <td colSpan={4} style={{ ...tdStyle, color: '#6b7280', textAlign: 'center' }}>
+                  Няма редове
+                </td>
+              </tr>
+            ) : (
+              deliveryLines.map((l: any) => (
+                <tr key={l.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={tdStyle}>
+                    {l.product ? `${l.product.code} — ${l.product.name}` : l.productId}
+                  </td>
+                  <td style={tdStyle}>
+                    {l.location ? `${l.location.code} — ${l.location.name}` : l.locationId}
+                  </td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{l.quantity}</td>
+                  <td style={tdStyle}>{l.lotNumber ?? '—'}</td>
+                </tr>
+              ))
+            )}
           </tbody>
+          {isDraft ? (
+            <tfoot>
+              <tr style={{ borderTop: '1px solid #e5e7eb', background: '#fafafa' }}>
+                <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                  <Select value={line.productId} onChange={(e) => handleProductChange(e.target.value)}>
+                    <option value="">Изберете продукт</option>
+                    {availableProducts.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code} — {p.name}
+                      </option>
+                    ))}
+                  </Select>
+                </td>
+                <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                  <Select
+                    value={line.locationId}
+                    onChange={(e) => setLine({ ...line, locationId: e.target.value })}
+                  >
+                    <option value="">{locations.isLoading ? 'Зареждане...' : 'Изберете локация'}</option>
+                    {warehouseLocations.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.code} — {l.name}
+                      </option>
+                    ))}
+                  </Select>
+                </td>
+                <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={line.quantity}
+                    onChange={(e) => setLine({ ...line, quantity: Number(e.target.value) })}
+                  />
+                </td>
+                <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Input
+                      placeholder="Партида"
+                      value={line.lotNumber}
+                      onChange={(e) => setLine({ ...line, lotNumber: e.target.value })}
+                      style={{ flex: 1 }}
+                    />
+                    <Button onClick={onAdd} disabled={addLine.isPending || !line.productId || !line.locationId}>
+                      {addLine.isPending ? '...' : 'Добави ред'}
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
-
-        {delivery?.status === 'DRAFT' ? (
-          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr 120px 1fr auto', gap: 8, alignItems: 'end' }}>
-            <select value={line.productId} onChange={(e) => setLine({ ...line, productId: e.target.value })} style={{ padding: 8 }}>
-              <option value="">Изберете продукт</option>
-              {availableProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} — {p.name}
-                </option>
-              ))}
-            </select>
-            <select value={line.locationId} onChange={(e) => setLine({ ...line, locationId: e.target.value })} style={{ padding: 8 }}>
-              <option value="">Изберете локация</option>
-              {((locations.data ?? []) as Array<any>).map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.code} — {l.name}
-                </option>
-              ))}
-            </select>
-            <input type="number" value={line.quantity} onChange={(e) => setLine({ ...line, quantity: Number(e.target.value) })} style={{ padding: 8 }} />
-            <input placeholder="Партида" value={line.lotNumber} onChange={(e) => setLine({ ...line, lotNumber: e.target.value })} style={{ padding: 8 }} />
-            <Button onClick={onAdd} disabled={addLine.isPending}>
-              Добави ред
-            </Button>
-          </div>
-        ) : null}
       </div>
     </div>
   )
 }
-
