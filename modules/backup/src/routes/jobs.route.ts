@@ -3,6 +3,7 @@ import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 import { cleanupStaleBackupJobs } from '../services/stale-jobs.service'
+import { serializeBackupJob, serializeBackupJobs } from '../utils/serialize-job'
 
 const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.post('/jobs/cleanup-stale', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
@@ -22,7 +23,7 @@ const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       include: { policy: true },
       orderBy: { createdAt: 'desc' }
     })
-    return createSuccessResponse(data)
+    return createSuccessResponse(serializeBackupJobs(data))
   })
 
   fastify.get('/jobs/:id', { preHandler: [authenticate] }, async (request, reply) => {
@@ -32,17 +33,26 @@ const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       include: { policy: true }
     })
     if (!job) return reply.status(404).send(createErrorResponse('Backup job not found', 'JOB_NOT_FOUND', 404))
-    return createSuccessResponse(job)
+    return createSuccessResponse(serializeBackupJob(job))
   })
 
   fastify.post('/jobs/:id/verify', { preHandler: [authenticate] }, async (request, reply) => {
     const params = request.params as { id: string }
-    const updated = await prisma.backupJob.updateMany({
-      where: { id: params.id, tenantId: request.user.tenantId },
-      data: { status: 'VERIFIED', isVerified: true, completedAt: new Date() }
+    const existing = await prisma.backupJob.findFirst({
+      where: { id: params.id, tenantId: request.user.tenantId }
     })
-    if (!updated.count) return reply.status(404).send(createErrorResponse('Backup job not found', 'JOB_NOT_FOUND', 404))
-    return createSuccessResponse({ verified: true })
+    if (!existing) return reply.status(404).send(createErrorResponse('Backup job not found', 'JOB_NOT_FOUND', 404))
+
+    const verifiedAt = new Date().toLocaleString('bg-BG')
+    const updated = await prisma.backupJob.update({
+      where: { id: existing.id },
+      data: {
+        isVerified: true,
+        note: `Верифицирано ръчно на ${verifiedAt}`
+      },
+      include: { policy: true }
+    })
+    return createSuccessResponse(serializeBackupJob(updated))
   })
 
   // internal endpoint used by Go backup daemon
@@ -70,7 +80,7 @@ const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         isVerified: body.status === 'VERIFIED' ? true : existing.isVerified
       }
     })
-    return createSuccessResponse(updated)
+    return createSuccessResponse(serializeBackupJob(updated))
   })
 }
 

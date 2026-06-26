@@ -2,6 +2,7 @@ import { createErrorResponse, createSuccessResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
+import { scheduleDevBackupSimulation } from '../services/dev-simulation.service'
 
 const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/policies', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
@@ -76,13 +77,16 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const params = request.params as { id: string }
     const policy = await prisma.backupPolicy.findFirst({ where: { id: params.id, tenantId: request.user.tenantId } })
     if (!policy) return reply.status(404).send(createErrorResponse('Policy not found', 'POLICY_NOT_FOUND', 404))
+    const startedAt = new Date()
     const job = await prisma.backupJob.create({
       data: {
         tenantId: request.user.tenantId,
         policyId: policy.id,
-        status: 'PENDING'
+        status: 'PENDING',
+        startedAt
       }
     })
+    scheduleDevBackupSimulation(job.id)
     return createSuccessResponse(job)
   })
 }
