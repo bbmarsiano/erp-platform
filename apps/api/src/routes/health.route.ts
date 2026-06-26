@@ -34,7 +34,7 @@ const healthRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         success: true,
         data: {
           status: 'ok',
-          version: '0.5.1',
+          version: '0.6.0',
           timestamp: new Date().toISOString(),
           loadedModules: fastify.loadedModules,
           skippedModules: fastify.skippedModules,
