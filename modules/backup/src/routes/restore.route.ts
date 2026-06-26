@@ -2,6 +2,7 @@ import { createSuccessResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
+import { serializeBackupJob, serializeBackupJobs } from '../utils/serialize-job'
 
 const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/restore/points', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
@@ -10,7 +11,7 @@ const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       include: { policy: true },
       orderBy: { createdAt: 'desc' }
     })
-    return createSuccessResponse(data)
+    return createSuccessResponse(serializeBackupJobs(data))
   })
 
   fastify.post('/restore/test', { preHandler: [authenticate] }, async (request) => {
@@ -29,7 +30,7 @@ const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         note: body.note ?? `Test restore from ${body.jobId}`
       }
     })
-    return createSuccessResponse(created)
+    return createSuccessResponse(serializeBackupJob(created))
   })
 }
 
