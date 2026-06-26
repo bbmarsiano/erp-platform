@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev --name init_core_schema",
     "db:studio": "prisma studio",
     "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
-    "db:seed:metalkonstrukt": "dotenv -e ../../.env -- tsx prisma/seed-metalkonstrukt.ts"
+    "db:seed:metalkonstrukt": "dotenv -e ../../.env -- tsx prisma/seed-metalkonstrukt.ts",
+    "db:backup-cleanup": "dotenv -e ../../.env -- tsx scripts/backup-cleanup.ts"
   },
   "prisma": {
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts"

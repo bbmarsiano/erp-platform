@@ -459,6 +459,7 @@ async function main() {
       schedule: '0 2 * * *',
       retentionDays: 30,
       targetType: 'LOCAL',
+      targetPath: '/backups/dflow',
       isActive: true
     }
   })

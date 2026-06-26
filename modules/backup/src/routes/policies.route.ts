@@ -12,7 +12,7 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     return createSuccessResponse(data)
   })
 
-  fastify.post('/policies', { preHandler: [authenticate] }, async (request) => {
+  fastify.post('/policies', { preHandler: [authenticate] }, async (request, reply) => {
     const body = request.body as {
       name: string
       schedule: string
@@ -22,14 +22,20 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       isActive?: boolean
       isEncrypted?: boolean
     }
+    const targetType = body.targetType ?? 'LOCAL'
+    if (targetType === 'LOCAL' && !body.targetPath?.trim()) {
+      return reply.status(400).send(
+        createErrorResponse('Пътят е задължителен при LOCAL архивиране', 'TARGET_PATH_REQUIRED', 400)
+      )
+    }
     const created = await prisma.backupPolicy.create({
       data: {
         tenantId: request.user.tenantId,
         name: body.name,
         schedule: body.schedule,
         retentionDays: body.retentionDays ?? 30,
-        targetType: body.targetType ?? 'LOCAL',
-        targetPath: body.targetPath,
+        targetType,
+        targetPath: body.targetPath?.trim() || null,
         isActive: body.isActive ?? true,
         isEncrypted: body.isEncrypted ?? true
       }

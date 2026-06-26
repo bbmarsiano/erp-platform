@@ -2,9 +2,16 @@ import { createErrorResponse, createSuccessResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
+import { cleanupStaleBackupJobs } from '../services/stale-jobs.service'
 
 const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
+  fastify.post('/jobs/cleanup-stale', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
+    const cleaned = await cleanupStaleBackupJobs(request.user.tenantId)
+    return createSuccessResponse({ cleaned })
+  })
+
   fastify.get('/jobs', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
+    await cleanupStaleBackupJobs(request.user.tenantId)
     const query = request.query as { status?: string; policyId?: string }
     const data = await prisma.backupJob.findMany({
       where: {
