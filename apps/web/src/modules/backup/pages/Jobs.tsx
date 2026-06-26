@@ -1,75 +1,84 @@
-import { Button, PageHeader } from '../../../components/ui'
+import { History } from 'lucide-react'
+import { Button, PageHeader, StatusBadge } from '../../../components/ui'
 import { useBackupJobs, useVerifyBackupJob } from '../hooks/useBackup'
-
-const jobStatusMap: Record<string, { label: string; bg: string; color: string }> = {
-  PENDING: { label: 'Изчакване', bg: '#fef9c3', color: '#854d0e' },
-  RUNNING: { label: 'Изпълнява се', bg: '#dbeafe', color: '#1e40af' },
-  COMPLETED: { label: 'Завършено', bg: '#dcfce7', color: '#166534' },
-  FAILED: { label: 'Грешка', bg: '#fee2e2', color: '#991b1b' },
-  VERIFIED: { label: 'Верифицирано', bg: '#f0fdf4', color: '#14532d' }
-}
-
-const formatBytes = (bytes?: bigint | number | null) => {
-  if (!bytes) return '—'
-  const b = Number(bytes)
-  if (!Number.isFinite(b) || b <= 0) return '—'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let val = b
-  let i = 0
-  while (val >= 1024 && i < units.length - 1) {
-    val /= 1024
-    i += 1
-  }
-  return `${val.toFixed(1)} ${units[i]}`
-}
+import {
+  backupTableRowStyle,
+  backupTableTdStyle,
+  backupTableThStyle,
+  formatBytes,
+  jobStatusMap
+} from '../backupUi'
+import { EmptyStatePanel } from '../components/EmptyStatePanel'
 
 export default function Jobs() {
   const jobs = useBackupJobs()
   const verify = useVerifyBackupJob()
+  const rows = (jobs.data ?? []) as Array<any>
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <PageHeader title="История" subtitle="История на архивни задачи" />
-      <div style={{ marginTop: 14, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: 10 }}>ID</th>
-              <th style={{ padding: 10 }}>Политика</th>
-              <th style={{ padding: 10 }}>Статус</th>
-              <th style={{ padding: 10 }}>Начало</th>
-              <th style={{ padding: 10 }}>Край</th>
-              <th style={{ padding: 10 }}>Размер</th>
-              <th style={{ padding: 10 }}>Верифицирано</th>
-            </tr>
-          </thead>
-          <tbody>
-            {((jobs.data ?? []) as Array<any>).map((j) => (
-              <tr key={j.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: 10, fontFamily: 'monospace' }}>{j.id.slice(0, 8)}</td>
-                <td style={{ padding: 10 }}>{j.policy?.name ?? '—'}</td>
-                <td style={{ padding: 10 }}>
-                  <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: jobStatusMap[j.status]?.bg, color: jobStatusMap[j.status]?.color }}>
-                    {jobStatusMap[j.status]?.label ?? j.status}
-                  </span>
-                </td>
-                <td style={{ padding: 10 }}>{j.startedAt ? new Date(j.startedAt).toLocaleString('bg-BG') : '—'}</td>
-                <td style={{ padding: 10 }}>{j.completedAt ? new Date(j.completedAt).toLocaleString('bg-BG') : '—'}</td>
-                <td style={{ padding: 10 }}>{formatBytes(j.sizeBytes)}</td>
-                <td style={{ padding: 10 }}>
-                  {j.isVerified ? (
-                    'Да'
-                  ) : (
-                    <Button variant="secondary" size="sm" onClick={() => verify.mutate(j.id)}>
-                      Верифицирай
-                    </Button>
-                  )}
-                </td>
+
+      {jobs.isLoading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Зареждане...</div>
+      ) : rows.length === 0 ? (
+        <EmptyStatePanel icon={<History size={28} />} title="Няма архивни задачи" />
+      ) : (
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                <th style={backupTableThStyle}>ID</th>
+                <th style={backupTableThStyle}>Политика</th>
+                <th style={backupTableThStyle}>Статус</th>
+                <th style={backupTableThStyle}>Начало</th>
+                <th style={backupTableThStyle}>Край</th>
+                <th style={backupTableThStyle}>Размер</th>
+                <th style={backupTableThStyle}>Верифицирано</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((j) => {
+                const st = jobStatusMap[j.status] ?? { label: j.status, bg: '#f3f4f6', color: '#374151' }
+                return (
+                  <tr
+                    key={j.id}
+                    style={backupTableRowStyle}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f9fafb'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent'
+                    }}
+                  >
+                    <td style={{ ...backupTableTdStyle, fontFamily: 'monospace', fontSize: 13 }}>{j.id.slice(0, 8)}</td>
+                    <td style={backupTableTdStyle}>{j.policy?.name ?? '—'}</td>
+                    <td style={backupTableTdStyle}>
+                      <StatusBadge label={st.label} bg={st.bg} color={st.color} />
+                    </td>
+                    <td style={{ ...backupTableTdStyle, color: '#6b7280' }}>
+                      {j.startedAt ? new Date(j.startedAt).toLocaleString('bg-BG') : '—'}
+                    </td>
+                    <td style={{ ...backupTableTdStyle, color: '#6b7280' }}>
+                      {j.completedAt ? new Date(j.completedAt).toLocaleString('bg-BG') : '—'}
+                    </td>
+                    <td style={backupTableTdStyle}>{formatBytes(j.sizeBytes)}</td>
+                    <td style={backupTableTdStyle}>
+                      {j.isVerified ? (
+                        <StatusBadge label="Да" bg="#dcfce7" color="#166534" />
+                      ) : (
+                        <Button variant="secondary" size="sm" onClick={() => verify.mutate(j.id)}>
+                          Верифицирай
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
-

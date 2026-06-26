@@ -1,24 +1,13 @@
-import { Button, PageHeader } from '../../../components/ui'
+import { RotateCcw } from 'lucide-react'
+import { Button, Card, PageHeader } from '../../../components/ui'
 import { useRestorePoints, useTestRestore } from '../hooks/useBackup'
-
-const formatDate = (iso?: string) => (iso ? new Date(iso).toLocaleString('bg-BG') : '—')
-const formatBytes = (bytes?: bigint | number | null) => {
-  if (!bytes) return '—'
-  const b = Number(bytes)
-  if (!Number.isFinite(b) || b <= 0) return '—'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let val = b
-  let i = 0
-  while (val >= 1024 && i < units.length - 1) {
-    val /= 1024
-    i += 1
-  }
-  return `${val.toFixed(1)} ${units[i]}`
-}
+import { EmptyStatePanel } from '../components/EmptyStatePanel'
+import { formatBytes, formatDate } from '../backupUi'
 
 export default function Restore() {
   const restorePoints = useRestorePoints()
   const testRestore = useTestRestore()
+  const rows = (restorePoints.data ?? []) as Array<any>
 
   const handleTestRestore = (jobId: string) => {
     testRestore.mutate({ jobId, note: 'Ръчен тест на възстановяване от UI' })
@@ -27,24 +16,49 @@ export default function Restore() {
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
       <PageHeader title="Възстановяване" subtitle="Точки за възстановяване" />
-      <div style={{ marginTop: 14 }}>
-        {((restorePoints.data ?? []) as Array<any>).map((job) => (
-          <div key={job.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 8, background: '#fff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>Архив от {formatDate(job.createdAt)}</div>
-                <div style={{ fontSize: 13, color: '#6b7280' }}>
-                  Размер: {formatBytes(job.sizeBytes)} · Политика: {job.policy?.name ?? '—'}
-                </div>
-              </div>
-              <Button variant="secondary" onClick={() => handleTestRestore(job.id)}>
-                Тест на възстановяване
-              </Button>
-            </div>
+
+      {restorePoints.isLoading ? (
+        <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>Зареждане...</div>
+      ) : rows.length === 0 ? (
+        <EmptyStatePanel
+          icon={<RotateCcw size={28} />}
+          title="Няма налични точки за възстановяване"
+          description="Точките за възстановяване се създават автоматично при успешно архивиране"
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              background: '#f8fafc',
+              border: '1px solid #e5e7eb',
+              borderRadius: 10,
+              fontSize: 13,
+              color: '#6b7280',
+              lineHeight: 1.5
+            }}
+          >
+            Точките за възстановяване се създават автоматично при успешно архивиране
           </div>
-        ))}
-      </div>
+          {rows.map((job) => (
+            <Card key={job.id} padding={20}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+                    Архив от {formatDate(job.createdAt)}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#6b7280', marginTop: 6 }}>
+                    Размер: {formatBytes(job.sizeBytes)} · Политика: {job.policy?.name ?? '—'}
+                  </div>
+                </div>
+                <Button variant="secondary" onClick={() => handleTestRestore(job.id)}>
+                  Тест на възстановяване
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
-
