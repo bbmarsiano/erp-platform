@@ -13,12 +13,14 @@ import {
 import { useCancelInvoice, useInvoice, useIssueInvoice } from '../hooks/useFinance'
 
 async function downloadInvoicePdf(id: string, number: string) {
-  const response = await api.get(`/api/finance/invoices/${id}/pdf`, { responseType: 'text' })
-  const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' })
+  const response = await api.get(`/api/finance/invoices/${id}/pdf`, { responseType: 'blob' })
+  const blob = new Blob([response.data], { type: 'application/pdf' })
   const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
-  setTimeout(() => URL.revokeObjectURL(url), 60000)
-  void number
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `faktura-${number}.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export default function InvoiceDetail() {

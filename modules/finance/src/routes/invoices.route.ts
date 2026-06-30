@@ -7,7 +7,7 @@ import { requireRole } from '../../../../apps/api/src/middleware/requireRole'
 import { requireTenantModule } from '../../../../apps/api/src/middleware/requireTenantModule'
 import { getNextDocumentNumber } from '../services/document-numbering.service'
 import { calculateInvoiceTotals, type InvoiceLineInput } from '../services/invoice-calc.service'
-import { buildInvoiceHtml } from '../services/invoice-pdf.service'
+import { buildInvoicePdf } from '../services/invoice-pdf.service'
 import { serializeInvoice } from '../utils/serialize-decimal'
 
 const financeGuards = [authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), requireTenantModule('finance')]
@@ -299,10 +299,10 @@ const invoicesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     })
     if (!invoice) return reply.status(404).send(createErrorResponse('Invoice not found', 'INVOICE_NOT_FOUND', 404))
 
-    const html = buildInvoiceHtml(serializeInvoice(invoice) as any)
-    reply.header('Content-Type', 'text/html; charset=utf-8')
-    reply.header('Content-Disposition', `inline; filename="invoice-${invoice.number}.html"`)
-    return reply.send(html)
+    const pdf = await buildInvoicePdf(serializeInvoice(invoice) as any)
+    reply.header('Content-Type', 'application/pdf')
+    reply.header('Content-Disposition', `attachment; filename="faktura-${invoice.number}.pdf"`)
+    return reply.send(pdf)
   })
 }
 
