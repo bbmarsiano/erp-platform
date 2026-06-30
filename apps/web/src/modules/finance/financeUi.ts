@@ -50,3 +50,10 @@ export const docTypeLabels: Record<string, string> = {
   CREDIT_NOTE: 'Кредитно известие',
   DEBIT_NOTE: 'Дебитно известие'
 }
+
+export const journalSourceTypeMap: Record<string, { label: string; bg: string; color: string }> = {
+  POS_SALE: { label: 'POS продажба', bg: '#dbeafe', color: '#1e40af' },
+  SCM_DELIVERY: { label: 'SCM доставка', bg: '#ede9fe', color: '#6d28d9' },
+  MANUAL: { label: 'Ръчен', bg: '#f3f4f6', color: '#374151' },
+  INVOICE: { label: 'Фактура', bg: '#dcfce7', color: '#166534' }
+}

@@ -4,6 +4,8 @@ import Customers from './pages/Customers'
 import FinanceDashboard from './pages/FinanceDashboard'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Invoices from './pages/Invoices'
+import JournalEntries from './pages/JournalEntries'
+import JournalEntryDetail from './pages/JournalEntryDetail'
 import Payables from './pages/Payables'
 import Receivables from './pages/Receivables'
 
@@ -17,6 +19,8 @@ export default function FinanceRouter() {
       <Route path="invoices/:id" element={<InvoiceDetail />} />
       <Route path="receivables" element={<Receivables />} />
       <Route path="payables" element={<Payables />} />
+      <Route path="journal-entries" element={<JournalEntries />} />
+      <Route path="journal-entries/:id" element={<JournalEntryDetail />} />
     </Routes>
   )
 }

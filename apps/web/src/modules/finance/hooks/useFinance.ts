@@ -219,3 +219,17 @@ export const useRecordPayablePayment = () => {
     }
   })
 }
+
+export const useJournalEntries = (filters?: { sourceType?: string; from?: string; to?: string }) =>
+  useQuery({
+    queryKey: ['finance', 'journal-entries', filters],
+    queryFn: () =>
+      api.get('/api/finance/journal-entries', { params: filters }).then((r) => r.data.data)
+  })
+
+export const useJournalEntry = (id: string) =>
+  useQuery({
+    queryKey: ['finance', 'journal-entries', id],
+    queryFn: () => api.get(`/api/finance/journal-entries/${id}`).then((r) => r.data.data),
+    enabled: Boolean(id)
+  })

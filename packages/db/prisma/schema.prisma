@@ -52,6 +52,7 @@ model Tenant {
   invoices      Invoice[]
   receivables   Receivable[]
   payables      Payable[]
+  journalEntries JournalEntry[]
 }
 
 model User {
@@ -425,6 +426,8 @@ model Sale {
   saleNo         String
   cashRegisterId String
   cashRegister   CashRegister  @relation(fields: [cashRegisterId], references: [id])
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
   paymentMethod  PaymentMethod @default(CASH)
   totalAmount    Float
   status         SaleStatus    @default(COMPLETED)
@@ -435,6 +438,7 @@ model Sale {
   updatedAt      DateTime      @updatedAt
 
   @@unique([tenantId, saleNo])
+  @@index([customerId])
 }
 
 enum PaymentMethod {
@@ -596,6 +600,7 @@ model Customer {
   tenant        Tenant   @relation(fields: [tenantId], references: [id])
   invoices      Invoice[]
   receivables   Receivable[]
+  sales         Sale[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -613,6 +618,7 @@ model ChartOfAccount {
   tenant      Tenant           @relation(fields: [tenantId], references: [id])
   parent      ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
   children    ChartOfAccount[] @relation("AccountHierarchy")
+  journalLines JournalEntryLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -730,4 +736,34 @@ model Payable {
 
   @@index([tenantId])
   @@index([status])
+}
+
+model JournalEntry {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entryDate   DateTime
+  description String
+  sourceType  String
+  sourceId    String?
+  isPosted    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id])
+  lines  JournalEntryLine[]
+
+  @@index([tenantId])
+  @@index([sourceType, sourceId])
+}
+
+model JournalEntryLine {
+  id             String  @id @default(cuid())
+  journalEntryId String
+  accountId      String
+  debit          Decimal @default(0) @db.Decimal(12, 2)
+  credit         Decimal @default(0) @db.Decimal(12, 2)
+  description    String?
+
+  journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      ChartOfAccount @relation(fields: [accountId], references: [id])
 }

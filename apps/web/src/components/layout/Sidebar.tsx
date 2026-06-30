@@ -100,7 +100,8 @@ const navGroups: NavGroup[] = [
       { label: 'Сметкоплан', path: '/finance/chart-of-accounts' },
       { label: 'Фактури', path: '/finance/invoices' },
       { label: 'Вземания', path: '/finance/receivables' },
-      { label: 'Задължения', path: '/finance/payables' }
+      { label: 'Задължения', path: '/finance/payables' },
+      { label: 'Главна книга', path: '/finance/journal-entries' }
     ]
   },
   {
@@ -153,6 +154,7 @@ const itemIcons: Record<string, React.ReactNode> = {
   '/finance/invoices': <ClipboardList size={13} />,
   '/finance/receivables': <CreditCard size={13} />,
   '/finance/payables': <CreditCard size={13} />,
+  '/finance/journal-entries': <BarChart3 size={13} />,
   '/backup': <LayoutDashboard size={13} />,
   '/backup/policies': <Shield size={13} />,
   '/backup/jobs': <History size={13} />,

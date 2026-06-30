@@ -2,6 +2,11 @@ import { createErrorResponse, createSuccessResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
+import {
+  FinanceAutomationError,
+  isFinanceModuleEnabled,
+  onScmDeliveryConfirmed
+} from '../../../finance/src/services/automation.service'
 import { listDeliveries } from '../services/delivery.service'
 import type { DeliveryLineInput, DeliveryLineUpdateInput } from '../types/scm.types'
 
@@ -299,11 +304,32 @@ const deliveriesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => 
           data: { status: 'CONFIRMED', goodsReceiptId: receipt.id }
         })
 
-        return { ...confirmedDelivery, goodsReceiptNo: receipt.receiptNo }
+        const tenant = await tx.tenant.findUnique({
+          where: { id: request.user.tenantId },
+          select: { enabledModules: true }
+        })
+
+        let draftInvoiceId: string | undefined
+        if (isFinanceModuleEnabled(tenant?.enabledModules)) {
+          const automation = await onScmDeliveryConfirmed(tx, {
+            deliveryId: delivery.id,
+            userId: request.user.id,
+            tenantId: request.user.tenantId
+          })
+          draftInvoiceId = automation.draftInvoiceId
+        }
+
+        return { ...confirmedDelivery, goodsReceiptNo: receipt.receiptNo, draftInvoiceId }
       })
 
       return createSuccessResponse(result)
     } catch (error) {
+      if (error instanceof FinanceAutomationError) {
+        return reply.status(500).send({
+          ...createErrorResponse(error.userMessage, error.code, 500),
+          details: error.message
+        })
+      }
       const message = (error as Error).message
       if (message === 'DELIVERY_NOT_FOUND') {
         return reply.status(404).send(createErrorResponse('Delivery not found', 'DELIVERY_NOT_FOUND', 404))

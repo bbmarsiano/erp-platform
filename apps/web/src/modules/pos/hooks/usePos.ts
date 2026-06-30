@@ -34,12 +34,15 @@ export const useCreateSale = () => {
   return useMutation({
     mutationFn: (data: {
       cashRegisterId: string
+      customerId?: string
       paymentMethod: 'CASH' | 'CARD' | 'MIXED'
       lines: Array<{ productId: string; locationId: string; quantity: number; unitPrice: number }>
     }) => api.post('/api/pos/sales', data).then((r) => r.data.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['pos', 'sales'] })
       qc.invalidateQueries({ queryKey: ['wms', 'stock'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'journal-entries'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'invoices'] })
     }
   })
 }

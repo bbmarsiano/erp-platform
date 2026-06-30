@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { PageHeader } from '../../../components/ui'
 import { formatCurrency } from '../../../lib/currency'
-import { useInvoices, usePayables, useReceivables } from '../hooks/useFinance'
+import { useInvoices, useJournalEntries, usePayables, useReceivables } from '../hooks/useFinance'
 
 function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle?: string }) {
   return (
@@ -16,13 +16,18 @@ function StatCard({ title, value, subtitle }: { title: string; value: string | n
 }
 
 export default function FinanceDashboard() {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+
   const outInvoices = useInvoices({ docType: 'INVOICE_OUT' })
   const inInvoices = useInvoices({ docType: 'INVOICE_IN' })
   const receivables = useReceivables()
   const payables = usePayables()
+  const journalEntries = useJournalEntries({ from: monthStart })
 
   const outCount = useMemo(() => ((outInvoices.data ?? []) as Array<unknown>).length, [outInvoices.data])
   const inCount = useMemo(() => ((inInvoices.data ?? []) as Array<unknown>).length, [inInvoices.data])
+  const journalCount = useMemo(() => ((journalEntries.data ?? []) as Array<unknown>).length, [journalEntries.data])
 
   const totalReceivables = useMemo(() => {
     return ((receivables.data ?? []) as Array<any>)
@@ -38,12 +43,13 @@ export default function FinanceDashboard() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
-      <PageHeader title="Финанси" subtitle="Финансов модул — Фаза 2" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginTop: 20 }}>
+      <PageHeader title="Финанси" subtitle="Финансов модул — Фаза 3" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 12, marginTop: 20 }}>
         <StatCard title="Изходящи фактури" value={outCount} />
         <StatCard title="Входящи фактури" value={inCount} />
         <StatCard title="Общо вземания" value={formatCurrency(totalReceivables)} subtitle="Неплатени салда" />
         <StatCard title="Общо задължения" value={formatCurrency(totalPayables)} subtitle="Неплатени салда" />
+        <StatCard title="Записи в журнала" value={journalCount} subtitle="Текущ месец" />
       </div>
     </div>
   )

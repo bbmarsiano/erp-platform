@@ -55,3 +55,31 @@ export function serializePayable<T extends { amountDue: DecimalLike; amountPaid:
     amountPaid: toNumber(payable.amountPaid)
   }
 }
+
+export function serializeJournalEntryLine<
+  T extends { debit: DecimalLike; credit: DecimalLike }
+>(line: T) {
+  return {
+    ...line,
+    debit: toNumber(line.debit),
+    credit: toNumber(line.credit)
+  }
+}
+
+export function serializeJournalEntry<
+  T extends {
+    lines?: Array<{ debit: DecimalLike; credit: DecimalLike }>
+  }
+>(entry: T) {
+  const lines = entry.lines?.map(serializeJournalEntryLine) ?? []
+  const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0)
+  const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0)
+
+  return {
+    ...entry,
+    lines,
+    totalDebit,
+    totalCredit,
+    isBalanced: Math.abs(totalDebit - totalCredit) < 0.005
+  }
+}

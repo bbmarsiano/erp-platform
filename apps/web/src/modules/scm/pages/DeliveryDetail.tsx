@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { BackButton, Button, Input, PageHeader, Select, StatusBadge } from '../../../components/ui'
+import { useToastStore } from '../../../store/toast.store'
 import { useReceipt, useStock, useWarehouseLocations } from '../../wms/hooks/useWms'
 import {
   useAddDeliveryLine,
@@ -50,6 +51,7 @@ function resolveDefaultLocationId(locs: Array<{ id: string; locationType?: strin
 
 export default function DeliveryDetail() {
   const { id = '' } = useParams()
+  const showToast = useToastStore((s) => s.show)
   const deliveryQuery = useDelivery(id)
   const addLine = useAddDeliveryLine()
   const updateLine = useUpdateDeliveryLine()
@@ -169,9 +171,14 @@ export default function DeliveryDetail() {
   }
 
   const onConfirm = async () => {
-    const result = await confirm.mutateAsync(id)
-    if (result?.goodsReceiptNo && result?.goodsReceiptId) {
-      setConfirmedReceipt({ id: result.goodsReceiptId, no: result.goodsReceiptNo })
+    try {
+      const result = await confirm.mutateAsync(id)
+      if (result?.goodsReceiptNo && result?.goodsReceiptId) {
+        setConfirmedReceipt({ id: result.goodsReceiptId, no: result.goodsReceiptNo })
+      }
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { error?: string } } }
+      showToast(apiErr?.response?.data?.error ?? 'Грешка при потвърждаване на доставката', 'error')
     }
   }
 

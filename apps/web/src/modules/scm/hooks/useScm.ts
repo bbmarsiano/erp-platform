@@ -166,6 +166,8 @@ export const useConfirmDelivery = () => {
       qc.invalidateQueries({ queryKey: ['wms', 'receipts'] })
       qc.invalidateQueries({ queryKey: ['wms', 'stock'] })
       qc.invalidateQueries({ queryKey: ['scm', 'orders'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'journal-entries'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'invoices'] })
     }
   })
 }

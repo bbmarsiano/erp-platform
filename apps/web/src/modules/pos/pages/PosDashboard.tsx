@@ -1,12 +1,17 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Scan, Printer, Download, RotateCcw, CheckCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Scan, Printer, Download, RotateCcw, CheckCircle, FileText } from 'lucide-react'
 import { BarcodeScanner, type ScanResult } from '../../../components/BarcodeScanner'
 import { Button, PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 import { CURRENCY_CODE, CURRENCY_SYMBOL, formatCurrency } from '../../../lib/currency'
+import { isModuleEnabledForTenant } from '../../../lib/tenantModules'
+import { useCustomers } from '../../finance/hooks/useFinance'
 import { useStock } from '../../wms/hooks/useWms'
 import { useCreateSale, useRegisters } from '../hooks/usePos'
+import { useAuthStore } from '../../../store/auth.store'
+import { useToastStore } from '../../../store/toast.store'
 
 type CartItem = {
   productId: string
@@ -43,6 +48,7 @@ type CompletedSale = {
   issueReceipt: boolean
   issueInvoice: boolean
   invoiceNumber?: string
+  draftInvoiceId?: string
   tenant?: TenantInfo
 }
 
@@ -53,12 +59,19 @@ const getInvoiceNumber = () => {
 }
 
 export default function PosDashboard() {
+  const navigate = useNavigate()
+  const showToast = useToastStore((s) => s.show)
+  const enabledModules = useAuthStore((s) => s.enabledModules)
+  const financeEnabled = isModuleEnabledForTenant({ enabledModules }, 'finance')
+
   const stock = useStock()
   const registers = useRegisters()
+  const customers = useCustomers()
   const createSale = useCreateSale()
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH')
   const [registerId, setRegisterId] = useState('')
+  const [customerId, setCustomerId] = useState('')
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null)
   const [issueReceipt, setIssueReceipt] = useState(true)
   const [issueInvoice, setIssueInvoice] = useState(false)
@@ -291,38 +304,49 @@ export default function PosDashboard() {
     const currentIssueInvoice = issueInvoice
     const currentIssueReceipt = issueReceipt
     const currentTenant = tenant
-    const sale = await createSale.mutateAsync({
-      cashRegisterId: registerId,
-      paymentMethod,
-      lines: cart.map((c) => ({
-        productId: c.productId,
-        locationId: c.locationId,
-        quantity: c.quantity,
-        unitPrice: c.unitPrice
-      }))
-    })
-    const registerList = (registers.data ?? []) as Array<{ id: string; name: string }>
-    setCompletedSale({
-      saleNo: sale.saleNo || sale.id,
-      total: Number(sale.totalAmount),
-      paymentMethod: currentPaymentMethod,
-      registerName: registerList.find((r) => r.id === currentRegisterId)?.name || '',
-      lines: currentCart.map((item) => ({
-        productName: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.quantity * item.unitPrice
-      })),
-      createdAt: new Date().toISOString(),
-      issueReceipt: currentIssueReceipt,
-      issueInvoice: currentIssueInvoice,
-      invoiceNumber: currentIssueInvoice ? getInvoiceNumber() : undefined,
-      tenant: currentTenant
-    })
-    setCart([])
-    setRegisterId('')
-    setIssueInvoice(false)
-    setIssueReceipt(true)
+    const currentCustomerId = customerId || undefined
+
+    try {
+      const result = await createSale.mutateAsync({
+        cashRegisterId: registerId,
+        customerId: financeEnabled ? currentCustomerId : undefined,
+        paymentMethod,
+        lines: cart.map((c) => ({
+          productId: c.productId,
+          locationId: c.locationId,
+          quantity: c.quantity,
+          unitPrice: c.unitPrice
+        }))
+      })
+      const sale = result.sale ?? result
+      const registerList = (registers.data ?? []) as Array<{ id: string; name: string }>
+      setCompletedSale({
+        saleNo: sale.saleNo || sale.id,
+        total: Number(sale.totalAmount),
+        paymentMethod: currentPaymentMethod,
+        registerName: registerList.find((r) => r.id === currentRegisterId)?.name || '',
+        lines: currentCart.map((item) => ({
+          productName: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.quantity * item.unitPrice
+        })),
+        createdAt: new Date().toISOString(),
+        issueReceipt: currentIssueReceipt,
+        issueInvoice: financeEnabled ? Boolean(result.draftInvoiceId) : currentIssueInvoice,
+        invoiceNumber: !financeEnabled && currentIssueInvoice ? getInvoiceNumber() : undefined,
+        draftInvoiceId: result.draftInvoiceId,
+        tenant: currentTenant
+      })
+      setCart([])
+      setRegisterId('')
+      setCustomerId('')
+      setIssueInvoice(false)
+      setIssueReceipt(true)
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { error?: string } } }
+      showToast(apiErr?.response?.data?.error ?? 'Грешка при завършване на продажбата', 'error')
+    }
   }
 
   return (
@@ -416,6 +440,16 @@ export default function PosDashboard() {
               <option value="CARD">Карта</option>
               <option value="MIXED">Смесено</option>
             </select>
+            {financeEnabled ? (
+              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} style={{ padding: 8 }}>
+                <option value="">Физическо лице</option>
+                {((customers.data ?? []) as Array<any>).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} — {c.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             {paymentMethod === 'CASH' && (
               <div
                 style={{
@@ -463,25 +497,27 @@ export default function PosDashboard() {
               />
               Издай стокова разписка
             </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                marginBottom: 10,
-                cursor: 'pointer',
-                fontSize: 13,
-                color: '#374151'
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={issueInvoice}
-                onChange={(e) => setIssueInvoice(e.target.checked)}
-                style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#7c3aed' }}
-              />
-              Издай фактура
-            </label>
+            {!financeEnabled ? (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 10,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  color: '#374151'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={issueInvoice}
+                  onChange={(e) => setIssueInvoice(e.target.checked)}
+                  style={{ width: 15, height: 15, cursor: 'pointer', accentColor: '#7c3aed' }}
+                />
+                Издай фактура
+              </label>
+            ) : null}
             <Button variant="success" onClick={completeSale} disabled={createSale.isPending || !cart.length || !registerId}>
               Завърши продажба
             </Button>
@@ -746,7 +782,7 @@ export default function PosDashboard() {
               </div>
             )}
 
-            {completedSale.issueInvoice && (
+            {completedSale.issueInvoice && !completedSale.draftInvoiceId && (
               <div style={{ padding: '12px 24px', borderTop: '1px solid #e5e7eb' }}>
                 <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
                   📄 Фактура № {completedSale.invoiceNumber}
@@ -778,6 +814,36 @@ export default function PosDashboard() {
                 </div>
               </div>
             )}
+
+            {completedSale.draftInvoiceId ? (
+              <div style={{ padding: '12px 24px', borderTop: '1px solid #e5e7eb' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/finance/invoices/${completedSale.draftInvoiceId}`)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    padding: '10px',
+                    background: '#7c3aed',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <FileText size={15} />
+                  Издай фактура
+                </button>
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, textAlign: 'center' }}>
+                  Чернова фактура е създадена — прегледайте и издайте от Финанси
+                </div>
+              </div>
+            ) : null}
 
             <div
               style={{
