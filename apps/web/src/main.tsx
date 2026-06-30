@@ -7,6 +7,7 @@ import './modules/wms/index'
 import './modules/scm/index'
 import './modules/mes/index'
 import './modules/pos/index'
+import './modules/finance/index'
 import './modules/backup/index'
 
 const style = document.createElement('style')

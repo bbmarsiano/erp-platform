@@ -9,7 +9,8 @@ const ALL_MODULE_FEATURES = [
   'module:scm',
   'module:mes',
   'module:pos',
-  'module:backup'
+  'module:backup',
+  'module:finance'
 ]
 
 const loginSchema = z.object({
@@ -142,6 +143,14 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         /* ignore license check errors */
       }
 
+      const tenantLicense = await prisma.licenseKey.findUnique({
+        where: { tenantId: user.tenantId }
+      })
+      const dbFeatures = Array.isArray(tenantLicense?.features)
+        ? (tenantLicense.features as string[])
+        : []
+      licensedFeatures = [...new Set([...licensedFeatures, ...dbFeatures])]
+
       if (!licensedFeatures.length) {
         licensedFeatures = [...ALL_MODULE_FEATURES]
       }
@@ -160,7 +169,8 @@ const authRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
             tenantId: user.tenantId
           },
           allowedVersion,
-          licensedFeatures
+          licensedFeatures,
+          enabledModules: user.tenant.enabledModules ?? []
         }
       })
     }

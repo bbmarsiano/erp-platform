@@ -25,6 +25,7 @@ model Tenant {
   bankName      String?
   bankIban      String?
   isActive      Boolean         @default(true)
+  enabledModules String[]       @default(["wms", "scm", "mes", "pos", "backup"])
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   users         User[]
@@ -44,6 +45,9 @@ model Tenant {
   sales         Sale[]
   backupPolicies BackupPolicy[]
   backupJobs    BackupJob[]
+  customers     Customer[]
+  chartOfAccounts ChartOfAccount[]
+  financialPeriods FinancialPeriod[]
 }
 
 model User {
@@ -566,4 +570,56 @@ enum DocumentStatus {
   DRAFT
   CONFIRMED
   CANCELLED
+}
+
+model Customer {
+  id            String   @id @default(cuid())
+  tenantId      String
+  code          String
+  name          String
+  eik           String?
+  vatNumber     String?
+  address       String?
+  city          String?
+  email         String?
+  phone         String?
+  contactPerson String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model ChartOfAccount {
+  id          String           @id @default(cuid())
+  tenantId    String
+  code        String
+  name        String
+  accountType String
+  parentId    String?
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  parent      ChartOfAccount?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children    ChartOfAccount[] @relation("AccountHierarchy")
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model FinancialPeriod {
+  id        String    @id @default(cuid())
+  tenantId  String
+  year      Int
+  month     Int
+  isClosed  Boolean   @default(false)
+  closedAt  DateTime?
+  closedBy  String?
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, year, month])
+  @@index([tenantId])
 }

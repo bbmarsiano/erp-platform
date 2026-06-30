@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-MODULES=(wms scm mes pos backup)
+MODULES=(wms scm mes pos backup finance)
 
 echo "🔨 Building modules..."
 for module in "${MODULES[@]}"; do

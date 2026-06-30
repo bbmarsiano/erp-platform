@@ -12,6 +12,7 @@ import AppShell from './components/layout/AppShell'
 import MesRouter from './modules/mes/MesRouter'
 import WmsRouter from './modules/wms/WmsRouter'
 import ScmRouter from './modules/scm/ScmRouter'
+import FinanceRouter from './modules/finance/FinanceRouter'
 import { SessionWarning } from './components/SessionWarning'
 import { RoleProtectedRoute } from './components/RoleProtectedRoute'
 
@@ -109,6 +110,14 @@ export default function App() {
                 <Help />
               </AppShell>
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/*"
+          element={
+            <ProtectedModule moduleId="finance">
+              <FinanceRouter />
+            </ProtectedModule>
           }
         />
         <Route

@@ -13,7 +13,8 @@ const MODULE_FEATURE_MAP: Record<string, string> = {
   scm: 'module:scm',
   mes: 'module:mes',
   pos: 'module:pos',
-  backup: 'module:backup'
+  backup: 'module:backup',
+  finance: 'module:finance'
 }
 
 const globalForModules = globalThis as typeof globalThis & {

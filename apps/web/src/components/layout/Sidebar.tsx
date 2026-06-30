@@ -8,6 +8,7 @@ import {
   Factory,
   ShoppingCart,
   HardDrive,
+  Landmark,
   Settings,
   LogOut,
   ChevronDown,
@@ -26,6 +27,7 @@ import {
 import { useAuthStore } from '../../store/auth.store'
 import { api } from '../../lib/api'
 import { canAccessModule } from '../../lib/menuPermissions'
+import { isModuleEnabledForTenant } from '../../lib/tenantModules'
 
 interface NavItem {
   label: string
@@ -89,6 +91,16 @@ const navGroups: NavGroup[] = [
     ]
   },
   {
+    id: 'finance',
+    label: 'Финанси',
+    basePath: '/finance',
+    items: [
+      { label: 'Табло', path: '/finance' },
+      { label: 'Клиенти', path: '/finance/customers' },
+      { label: 'Сметкоплан', path: '/finance/chart-of-accounts' }
+    ]
+  },
+  {
     id: 'backup',
     label: 'Архивиране',
     basePath: '/backup',
@@ -106,6 +118,7 @@ const groupIcons: Record<string, { icon: React.ReactNode; color: string }> = {
   scm: { icon: <Truck size={17} />, color: '#34d399' },
   mes: { icon: <Factory size={17} />, color: '#f472b6' },
   pos: { icon: <ShoppingCart size={17} />, color: '#38bdf8' },
+  finance: { icon: <Landmark size={17} />, color: '#fbbf24' },
   backup: { icon: <HardDrive size={17} />, color: '#4ade80' }
 }
 
@@ -131,6 +144,9 @@ const itemIcons: Record<string, React.ReactNode> = {
   '/pos/sales': <ClipboardList size={13} />,
   '/pos/registers': <CreditCard size={13} />,
   '/pos/reports': <BarChart3 size={13} />,
+  '/finance': <LayoutDashboard size={13} />,
+  '/finance/customers': <Users size={13} />,
+  '/finance/chart-of-accounts': <ListTree size={13} />,
   '/backup': <LayoutDashboard size={13} />,
   '/backup/policies': <Shield size={13} />,
   '/backup/jobs': <History size={13} />,
@@ -150,6 +166,7 @@ export function Sidebar({
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
+  const enabledModules = useAuthStore((s) => s.enabledModules)
   const logout = useAuthStore((s) => s.logout)
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -162,6 +179,7 @@ export function Sidebar({
           scm: 'module:scm',
           mes: 'module:mes',
           pos: 'module:pos',
+          finance: 'module:finance',
           backup: 'module:backup'
         }
         const featureKey = featureMap[moduleId]
@@ -175,9 +193,12 @@ export function Sidebar({
   const visibleGroups = useMemo(
     () =>
       navGroups.filter(
-        (group) => isModuleLicensed(group.id) && canAccessModule(user?.role, group.id)
+        (group) =>
+          isModuleLicensed(group.id) &&
+          canAccessModule(user?.role, group.id) &&
+          isModuleEnabledForTenant({ enabledModules }, group.id)
       ),
-    [isModuleLicensed, user?.role]
+    [isModuleLicensed, user?.role, enabledModules]
   )
 
   const canSeeDashboard = canAccessModule(user?.role, 'dashboard')

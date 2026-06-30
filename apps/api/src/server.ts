@@ -16,6 +16,7 @@ import usersRoute from './routes/users.route'
 import licenseRoute from './routes/license.route'
 import exportRoute from './routes/export.route'
 import { validateLicense } from './services/license.service'
+import { prisma } from '@dflow/db'
 
 dotenv.config({ path: '../../.env' })
 
@@ -24,7 +25,8 @@ const ALL_MODULE_FEATURES = [
   'module:scm',
   'module:mes',
   'module:pos',
-  'module:backup'
+  'module:backup',
+  'module:finance'
 ]
 
 const buildServer = async (): Promise<FastifyInstance> => {
@@ -49,6 +51,19 @@ const buildServer = async (): Promise<FastifyInstance> => {
 
   if (!allowedFeatures.length) {
     allowedFeatures = [...ALL_MODULE_FEATURES]
+  } else {
+    try {
+      const dbLicenses = await prisma.licenseKey.findMany({
+        where: { isActive: true },
+        select: { features: true }
+      })
+      const dbFeatures = dbLicenses.flatMap((lic) =>
+        Array.isArray(lic.features) ? (lic.features as string[]) : []
+      )
+      allowedFeatures = [...new Set([...allowedFeatures, ...dbFeatures])]
+    } catch (err) {
+      app.log.warn({ err }, 'Failed to merge DB license features')
+    }
   }
 
   app.decorate('loadedModules', [] as string[])

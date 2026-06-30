@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { seedChartOfAccounts } from './seed-chart-of-accounts'
 
 const prisma = new PrismaClient()
 
@@ -8,6 +9,9 @@ async function main() {
 
   await prisma.backupJob.deleteMany()
   await prisma.backupPolicy.deleteMany()
+  await prisma.chartOfAccount.deleteMany()
+  await prisma.customer.deleteMany()
+  await prisma.financialPeriod.deleteMany()
   await prisma.saleLine.deleteMany()
   await prisma.sale.deleteMany()
   await prisma.cashRegister.deleteMany()
@@ -50,10 +54,14 @@ async function main() {
       phone: '+359 32 123 456',
       email: 'office@metalkonstrukt.bg',
       bankName: 'ОББ',
-      bankIban: 'BG80UBBS80021020345678'
+      bankIban: 'BG80UBBS80021020345678',
+      enabledModules: ['wms', 'scm', 'mes', 'pos', 'backup', 'finance']
     }
   })
   console.log('✓ Tenant created:', tenant.name)
+
+  await seedChartOfAccounts(prisma, tenant.id)
+  console.log('✓ Chart of accounts seeded')
 
   const hashedPassword = await bcrypt.hash('Metal2024', 10)
   const admin = await prisma.user.create({
@@ -96,7 +104,7 @@ async function main() {
     data: {
       tenantId: tenant.id,
       key: 'AO6M-ERIE-UDQ4-TVCS',
-      features: ['module:wms', 'module:scm', 'module:mes', 'module:pos', 'module:backup'],
+      features: ['module:wms', 'module:scm', 'module:mes', 'module:pos', 'module:backup', 'module:finance'],
       expiresAt: new Date('2126-01-01'),
       isActive: true
     }
