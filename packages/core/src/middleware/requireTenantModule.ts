@@ -1,6 +1,6 @@
-import { createErrorResponse } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyRequest, FastifyReply } from 'fastify'
+import { createErrorResponse } from '../utils/api.utils.js'
 
 export const requireTenantModule =
   (moduleId: string) =>

@@ -1,7 +1,6 @@
-import { createSuccessResponse } from '@dflow/core'
+import { createSuccessResponse, authenticate } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 import { serializeBackupJob, serializeBackupJobs } from '../utils/serialize-job'
 
 const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {

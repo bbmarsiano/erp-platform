@@ -1,9 +1,6 @@
-import { createErrorResponse, createSuccessResponse } from '@dflow/core'
+import { createErrorResponse, createSuccessResponse, authenticate, requireRole, requireTenantModule } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
-import { requireRole } from '../../../../apps/api/src/middleware/requireRole'
-import { requireTenantModule } from '../../../../apps/api/src/middleware/requireTenantModule'
 import {
   buildAccountTree,
   groupAccountsByType,

@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import { createErrorResponse } from '@dflow/core'
+import { createErrorResponse } from '../utils/api.utils.js'
 
 export const requireRole =
   (...roles: string[]) =>

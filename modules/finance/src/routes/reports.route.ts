@@ -1,8 +1,5 @@
-import { createSuccessResponse } from '@dflow/core'
+import { createSuccessResponse, authenticate, requireRole, requireTenantModule } from '@dflow/core'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
-import { requireRole } from '../../../../apps/api/src/middleware/requireRole'
-import { requireTenantModule } from '../../../../apps/api/src/middleware/requireTenantModule'
 import { getBalanceSheet, getIncomeStatement, getTrialBalance } from '../services/reports.service'
 
 const financeGuards = [authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), requireTenantModule('finance')]

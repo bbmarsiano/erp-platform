@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../middleware/authenticate'
+import { authenticate } from '@dflow/core'
 import { validateLicense } from '../services/license.service'
 
 const licenseRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {

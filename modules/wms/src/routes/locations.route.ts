@@ -1,7 +1,6 @@
-import { createErrorResponse, createSuccessResponse } from '@dflow/core'
+import { createErrorResponse, createSuccessResponse, authenticate } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 
 const locationsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get(

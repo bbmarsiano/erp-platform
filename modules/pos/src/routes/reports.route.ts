@@ -1,7 +1,6 @@
-import { createSuccessResponse } from '@dflow/core'
+import { createSuccessResponse, authenticate } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { authenticate } from '../../../../apps/api/src/middleware/authenticate'
 
 const reportsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/reports/daily', { preHandler: [authenticate], schema: { tags: ['POS'] } }, async (request) => {

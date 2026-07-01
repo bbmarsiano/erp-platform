@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { prisma } from '@dflow/db'
-import { authenticate } from '../middleware/authenticate'
+import { authenticate } from '@dflow/core'
 
 const exportRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get(

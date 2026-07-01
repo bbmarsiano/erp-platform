@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { prisma } from '@dflow/db'
 import bcrypt from 'bcryptjs'
-import { authenticate } from '../middleware/authenticate'
+import { authenticate } from '@dflow/core'
 
 const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // GET /api/users — list all users for tenant

@@ -89,10 +89,7 @@ for module in wms scm mes pos backup finance; do
   fi
 done
 
-# 9. Auth middleware shim — modules import apps/api/src/middleware/authenticate
-mkdir -p "${PACKAGE_DIR}/apps/api/src/middleware"
-cp "${PACKAGE_DIR}/apps/api/dist/middleware/authenticate.js" \
-  "${PACKAGE_DIR}/apps/api/src/middleware/authenticate.js"
+done
 
 # 10. Root config files
 cp package.json "${PACKAGE_DIR}/"
