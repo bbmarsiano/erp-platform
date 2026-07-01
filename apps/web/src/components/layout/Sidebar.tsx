@@ -22,6 +22,7 @@ import {
   Shield,
   History,
   RotateCcw,
+  Wallet,
   X
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
@@ -101,7 +102,10 @@ const navGroups: NavGroup[] = [
       { label: 'Фактури', path: '/finance/invoices' },
       { label: 'Вземания', path: '/finance/receivables' },
       { label: 'Задължения', path: '/finance/payables' },
-      { label: 'Главна книга', path: '/finance/journal-entries' }
+      { label: 'Главна книга', path: '/finance/journal-entries' },
+      { label: 'Банкови сметки', path: '/finance/bank-accounts' },
+      { label: 'Банкови транзакции', path: '/finance/bank-transactions' },
+      { label: 'Справки', path: '/finance/reports' }
     ]
   },
   {
@@ -155,6 +159,9 @@ const itemIcons: Record<string, React.ReactNode> = {
   '/finance/receivables': <CreditCard size={13} />,
   '/finance/payables': <CreditCard size={13} />,
   '/finance/journal-entries': <BarChart3 size={13} />,
+  '/finance/bank-accounts': <Wallet size={13} />,
+  '/finance/bank-transactions': <CreditCard size={13} />,
+  '/finance/reports': <BarChart3 size={13} />,
   '/backup': <LayoutDashboard size={13} />,
   '/backup/policies': <Shield size={13} />,
   '/backup/jobs': <History size={13} />,

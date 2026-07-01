@@ -1,7 +1,10 @@
 import { Route, Routes } from 'react-router-dom'
+import BankAccounts from './pages/BankAccounts'
+import BankTransactions from './pages/BankTransactions'
 import ChartOfAccounts from './pages/ChartOfAccounts'
 import Customers from './pages/Customers'
 import FinanceDashboard from './pages/FinanceDashboard'
+import FinanceReports from './pages/FinanceReports'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Invoices from './pages/Invoices'
 import JournalEntries from './pages/JournalEntries'
@@ -21,6 +24,9 @@ export default function FinanceRouter() {
       <Route path="payables" element={<Payables />} />
       <Route path="journal-entries" element={<JournalEntries />} />
       <Route path="journal-entries/:id" element={<JournalEntryDetail />} />
+      <Route path="bank-accounts" element={<BankAccounts />} />
+      <Route path="bank-transactions" element={<BankTransactions />} />
+      <Route path="reports" element={<FinanceReports />} />
     </Routes>
   )
 }

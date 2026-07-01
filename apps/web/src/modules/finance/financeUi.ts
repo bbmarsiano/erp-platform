@@ -57,3 +57,14 @@ export const journalSourceTypeMap: Record<string, { label: string; bg: string; c
   MANUAL: { label: 'Ръчен', bg: '#f3f4f6', color: '#374151' },
   INVOICE: { label: 'Фактура', bg: '#dcfce7', color: '#166534' }
 }
+
+export const bankTransactionTypeMap: Record<string, { label: string; bg: string; color: string }> = {
+  IN: { label: 'Вход', bg: '#dcfce7', color: '#166534' },
+  OUT: { label: 'Изход', bg: '#fee2e2', color: '#991b1b' },
+  TRANSFER: { label: 'Превод', bg: '#dbeafe', color: '#1e40af' }
+}
+
+export const reconciledStatusMap: Record<string, { label: string; bg: string; color: string }> = {
+  true: { label: 'Съпоставена', bg: '#dcfce7', color: '#166534' },
+  false: { label: 'Несъпоставена', bg: '#fef3c7', color: '#92400e' }
+}

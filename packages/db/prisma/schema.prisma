@@ -53,6 +53,8 @@ model Tenant {
   receivables   Receivable[]
   payables      Payable[]
   journalEntries JournalEntry[]
+  bankAccounts  BankAccount[]
+  bankTransactions BankTransaction[]
 }
 
 model User {
@@ -766,4 +768,47 @@ model JournalEntryLine {
 
   journalEntry JournalEntry   @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
   account      ChartOfAccount @relation(fields: [accountId], references: [id])
+}
+
+model BankAccount {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  iban      String
+  currency  String   @default("BGN")
+  bankName  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  transactions BankTransaction[]
+
+  @@unique([tenantId, iban])
+  @@index([tenantId])
+}
+
+model BankTransaction {
+  id              String    @id @default(cuid())
+  tenantId        String
+  bankAccountId   String
+  transactionDate DateTime
+  valueDate       DateTime?
+  amount          Decimal   @db.Decimal(12, 2)
+  description     String
+  counterparty    String?
+  referenceNumber String?
+  transactionType String
+  matchedType     String?
+  matchedId       String?
+  isReconciled    Boolean   @default(false)
+  createdBy       String
+  createdAt       DateTime  @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  @@index([tenantId])
+  @@index([bankAccountId])
+  @@index([matchedType, matchedId])
 }

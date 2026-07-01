@@ -83,3 +83,16 @@ export function serializeJournalEntry<
     isBalanced: Math.abs(totalDebit - totalCredit) < 0.005
   }
 }
+
+export function serializeBankAccount<T extends Record<string, unknown>>(account: T) {
+  return account
+}
+
+export function serializeBankTransaction<T extends { amount: DecimalLike }>(tx: T) {
+  const amount = toNumber(tx.amount)
+  return {
+    ...tx,
+    amount,
+    displayAmount: Math.abs(amount)
+  }
+}

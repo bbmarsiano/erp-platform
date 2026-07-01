@@ -233,3 +233,116 @@ export const useJournalEntry = (id: string) =>
     queryFn: () => api.get(`/api/finance/journal-entries/${id}`).then((r) => r.data.data),
     enabled: Boolean(id)
   })
+
+export const useBankAccounts = () =>
+  useQuery({
+    queryKey: ['finance', 'bank-accounts'],
+    queryFn: () => api.get('/api/finance/bank-accounts').then((r) => r.data.data)
+  })
+
+export const useCreateBankAccount = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; iban: string; currency?: string; bankName?: string }) =>
+      api.post('/api/finance/bank-accounts', data).then((r) => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'bank-accounts'] })
+  })
+}
+
+export const useUpdateBankAccount = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name?: string; bankName?: string; isActive?: boolean }) =>
+      api.put(`/api/finance/bank-accounts/${id}`, data).then((r) => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'bank-accounts'] })
+  })
+}
+
+export const useBankTransactions = (filters?: {
+  bankAccountId?: string
+  from?: string
+  to?: string
+  isReconciled?: string
+  transactionType?: string
+}) =>
+  useQuery({
+    queryKey: ['finance', 'bank-transactions', filters],
+    queryFn: () =>
+      api.get('/api/finance/bank-transactions', { params: filters }).then((r) => r.data.data)
+  })
+
+export const useCreateBankTransaction = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      bankAccountId: string
+      transactionDate: string
+      valueDate?: string
+      amount: number
+      description: string
+      counterparty?: string
+      referenceNumber?: string
+      transactionType: 'IN' | 'OUT' | 'TRANSFER'
+    }) => api.post('/api/finance/bank-transactions', data).then((r) => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance', 'bank-transactions'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'bank-accounts'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'receivables'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'payables'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'journal-entries'] })
+    }
+  })
+}
+
+export const useReconcileBankTransaction = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      matchedType,
+      matchedId
+    }: {
+      id: string
+      matchedType: 'RECEIVABLE' | 'PAYABLE'
+      matchedId: string
+    }) =>
+      api.post(`/api/finance/bank-transactions/${id}/reconcile`, { matchedType, matchedId }).then((r) => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance', 'bank-transactions'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'bank-accounts'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'receivables'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'payables'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'invoices'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'journal-entries'] })
+    }
+  })
+}
+
+export const useTrialBalance = (year?: number, month?: number) =>
+  useQuery({
+    queryKey: ['finance', 'reports', 'trial-balance', year, month],
+    queryFn: () =>
+      api
+        .get('/api/finance/reports/trial-balance', {
+          params: { ...(year ? { year } : {}), ...(month ? { month } : {}) }
+        })
+        .then((r) => r.data.data)
+  })
+
+export const useIncomeStatement = (year?: number, month?: number) =>
+  useQuery({
+    queryKey: ['finance', 'reports', 'income-statement', year, month],
+    queryFn: () =>
+      api
+        .get('/api/finance/reports/income-statement', {
+          params: { ...(year ? { year } : {}), ...(month ? { month } : {}) }
+        })
+        .then((r) => r.data.data)
+  })
+
+export const useBalanceSheet = (date?: string) =>
+  useQuery({
+    queryKey: ['finance', 'reports', 'balance-sheet', date],
+    queryFn: () =>
+      api.get('/api/finance/reports/balance-sheet', { params: date ? { date } : undefined }).then((r) => r.data.data)
+  })
