@@ -8,6 +8,7 @@ export const menuPermissions: Record<string, AppUserRole[]> = {
   mes: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'OPERATOR'],
   pos: ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'OPERATOR'],
   finance: ['SUPER_ADMIN', 'MANAGER'],
+  'finance-periods': ['SUPER_ADMIN', 'MANAGER'],
   backup: ['SUPER_ADMIN', 'ADMIN'],
   settings: ['SUPER_ADMIN', 'ADMIN']
 }

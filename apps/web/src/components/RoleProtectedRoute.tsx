@@ -5,6 +5,11 @@ import { isModuleEnabledForTenant } from '../lib/tenantModules'
 import { useAuthStore } from '../store/auth.store'
 import { useToastStore } from '../store/toast.store'
 
+function resolveTenantModuleId(moduleId: string): string {
+  if (moduleId.startsWith('finance-')) return 'finance'
+  return moduleId
+}
+
 export function RoleProtectedRoute({
   moduleId,
   children
@@ -18,7 +23,7 @@ export function RoleProtectedRoute({
   const navigate = useNavigate()
   const showToast = useToastStore((s) => s.show)
   const roleAllowed = canAccessModule(role, moduleId)
-  const tenantAllowed = isModuleEnabledForTenant({ enabledModules }, moduleId)
+  const tenantAllowed = isModuleEnabledForTenant({ enabledModules }, resolveTenantModuleId(moduleId))
   const allowed = roleAllowed && tenantAllowed
 
   useEffect(() => {

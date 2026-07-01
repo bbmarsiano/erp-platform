@@ -13,6 +13,7 @@ import MesRouter from './modules/mes/MesRouter'
 import WmsRouter from './modules/wms/WmsRouter'
 import ScmRouter from './modules/scm/ScmRouter'
 import FinanceRouter from './modules/finance/FinanceRouter'
+import FinancialPeriods from './modules/finance/pages/FinancialPeriods'
 import { SessionWarning } from './components/SessionWarning'
 import { RoleProtectedRoute } from './components/RoleProtectedRoute'
 
@@ -110,6 +111,14 @@ export default function App() {
                 <Help />
               </AppShell>
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/finance/periods"
+          element={
+            <ProtectedModule moduleId="finance-periods">
+              <FinancialPeriods />
+            </ProtectedModule>
           }
         />
         <Route
