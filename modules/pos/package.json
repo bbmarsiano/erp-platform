@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/module.plugin.js",
   "scripts": {
-    "build": "esbuild module.plugin.ts manifest.ts 'src/**/*.ts' --platform=node --format=cjs --outdir=dist --outbase=."
+    "build": "esbuild module.plugin.ts manifest.ts 'src/**/*.ts' --bundle --platform=node --format=cjs --outdir=dist --outbase=. --external:@dflow/core --external:@dflow/db --external:fastify --external:@prisma/client --external:@prisma/client/runtime/library"
   },
   "dependencies": {
     "@dflow/core": "workspace:*",
