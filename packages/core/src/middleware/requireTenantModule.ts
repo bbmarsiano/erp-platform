@@ -5,8 +5,15 @@ import { createErrorResponse } from '../utils/api.utils.js'
 export const requireTenantModule =
   (moduleId: string) =>
   async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const tenantId = request.user?.tenantId
+    if (!tenantId) {
+      return reply
+        .status(401)
+        .send(createErrorResponse('Необходима е автентикация', 'UNAUTHORIZED', 401))
+    }
+
     const tenant = await prisma.tenant.findUnique({
-      where: { id: request.user.tenantId },
+      where: { id: tenantId },
       select: { enabledModules: true }
     })
 

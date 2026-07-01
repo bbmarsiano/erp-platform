@@ -2,7 +2,7 @@ import 'fastify'
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user: {
+    user?: {
       id: string
       email: string
       role: string
@@ -10,5 +10,3 @@ declare module 'fastify' {
     }
   }
 }
-
-export {}

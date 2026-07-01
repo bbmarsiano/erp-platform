@@ -1,3 +1,5 @@
+/// <reference path="./middleware/fastify.d.ts" />
+
 export * from './types/module.types.js'
 export * from './types/api.types.js'
 export * from './constants/features.js'
