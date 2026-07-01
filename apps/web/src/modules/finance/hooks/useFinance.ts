@@ -346,3 +346,27 @@ export const useBalanceSheet = (date?: string) =>
     queryFn: () =>
       api.get('/api/finance/reports/balance-sheet', { params: date ? { date } : undefined }).then((r) => r.data.data)
   })
+
+export const useFinancialPeriods = () =>
+  useQuery({
+    queryKey: ['finance', 'periods'],
+    queryFn: () => api.get('/api/finance/periods').then((r) => r.data.data)
+  })
+
+export const useCloseFinancialPeriod = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ year, month }: { year: number; month: number }) =>
+      api.post(`/api/finance/periods/${year}/${month}/close`).then((r) => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'periods'] })
+  })
+}
+
+export const useReopenFinancialPeriod = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ year, month }: { year: number; month: number }) =>
+      api.post(`/api/finance/periods/${year}/${month}/reopen`).then((r) => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance', 'periods'] })
+  })
+}

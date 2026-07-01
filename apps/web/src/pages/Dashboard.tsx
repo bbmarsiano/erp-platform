@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Warehouse, Truck, Factory, ShoppingCart, HardDrive, X } from 'lucide-react'
+import { Warehouse, Truck, Factory, ShoppingCart, HardDrive, Landmark, X } from 'lucide-react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
 import { formatCurrency } from '../lib/currency'
+import { isModuleEnabledForTenant } from '../lib/tenantModules'
 import { HelpTooltip } from '../components/ui'
 
 interface DashboardStats {
@@ -11,6 +12,12 @@ interface DashboardStats {
   scm: { suppliers: number; pendingOrders: number; openOrders: number }
   mes: { activeBoms: number; inProgressOrders: number; completedThisWeek: number }
   pos: { todaySales: number; todayRevenue: number; registers: number }
+  finance: {
+    outInvoices: number
+    monthRevenue: number
+    openReceivables: number
+    openPayables: number
+  }
   backup: { activePolicies: number; lastBackup: string | null; failedThisWeek: number }
 }
 
@@ -19,6 +26,7 @@ const moduleIcons: Record<string, React.ReactNode> = {
   scm: <Truck size={20} color="white" />,
   mes: <Factory size={20} color="white" />,
   pos: <ShoppingCart size={20} color="white" />,
+  finance: <Landmark size={20} color="white" />,
   backup: <HardDrive size={20} color="white" />
 }
 
@@ -27,12 +35,14 @@ const moduleColors: Record<string, { gradient: string; accent: string; text: str
   scm: { gradient: 'linear-gradient(135deg,#11998e,#38ef7d)', accent: '#11998e', text: '#059669' },
   mes: { gradient: 'linear-gradient(135deg,#f093fb,#f5576c)', accent: '#f5576c', text: '#dc2626' },
   pos: { gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)', accent: '#4facfe', text: '#0284c7' },
+  finance: { gradient: 'linear-gradient(135deg,#fbbf24,#f59e0b)', accent: '#f59e0b', text: '#b45309' },
   backup: { gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', accent: '#38f9d7', text: '#0d9488' }
 }
 
 export default function Dashboard() {
   const user = useAuthStore((s) => s.user)
   const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
+  const enabledModules = useAuthStore((s) => s.enabledModules)
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,6 +54,7 @@ export default function Dashboard() {
       scm: 'module:scm',
       mes: 'module:mes',
       pos: 'module:pos',
+      finance: 'module:finance',
       backup: 'module:backup'
     }
     const featureKey = featureMap[moduleId]
@@ -100,6 +111,12 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        const financeEnabled =
+          isModuleLicensed('finance') && isModuleEnabledForTenant({ enabledModules }, 'finance')
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = now.getMonth() + 1
+
         const [
           wmsWh,
           wmsStock,
@@ -110,7 +127,11 @@ export default function Dashboard() {
           mesBom,
           mesOrders,
           posReg,
-          backupPol
+          backupPol,
+          financeOutInvoices,
+          financeIncome,
+          financeReceivables,
+          financePayables
         ] = await Promise.allSettled([
           api.get('/api/wms/warehouses'),
           api.get('/api/wms/stock'),
@@ -121,7 +142,15 @@ export default function Dashboard() {
           api.get('/api/mes/bom'),
           api.get('/api/mes/orders'),
           api.get('/api/pos/registers'),
-          api.get('/api/backup/policies')
+          api.get('/api/backup/policies'),
+          ...(financeEnabled
+            ? [
+                api.get('/api/finance/invoices', { params: { docType: 'INVOICE_OUT' } }),
+                api.get('/api/finance/reports/income-statement', { params: { year, month } }),
+                api.get('/api/finance/receivables'),
+                api.get('/api/finance/payables')
+              ]
+            : [])
         ])
 
         const get = (r: PromiseSettledResult<{ data: { data: unknown } }>) =>
@@ -134,6 +163,13 @@ export default function Dashboard() {
         const suppliers = get(scmSup) as Array<{ isActive: boolean }>
         const boms = get(mesBom) as Array<{ isActive: boolean }>
         const policies = get(backupPol) as Array<{ isActive: boolean }>
+
+        const receivables = financeEnabled ? (get(financeReceivables) as Array<{ status: string }>) : []
+        const payables = financeEnabled ? (get(financePayables) as Array<{ status: string }>) : []
+        const incomeData =
+          financeEnabled && financeIncome.status === 'fulfilled'
+            ? (financeIncome.value.data.data as { revenueTotal?: number })
+            : null
 
         setStats({
           wms: {
@@ -162,6 +198,12 @@ export default function Dashboard() {
             todaySales: 0,
             todayRevenue: 0
           },
+          finance: {
+            outInvoices: financeEnabled ? get(financeOutInvoices).length : 0,
+            monthRevenue: incomeData?.revenueTotal ?? 0,
+            openReceivables: receivables.filter((r) => ['OPEN', 'PARTIALLY_PAID'].includes(r.status)).length,
+            openPayables: payables.filter((p) => ['OPEN', 'PARTIALLY_PAID'].includes(p.status)).length
+          },
           backup: {
             activePolicies: policies.filter((p) => p.isActive).length,
             lastBackup: null,
@@ -173,7 +215,7 @@ export default function Dashboard() {
       }
     }
     void fetchStats()
-  }, [])
+  }, [enabledModules, licensedFeatures])
 
   const modules = [
     {
@@ -230,6 +272,27 @@ export default function Dashboard() {
         : []
     },
     {
+      id: 'finance',
+      name: 'Финанси',
+      path: '/finance',
+      stats: stats
+        ? [
+            { label: 'Изходящи фактури', value: stats.finance.outInvoices },
+            { label: 'Приходи (текущ месец)', value: formatCurrency(stats.finance.monthRevenue) },
+            {
+              label: 'Неплатени вземания',
+              value: stats.finance.openReceivables,
+              alert: stats.finance.openReceivables > 0
+            },
+            {
+              label: 'Неплатени задължения',
+              value: stats.finance.openPayables,
+              alert: stats.finance.openPayables > 0
+            }
+          ]
+        : []
+    },
+    {
       id: 'backup',
       name: 'Архивиране',
       path: '/backup',
@@ -247,7 +310,11 @@ export default function Dashboard() {
     }
   ]
 
-  const visibleModules = modules.filter((mod) => isModuleLicensed(mod.id))
+  const visibleModules = modules.filter(
+    (mod) =>
+      isModuleLicensed(mod.id) &&
+      (mod.id !== 'finance' || isModuleEnabledForTenant({ enabledModules }, 'finance'))
+  )
 
   const greeting = () => {
     const h = new Date().getHours()

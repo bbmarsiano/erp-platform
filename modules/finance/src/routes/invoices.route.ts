@@ -8,6 +8,7 @@ import { requireTenantModule } from '../../../../apps/api/src/middleware/require
 import { getNextDocumentNumber } from '../services/document-numbering.service'
 import { calculateInvoiceTotals, type InvoiceLineInput } from '../services/invoice-calc.service'
 import { buildInvoicePdf } from '../services/invoice-pdf.service'
+import { assertPeriodOpen, PeriodClosedError } from '../services/period.service'
 import { serializeInvoice } from '../utils/serialize-decimal'
 
 const financeGuards = [authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), requireTenantModule('finance')]
@@ -89,6 +90,15 @@ const invoicesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     }
     if (body.docType === 'INVOICE_IN' && !body.supplierId) {
       return reply.status(400).send(createErrorResponse('Supplier is required', 'SUPPLIER_REQUIRED', 400))
+    }
+
+    try {
+      await assertPeriodOpen(request.user.tenantId, new Date(body.issueDate))
+    } catch (error) {
+      if (error instanceof PeriodClosedError) {
+        return reply.status(400).send(createErrorResponse(error.userMessage, 'PERIOD_CLOSED', 400))
+      }
+      throw error
     }
 
     const number = await getNextDocumentNumber(request.user.tenantId, body.docType)

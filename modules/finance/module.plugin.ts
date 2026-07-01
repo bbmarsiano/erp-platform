@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import bankAccountsRoute from './src/routes/bank-accounts.route'
 import bankTransactionsRoute from './src/routes/bank-transactions.route'
 import chartOfAccountsRoute from './src/routes/chart-of-accounts.route'
+import financialPeriodsRoute from './src/routes/financial-periods.route'
 import customersRoute from './src/routes/customers.route'
 import invoicesRoute from './src/routes/invoices.route'
 import journalEntriesRoute from './src/routes/journal-entries.route'
@@ -19,6 +20,7 @@ const financePlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   await fastify.register(bankAccountsRoute, { prefix: '/api/finance' })
   await fastify.register(bankTransactionsRoute, { prefix: '/api/finance' })
   await fastify.register(reportsRoute, { prefix: '/api/finance' })
+  await fastify.register(financialPeriodsRoute, { prefix: '/api/finance' })
 }
 
 export default financePlugin

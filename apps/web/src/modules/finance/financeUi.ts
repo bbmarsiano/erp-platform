@@ -68,3 +68,8 @@ export const reconciledStatusMap: Record<string, { label: string; bg: string; co
   true: { label: 'Съпоставена', bg: '#dcfce7', color: '#166534' },
   false: { label: 'Несъпоставена', bg: '#fef3c7', color: '#92400e' }
 }
+
+export const periodStatusMap = {
+  open: { label: 'Отворен', bg: '#dcfce7', color: '#166534' },
+  closed: { label: 'Затворен', bg: '#fee2e2', color: '#991b1b' }
+}

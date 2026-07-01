@@ -3,6 +3,7 @@ import { Decimal } from '@prisma/client/runtime/library'
 import { getNextDocumentNumberInTx } from './document-numbering.service'
 import { calculateInvoiceTotals } from './invoice-calc.service'
 import { createJournalEntry, type JournalLineInput } from './journal.service'
+import { assertPeriodOpen, PeriodClosedError } from './period.service'
 
 const DEFAULT_VAT_RATE = 20
 
@@ -45,6 +46,9 @@ async function getAccountByCode(tx: Prisma.TransactionClient, tenantId: string, 
 
 function wrapAutomationError(error: unknown, userMessage: string): never {
   if (error instanceof FinanceAutomationError) throw error
+  if (error instanceof PeriodClosedError) {
+    throw new FinanceAutomationError(error.message, error.userMessage, 'PERIOD_CLOSED')
+  }
   const technical = error instanceof Error ? error.message : String(error)
   throw new FinanceAutomationError(technical, userMessage, 'FINANCE_AUTOMATION_FAILED')
 }
@@ -121,6 +125,8 @@ export async function onPosSaleCompleted(
       const vatAccount = await getAccountByCode(tx, opts.tenantId, '4538')
       journalLines.push({ accountId: vatAccount.id, credit: vatAmount, description: `ДДС ${sale.saleNo}` })
     }
+
+    await assertPeriodOpen(opts.tenantId, sale.createdAt, tx)
 
     await createJournalEntry(tx, {
       tenantId: opts.tenantId,
@@ -255,9 +261,12 @@ export async function onScmDeliveryConfirmed(
 
     const supplierAccount = await getAccountByCode(tx, opts.tenantId, '401')
 
+    const entryDate = new Date()
+    await assertPeriodOpen(opts.tenantId, entryDate, tx)
+
     await createJournalEntry(tx, {
       tenantId: opts.tenantId,
-      entryDate: new Date(),
+      entryDate,
       description: `Доставка ${delivery.deliveryNo}`,
       sourceType: 'SCM_DELIVERY',
       sourceId: delivery.id,

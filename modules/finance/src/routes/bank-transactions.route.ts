@@ -8,6 +8,7 @@ import { requireTenantModule } from '../../../../apps/api/src/middleware/require
 import { getAccountByCode } from '../services/account.service'
 import { createJournalEntry } from '../services/journal.service'
 import { applyPayablePayment, applyReceivablePayment, PaymentError } from '../services/payment.service'
+import { assertPeriodOpen, PeriodClosedError } from '../services/period.service'
 import { computeReceivableStatus } from '../services/receivable-status.service'
 import { serializeBankTransaction, serializePayable, serializeReceivable } from '../utils/serialize-decimal'
 
@@ -151,6 +152,8 @@ const bankTransactionsRoute: FastifyPluginAsync = async (fastify: FastifyInstanc
         const acc411 = await getAccountByCode(tx, request.user.tenantId, '411')
         const acc401 = await getAccountByCode(tx, request.user.tenantId, '401')
 
+        await assertPeriodOpen(request.user.tenantId, transaction.transactionDate, tx)
+
         if (amount > 0) {
           await createJournalEntry(tx, {
             tenantId: request.user.tenantId,
@@ -218,6 +221,9 @@ const bankTransactionsRoute: FastifyPluginAsync = async (fastify: FastifyInstanc
     } catch (error) {
       if (error instanceof PaymentError) {
         return reply.status(400).send(createErrorResponse(error.message, error.code, 400))
+      }
+      if (error instanceof PeriodClosedError) {
+        return reply.status(400).send(createErrorResponse(error.userMessage, 'PERIOD_CLOSED', 400))
       }
       if (error instanceof Error && error.message.startsWith('MISSING_ACCOUNT:')) {
         const code = error.message.split(':')[1]

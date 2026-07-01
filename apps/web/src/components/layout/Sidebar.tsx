@@ -105,7 +105,8 @@ const navGroups: NavGroup[] = [
       { label: 'Главна книга', path: '/finance/journal-entries' },
       { label: 'Банкови сметки', path: '/finance/bank-accounts' },
       { label: 'Банкови транзакции', path: '/finance/bank-transactions' },
-      { label: 'Справки', path: '/finance/reports' }
+      { label: 'Справки', path: '/finance/reports' },
+      { label: 'Периоди', path: '/finance/periods' }
     ]
   },
   {
@@ -162,6 +163,7 @@ const itemIcons: Record<string, React.ReactNode> = {
   '/finance/bank-accounts': <Wallet size={13} />,
   '/finance/bank-transactions': <CreditCard size={13} />,
   '/finance/reports': <BarChart3 size={13} />,
+  '/finance/periods': <BarChart3 size={13} />,
   '/backup': <LayoutDashboard size={13} />,
   '/backup/policies': <Shield size={13} />,
   '/backup/jobs': <History size={13} />,

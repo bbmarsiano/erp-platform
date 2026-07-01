@@ -5,6 +5,7 @@ import ChartOfAccounts from './pages/ChartOfAccounts'
 import Customers from './pages/Customers'
 import FinanceDashboard from './pages/FinanceDashboard'
 import FinanceReports from './pages/FinanceReports'
+import FinancialPeriods from './pages/FinancialPeriods'
 import InvoiceDetail from './pages/InvoiceDetail'
 import Invoices from './pages/Invoices'
 import JournalEntries from './pages/JournalEntries'
@@ -27,6 +28,7 @@ export default function FinanceRouter() {
       <Route path="bank-accounts" element={<BankAccounts />} />
       <Route path="bank-transactions" element={<BankTransactions />} />
       <Route path="reports" element={<FinanceReports />} />
+      <Route path="periods" element={<FinancialPeriods />} />
     </Routes>
   )
 }
