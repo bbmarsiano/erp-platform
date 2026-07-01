@@ -1,12 +1,15 @@
 import 'fastify'
+import type { JwtPayload } from './authenticate'
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: {
-      id: string
-      email: string
-      role: string
-      tenantId: string
-    }
+    user?: JwtPayload
+  }
+}
+
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: JwtPayload
+    user: JwtPayload
   }
 }
