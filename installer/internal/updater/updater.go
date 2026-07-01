@@ -16,7 +16,7 @@ import (
 	"github.com/fatih/color"
 )
 
-const CURRENT_VERSION = "0.6.0"
+const CURRENT_VERSION = "0.7.0"
 
 func Run(licenseServerURL, licenseKey, githubRepo string) error {
 	color.Cyan("\n🔄 DFlowERP Updater")

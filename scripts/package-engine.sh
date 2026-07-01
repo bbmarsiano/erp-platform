@@ -71,7 +71,7 @@ fi
 # 8. Copy modules — compiled JS only (no TypeScript source)
 echo "📁 Copying modules (compiled)..."
 mkdir -p "${PACKAGE_DIR}/modules"
-for module in wms scm mes pos backup; do
+for module in wms scm mes pos backup finance; do
   MODULE_SRC="modules/${module}"
   MODULE_DST="${PACKAGE_DIR}/modules/${module}"
   if [ ! -d "${MODULE_SRC}" ]; then
