@@ -58,9 +58,18 @@ export const moduleLoaderPlugin: FastifyPluginAsync<ModuleLoaderOptions> = async
     }
 
     try {
+      // Production: check dist/ first
+      const pluginDistPath = join(modulesDir, moduleName, 'dist', 'module.plugin.js')
+      // Development: fall back to root .ts file
       const pluginTsPath = join(modulesDir, moduleName, 'module.plugin.ts')
+      // Legacy: root .js file
       const pluginJsPath = join(modulesDir, moduleName, 'module.plugin.js')
-      const candidate = existsSync(pluginTsPath) ? pluginTsPath : pluginJsPath
+
+      const candidate = existsSync(pluginDistPath)
+        ? pluginDistPath
+        : existsSync(pluginTsPath)
+          ? pluginTsPath
+          : pluginJsPath
 
       if (!existsSync(candidate)) {
         fastify.log.warn({ module: moduleName }, 'No module.plugin found')
