@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Search, X, BookOpen, ChevronRight, Download } from 'lucide-react'
+import { useAuthStore } from '../store/auth.store'
+import { isFinanceModuleEnabledForTenant } from '../lib/tenantModules'
 
 type Language = 'bg' | 'en'
 
@@ -9,6 +11,7 @@ interface HelpSection {
   title: { bg: string; en: string }
   content: { bg: string; en: string }
   keywords: string[]
+  requiresFinance?: boolean
 }
 
 const sections: HelpSection[] = [
@@ -224,7 +227,7 @@ Confirm quantities when goods arrive.
     id: 'pos',
     icon: '🛒',
     title: { bg: 'Точка на продажба (POS)', en: 'Point of Sale (POS)' },
-    keywords: ['продажба', 'sale', 'каса', 'register', 'касова бележка', 'receipt', 'фактура', 'invoice', 'баркод', 'barcode', 'плащане', 'payment'],
+    keywords: ['продажба', 'sale', 'каса', 'register', 'касова бележка', 'receipt', 'фактура', 'invoice', 'баркод', 'barcode', 'плащане', 'payment', 'контрагент', 'counterparty', 'еик', 'зддс', 'vat'],
     content: {
       bg: `**Извършване на продажба:**
 1. POS → Каса → изберете каса
@@ -236,11 +239,24 @@ Confirm quantities when goods arrive.
 - 🖨️ Принтирайте директно
 - 📥 Свалете като файл
 
-**Фактура:**
-Поставете ✅ "Издай фактура" преди завършване.
-
 **Баркод скенер:**
-Натиснете "Сканирай" → изберете USB или Камера режим.`,
+Натиснете "Сканирай" → изберете USB или Камера режим.
+
+**Контрагенти**
+Управление на юридически лица (фирми) за фактуриране от POS.
+- Къде: Точка на продажба → Контрагенти
+- Създаване: "Нов контрагент" → попълнете име, ЕИК, ДДС номер, адрес, МОЛ, телефон, имейл
+- История: отворете контрагент за списък с всички свързани покупки
+- ⚠️ Видимо само когато модулът Финанси НЕ е активиран. При активен Финанси използвайте Финанси → Клиенти.
+
+**Фактури от POS**
+Издаване на законосъобразни български ЗДДС фактури директно от касата.
+- Къде: Точка на продажба → Фактури (списък) + процес на плащане в касата
+- Издаване: в касата изберете контрагент от "Клиент" → ✅ "Издай фактура" → попълнете дати/ДДС → завършете продажбата → свалете PDF
+- Номерация: поредни 10-цифрени номера (0000000001, 0000000002, ...)
+- Ръчна корекция: операторът може да промени номера преди издаване за синхрон с външна счетоводна система
+- Начален номер: Настройки → Фирма → секция "Фактури"
+- ⚠️ Видимо само когато модулът Финанси НЕ е активиран.`,
       en: `**Making a sale:**
 1. POS → Register → select register
 2. Add products (click or 🔍 barcode scanner)
@@ -251,11 +267,93 @@ Confirm quantities when goods arrive.
 - 🖨️ Print directly
 - 📥 Download as file
 
-**Invoice:**
-Check ✅ "Issue Invoice" before completing the sale.
-
 **Barcode scanner:**
-Click "Scan" → choose USB or Camera mode.`
+Click "Scan" → choose USB or Camera mode.
+
+**Counterparties**
+Manage legal entity customers for POS invoicing.
+- Where: Point of Sale → Counterparties
+- Create: "New counterparty" → fill name, EIK, VAT number, address, manager, phone, email
+- History: open a counterparty to see all linked purchases
+- ⚠️ Only visible when the Finance module is NOT enabled. When Finance is enabled, use Finance → Customers.
+
+**POS Invoices**
+Issue Bulgarian VAT-compliant invoices directly from the POS terminal.
+- Where: Point of Sale → Invoices (list) + checkout flow
+- Issue: at checkout select a counterparty from "Customer" → ✅ "Issue invoice" → fill dates/VAT → complete sale → download PDF
+- Numbering: sequential 10-digit numbers (0000000001, 0000000002, ...)
+- Manual override: operator can change the number before issuing to sync with external accounting
+- Start number: Settings → Company → "Invoices" section
+- ⚠️ Only visible when the Finance module is NOT enabled.`
+    }
+  },
+  {
+    id: 'finance',
+    icon: '💰',
+    title: { bg: 'Финанси', en: 'Finance' },
+    requiresFinance: true,
+    keywords: ['финанси', 'finance', 'фактура', 'invoice', 'клиент', 'customer', 'вземане', 'receivable', 'задължение', 'payable', 'главна книга', 'journal', 'банка', 'bank', 'справка', 'report', 'период', 'period', 'счетоводство', 'accounting'],
+    content: {
+      bg: `**Финанси модул — обзор**
+Пълнофункционален финансово-счетоводен модул с двойно счетоводство, съвместим с българското законодателство.
+
+**Клиенти**
+Управление на клиенти (юридически лица) за фактуриране.
+Финанси → Клиенти → "Нов клиент"
+
+**Фактури**
+Изходящи (към клиенти) и входящи (от доставчици) фактури.
+Номерация: отделни поредни номера по тип документ.
+Издадена фактура е неизменна (българско законодателство).
+
+**Вземания и Задължения**
+Автоматично се създават при издаване на фактура.
+Записвайте плащания чрез бутона "Плащане".
+
+**Главна книга**
+Счетоводни записи (double-entry) — автоматично от POS и SCM.
+Всяка продажба → дебит Каса/кредит Приходи.
+Всяка доставка → дебит Стоки/кредит Доставчици.
+
+**Банкови операции**
+Ръчно въвеждане на банкови транзакции + съпоставяне с вземания/задължения.
+
+**Справки**
+Оборотна ведомост, ОПР, Баланс — с Excel експорт.
+
+**Счетоводни периоди**
+Затваряне на месец предотвратява редакция на минали записи.
+Само SUPER_ADMIN може да отвори затворен период.`,
+      en: `**Finance module — overview**
+Full accounting module with double-entry bookkeeping, compliant with Bulgarian regulations.
+
+**Customers**
+Manage legal entity customers for invoicing.
+Finance → Customers → "New customer"
+
+**Invoices**
+Outgoing (to customers) and incoming (from suppliers) invoices.
+Numbering: separate sequential numbers per document type.
+Issued invoices are immutable (Bulgarian law).
+
+**Receivables and Payables**
+Created automatically when an invoice is issued.
+Record payments via the "Payment" button.
+
+**General ledger**
+Journal entries (double-entry) — automated from POS and SCM.
+Each sale → debit Cash/credit Revenue.
+Each delivery → debit Inventory/credit Suppliers.
+
+**Bank operations**
+Manual bank transaction entry + matching with receivables/payables.
+
+**Reports**
+Trial balance, P&L, Balance sheet — with Excel export.
+
+**Accounting periods**
+Month closing prevents editing past entries.
+Only SUPER_ADMIN can reopen a closed period.`
     }
   },
   {
@@ -296,6 +394,7 @@ Contact your administrator to restore from a backup.`
 - Наименование, МОЛ, ЕИК, ДДС номер
 - Адрес, Телефон, Имейл
 - Банка, IBAN, Лого
+- Начален номер на фактури (само без модул Финанси) — секция "Фактури"
 
 **Лиценз:** Информация за абонамента.
 
@@ -306,6 +405,7 @@ Contact your administrator to restore from a backup.`
 - Name, Manager, EIK, VAT number
 - Address, Phone, Email
 - Bank, IBAN, Logo
+- Invoice start number (only without Finance module) — "Invoices" section
 
 **License:** Subscription information.
 
@@ -318,17 +418,24 @@ export default function Help() {
   const [lang, setLang] = useState<Language>('bg')
   const [search, setSearch] = useState('')
   const [activeSection, setActiveSection] = useState<string | null>(null)
+  const enabledModules = useAuthStore((s) => s.enabledModules)
+  const financeEnabled = isFinanceModuleEnabledForTenant({ enabledModules })
+
+  const visibleSections = useMemo(
+    () => sections.filter((section) => !section.requiresFinance || financeEnabled),
+    [financeEnabled]
+  )
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return sections
+    if (!search.trim()) return visibleSections
     const q = search.toLowerCase()
-    return sections.filter(
+    return visibleSections.filter(
       (s) =>
         s.title[lang].toLowerCase().includes(q) ||
         s.content[lang].toLowerCase().includes(q) ||
         s.keywords.some((k) => k.includes(q))
     )
-  }, [search, lang])
+  }, [search, lang, visibleSections])
 
   const renderContent = (text: string) => {
     return text.split('\n').map((line, i) => {

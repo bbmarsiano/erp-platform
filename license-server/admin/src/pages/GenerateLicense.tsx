@@ -24,7 +24,8 @@ const allModules = [
   { id: 'module:scm', label: '🚚 SCM — Верига на доставките' },
   { id: 'module:mes', label: '🏭 MES — Производство' },
   { id: 'module:pos', label: '🛒 POS — Точка на продажба' },
-  { id: 'module:backup', label: '💾 Backup — Архивиране' }
+  { id: 'module:backup', label: '💾 Backup — Архивиране' },
+  { id: 'module:finance', label: '💰 Finance — Финансово-счетоводен модул' }
 ]
 
 const fieldStyle: React.CSSProperties = {

@@ -10,7 +10,8 @@ const MODULE_BADGES: Record<string, { label: string; bg: string; color: string }
   'module:scm': { label: 'SCM', bg: '#d1fae5', color: '#065f46' },
   'module:mes': { label: 'MES', bg: '#fce7f3', color: '#9d174d' },
   'module:pos': { label: 'POS', bg: '#e0f2fe', color: '#0c4a6e' },
-  'module:backup': { label: 'Backup', bg: '#dcfce7', color: '#14532d' }
+  'module:backup': { label: 'Backup', bg: '#dcfce7', color: '#14532d' },
+  'module:finance': { label: 'Finance', bg: '#fef3c7', color: '#92400e' }
 }
 
 const columns = [
