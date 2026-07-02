@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
-import { isModuleEnabledForTenant } from '../lib/tenantModules'
+import { isFinanceModuleEnabledForTenant } from '../lib/tenantModules'
 import { APP_VERSION } from '../version'
 import { HelpTooltip } from '../components/ui'
 import ExportData from './settings/ExportData'
@@ -207,7 +207,8 @@ function LicenseSettings() {
 
 function CompanySettings() {
   const enabledModules = useAuthStore((s) => s.enabledModules)
-  const financeEnabled = isModuleEnabledForTenant({ enabledModules }, 'finance')
+  const setEnabledModules = useAuthStore((s) => s.setEnabledModules)
+  const financeEnabled = isFinanceModuleEnabledForTenant({ enabledModules })
   const [form, setForm] = useState({
     name: '',
     logoUrl: '',
@@ -248,9 +249,12 @@ function CompanySettings() {
           bankIban: t.bankIban || '',
           posInvoiceStartNumber: t.posInvoiceStartNumber ?? 1
         })
+        if (Array.isArray(t.enabledModules)) {
+          setEnabledModules(t.enabledModules)
+        }
       })
       .catch(() => {})
-  }, [])
+  }, [setEnabledModules])
 
   const save = async () => {
     setSaving(true)

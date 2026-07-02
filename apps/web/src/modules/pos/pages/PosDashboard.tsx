@@ -6,7 +6,7 @@ import { BarcodeScanner, type ScanResult } from '../../../components/BarcodeScan
 import { Button, PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 import { CURRENCY_CODE, CURRENCY_SYMBOL, formatCurrency } from '../../../lib/currency'
-import { isModuleEnabledForTenant } from '../../../lib/tenantModules'
+import { isFinanceModuleEnabledForTenant } from '../../../lib/tenantModules'
 import { useStock } from '../../wms/hooks/useWms'
 import {
   downloadPosInvoicePdf,
@@ -69,7 +69,7 @@ export default function PosDashboard() {
   const navigate = useNavigate()
   const showToast = useToastStore((s) => s.show)
   const enabledModules = useAuthStore((s) => s.enabledModules)
-  const financeEnabled = isModuleEnabledForTenant({ enabledModules }, 'finance')
+  const financeEnabled = isFinanceModuleEnabledForTenant({ enabledModules })
 
   const stock = useStock()
   const registers = useRegisters()

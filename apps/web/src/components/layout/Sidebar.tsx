@@ -30,7 +30,7 @@ import {
 import { useAuthStore } from '../../store/auth.store'
 import { api } from '../../lib/api'
 import { canAccessModule } from '../../lib/menuPermissions'
-import { isModuleEnabledForTenant } from '../../lib/tenantModules'
+import { isModuleEnabledForTenant, isFinanceModuleEnabledForTenant } from '../../lib/tenantModules'
 
 interface NavItem {
   label: string
@@ -93,8 +93,8 @@ const navGroups: NavGroup[] = [
       { label: 'Продажби', path: '/pos/sales' },
       { label: 'Каси', path: '/pos/registers' },
       { label: 'Справки', path: '/pos/reports' },
-      { label: 'Контрагенти', path: '/pos/counterparties', hideWhenFinance: true },
-      { label: 'Фактури', path: '/pos/invoices', hideWhenFinance: true }
+      { label: 'Контрагенти', path: '/pos/counterparties', hideWhenFinance: true, permissionId: 'pos-counterparties' },
+      { label: 'Фактури', path: '/pos/invoices', hideWhenFinance: true, permissionId: 'pos-invoices' }
     ]
   },
   {
@@ -192,9 +192,15 @@ export function Sidebar({
   const user = useAuthStore((s) => s.user)
   const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
   const enabledModules = useAuthStore((s) => s.enabledModules)
+  const setEnabledModules = useAuthStore((s) => s.setEnabledModules)
   const logout = useAuthStore((s) => s.logout)
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+
+  const financeEnabled = useMemo(
+    () => isFinanceModuleEnabledForTenant({ enabledModules }),
+    [enabledModules]
+  )
 
   const isModuleLicensed = useMemo(
     () =>
@@ -244,9 +250,15 @@ export function Sidebar({
   useEffect(() => {
     api
       .get('/api/tenant')
-      .then((r) => setTenant(r.data.data))
+      .then((r) => {
+        const data = r.data.data
+        setTenant(data)
+        if (Array.isArray(data.enabledModules)) {
+          setEnabledModules(data.enabledModules)
+        }
+      })
       .catch(() => {})
-  }, [])
+  }, [setEnabledModules])
 
   useEffect(() => {
     visibleGroups.forEach((group) => {
@@ -425,10 +437,7 @@ export function Sidebar({
                 <div style={{ overflow: 'hidden' }}>
                   {group.items
                     .filter((item) => !item.permissionId || canAccessModule(user?.role, item.permissionId))
-                    .filter(
-                      (item) =>
-                        !item.hideWhenFinance || !isModuleEnabledForTenant({ enabledModules }, 'finance')
-                    )
+                    .filter((item) => !(item.hideWhenFinance && financeEnabled))
                     .map((item) => {
                     const isActive =
                       location.pathname === item.path ||

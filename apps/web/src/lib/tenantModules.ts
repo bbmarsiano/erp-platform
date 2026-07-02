@@ -6,3 +6,10 @@ export function isModuleEnabledForTenant(
   if (!modules || modules.length === 0) return true
   return modules.includes(moduleId)
 }
+
+/** Finance is enabled only when explicitly listed in tenant.enabledModules. */
+export function isFinanceModuleEnabledForTenant(
+  tenant: { enabledModules?: string[] } | null | undefined
+): boolean {
+  return Boolean(tenant?.enabledModules?.includes('finance'))
+}

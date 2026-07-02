@@ -22,6 +22,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   setTokens: (accessToken: string, refreshToken: string) => void
+  setEnabledModules: (enabledModules: string[]) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -64,6 +65,10 @@ export const useAuthStore = create<AuthState>()(
 
       setTokens: (accessToken, refreshToken) => {
         set({ accessToken, refreshToken })
+      },
+
+      setEnabledModules: (enabledModules) => {
+        set({ enabledModules })
       }
     }),
     {
