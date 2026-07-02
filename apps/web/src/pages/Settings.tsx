@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/auth.store'
 import { api } from '../lib/api'
+import { isModuleEnabledForTenant } from '../lib/tenantModules'
 import { APP_VERSION } from '../version'
 import { HelpTooltip } from '../components/ui'
 import ExportData from './settings/ExportData'
@@ -205,6 +206,8 @@ function LicenseSettings() {
 }
 
 function CompanySettings() {
+  const enabledModules = useAuthStore((s) => s.enabledModules)
+  const financeEnabled = isModuleEnabledForTenant({ enabledModules }, 'finance')
   const [form, setForm] = useState({
     name: '',
     logoUrl: '',
@@ -218,7 +221,8 @@ function CompanySettings() {
     phone: '',
     email: '',
     bankName: '',
-    bankIban: ''
+    bankIban: '',
+    posInvoiceStartNumber: 1
   })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -241,7 +245,8 @@ function CompanySettings() {
           phone: t.phone || '',
           email: t.email || '',
           bankName: t.bankName || '',
-          bankIban: t.bankIban || ''
+          bankIban: t.bankIban || '',
+          posInvoiceStartNumber: t.posInvoiceStartNumber ?? 1
         })
       })
       .catch(() => {})
@@ -471,6 +476,30 @@ function CompanySettings() {
           />
         )}
       </div>
+
+      {!financeEnabled ? (
+        <>
+          {section('Фактури')}
+          <div style={{ marginBottom: 16, maxWidth: 280 }}>
+            <label style={labelStyle}>Начален номер на фактури</label>
+            <input
+              type="number"
+              min={1}
+              value={form.posInvoiceStartNumber}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, posInvoiceStartNumber: Math.max(1, Number(e.target.value) || 1) }))
+              }
+              style={fieldStyle}
+              onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+              onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+            />
+            <p style={{ fontSize: 12, color: '#6b7280', marginTop: 8, lineHeight: 1.5 }}>
+              Следващата издадена фактура ще получи този номер. Променете само ако трябва да синхронизирате с
+              номерация от друг счетоводен софтуер.
+            </p>
+          </div>
+        </>
+      ) : null}
 
       <button
         type="button"

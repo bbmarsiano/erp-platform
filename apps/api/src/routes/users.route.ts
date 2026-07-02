@@ -198,24 +198,42 @@ const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         email?: string
         bankName?: string
         bankIban?: string
+        posInvoiceStartNumber?: number
       }
+
+      const existingTenant = await prisma.tenant.findUnique({
+        where: { id: request.user.tenantId },
+        select: { posInvoiceLastNumber: true, posInvoiceStartNumber: true }
+      })
+
+      const updateData: Record<string, unknown> = {
+        ...(body.name !== undefined && { name: body.name }),
+        ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
+        ...(body.address !== undefined && { address: body.address }),
+        ...(body.eik !== undefined && { eik: body.eik }),
+        ...(body.vatNumber !== undefined && { vatNumber: body.vatNumber }),
+        ...(body.vatRegistered !== undefined && { vatRegistered: body.vatRegistered }),
+        ...(body.mol !== undefined && { mol: body.mol }),
+        ...(body.city !== undefined && { city: body.city }),
+        ...(body.country !== undefined && { country: body.country }),
+        ...(body.phone !== undefined && { phone: body.phone }),
+        ...(body.email !== undefined && { email: body.email }),
+        ...(body.bankName !== undefined && { bankName: body.bankName }),
+        ...(body.bankIban !== undefined && { bankIban: body.bankIban })
+      }
+
+      if (body.posInvoiceStartNumber !== undefined) {
+        const startNumber = Math.max(1, Math.floor(body.posInvoiceStartNumber))
+        updateData.posInvoiceStartNumber = startNumber
+        const lastNumber = existingTenant?.posInvoiceLastNumber ?? 0
+        if (lastNumber < startNumber) {
+          updateData.posInvoiceLastNumber = startNumber - 1
+        }
+      }
+
       const tenant = await prisma.tenant.update({
         where: { id: request.user.tenantId },
-        data: {
-          ...(body.name !== undefined && { name: body.name }),
-          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
-          ...(body.address !== undefined && { address: body.address }),
-          ...(body.eik !== undefined && { eik: body.eik }),
-          ...(body.vatNumber !== undefined && { vatNumber: body.vatNumber }),
-          ...(body.vatRegistered !== undefined && { vatRegistered: body.vatRegistered }),
-          ...(body.mol !== undefined && { mol: body.mol }),
-          ...(body.city !== undefined && { city: body.city }),
-          ...(body.country !== undefined && { country: body.country }),
-          ...(body.phone !== undefined && { phone: body.phone }),
-          ...(body.email !== undefined && { email: body.email }),
-          ...(body.bankName !== undefined && { bankName: body.bankName }),
-          ...(body.bankIban !== undefined && { bankIban: body.bankIban })
-        }
+        data: updateData
       })
       return reply.send({ success: true, data: tenant })
     }

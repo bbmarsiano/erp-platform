@@ -13,17 +13,28 @@ for module in "${MODULES[@]}"; do
 
   echo "  Building ${module}..."
   rm -rf "${dir}/dist"
+  bundle_flags=(--bundle)
+  external_flags=(
+    --external:@dflow/core
+    --external:@dflow/db
+    --external:fastify
+    --external:@prisma/client
+    --external:@prisma/client/runtime/library
+  )
+  if [ "$module" = "finance" ]; then
+    bundle_flags=()
+    external_flags=()
+  fi
+  if [ "$module" = "pos" ]; then
+    external_flags+=(--external:pdfmake)
+  fi
   npx esbuild "${dir}/module.plugin.ts" "${dir}/manifest.ts" "${dir}/src/**/*.ts" \
-    --bundle \
+    "${bundle_flags[@]}" \
     --platform=node \
     --format=cjs \
     --outdir="${dir}/dist" \
     --outbase="${dir}" \
-    --external:@dflow/core \
-    --external:@dflow/db \
-    --external:fastify \
-    --external:@prisma/client \
-    --external:@prisma/client/runtime/library
+    "${external_flags[@]}"
 done
 
 echo "✅ Modules built"

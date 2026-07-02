@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Scan, Printer, Download, RotateCcw, CheckCircle, FileText } from 'lucide-react'
@@ -7,9 +7,15 @@ import { Button, PageHeader } from '../../../components/ui'
 import { api } from '../../../lib/api'
 import { CURRENCY_CODE, CURRENCY_SYMBOL, formatCurrency } from '../../../lib/currency'
 import { isModuleEnabledForTenant } from '../../../lib/tenantModules'
-import { useCustomers } from '../../finance/hooks/useFinance'
 import { useStock } from '../../wms/hooks/useWms'
-import { useCreateSale, useRegisters } from '../hooks/usePos'
+import {
+  downloadPosInvoicePdf,
+  useCounterparties,
+  useCreatePosInvoice,
+  useCreateSale,
+  useNextPosInvoiceNumber,
+  useRegisters
+} from '../hooks/usePos'
 import { useAuthStore } from '../../../store/auth.store'
 import { useToastStore } from '../../../store/toast.store'
 
@@ -48,14 +54,15 @@ type CompletedSale = {
   issueReceipt: boolean
   issueInvoice: boolean
   invoiceNumber?: string
+  posInvoiceId?: string
   draftInvoiceId?: string
   tenant?: TenantInfo
 }
 
-const getInvoiceNumber = () => {
-  const num = Number(localStorage.getItem('dflow_invoice_counter') || '0') + 1
-  localStorage.setItem('dflow_invoice_counter', String(num))
-  return `${new Date().getFullYear()}-${String(num).padStart(6, '0')}`
+const addDays = (days: number) => {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
 }
 
 export default function PosDashboard() {
@@ -66,17 +73,37 @@ export default function PosDashboard() {
 
   const stock = useStock()
   const registers = useRegisters()
-  const customers = useCustomers()
+  const financeCustomers = useQuery({
+    enabled: financeEnabled,
+    queryKey: ['finance', 'customers'],
+    queryFn: () => api.get('/api/finance/customers').then((r) => r.data.data)
+  })
+  const posCounterparties = useCounterparties(!financeEnabled)
   const createSale = useCreateSale()
+  const createPosInvoice = useCreatePosInvoice()
   const [cart, setCart] = useState<CartItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'CARD' | 'MIXED'>('CASH')
   const [registerId, setRegisterId] = useState('')
   const [customerId, setCustomerId] = useState('')
-  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null)
   const [issueReceipt, setIssueReceipt] = useState(true)
   const [issueInvoice, setIssueInvoice] = useState(false)
+  const [taxEventDate, setTaxEventDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [dueDate, setDueDate] = useState(() => addDays(30))
+  const [vatRate, setVatRate] = useState(20)
+  const [overrideNumber, setOverrideNumber] = useState('')
+  const [invoiceNote, setInvoiceNote] = useState('')
+  const nextInvoiceNumber = useNextPosInvoiceNumber(!financeEnabled && issueInvoice && Boolean(customerId))
+  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
   const receiptRef = useRef<HTMLDivElement>(null)
+
+  const customers = financeEnabled ? financeCustomers : posCounterparties
+
+  useEffect(() => {
+    if (!financeEnabled && issueInvoice && nextInvoiceNumber.data && !overrideNumber) {
+      setOverrideNumber(nextInvoiceNumber.data)
+    }
+  }, [financeEnabled, issueInvoice, nextInvoiceNumber.data, overrideNumber])
 
   const { data: tenant } = useQuery({
     queryKey: ['tenant'],
@@ -232,72 +259,13 @@ export default function PosDashboard() {
     URL.revokeObjectURL(url)
   }
 
-  const handleDownloadInvoice = () => {
-    if (!completedSale?.invoiceNumber || !completedSale.tenant) return
-    const t = completedSale.tenant
-    const vatBase = t.vatRegistered ? completedSale.total / 1.2 : completedSale.total
-    const vatAmt = t.vatRegistered ? completedSale.total - vatBase : 0
-
-    const lines = [
-      '================================================================',
-      '                         Ф А К Т У Р А',
-      '================================================================',
-      `Фактура №:    ${completedSale.invoiceNumber}`,
-      `Дата:         ${new Date(completedSale.createdAt).toLocaleDateString('bg-BG')}`,
-      `Данъчна дата: ${new Date(completedSale.createdAt).toLocaleDateString('bg-BG')}`,
-      '',
-      '--- ДОСТАВЧИК ---',
-      `Фирма:  ${t.name || ''}`,
-      `ЕИК:    ${t.eik || ''}`,
-      t.vatRegistered ? `ДДС №:  ${t.vatNumber || ''}` : '',
-      `Адрес:  ${t.address || ''}, ${t.city || ''}`,
-      t.mol ? `МОЛ:    ${t.mol}` : '',
-      t.bankIban ? `IBAN:   ${t.bankIban}` : '',
-      t.bankName ? `Банка:  ${t.bankName}` : '',
-      '',
-      '--- ПОЛУЧАТЕЛ ---',
-      'Фирма:  [Получател]',
-      'ЕИК:    [ЕИК на получателя]',
-      'Адрес:  [Адрес на получателя]',
-      '(Полетата ще се попълват автоматично след добавяне на модул Счетоводство)',
-      '',
-      '================================================================',
-      'Артикул                        Кол.    Ед.цена    Стойност',
-      '----------------------------------------------------------------',
-      ...completedSale.lines.map(
-        (l) =>
-          `${l.productName.padEnd(30)} ${String(l.quantity).padStart(5)}  ${l.unitPrice.toFixed(2).padStart(9)}  ${l.total.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`
-      ),
-      '----------------------------------------------------------------',
-      ...(t.vatRegistered
-        ? [
-            `Данъчна основа (20%):              ${vatBase.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`,
-            `ДДС 20%:                           ${vatAmt.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`
-          ]
-        : []),
-      `ОБЩО:                              ${completedSale.total.toFixed(2).padStart(9)} ${CURRENCY_SYMBOL}`,
-      `Валута: ${CURRENCY_CODE}`,
-      '',
-      `Начин на плащане: ${completedSale.paymentMethod === 'CASH' ? 'В БРОЙ' : 'С КАРТА'}`,
-      '',
-      '================================================================',
-      'Съставил: _________________    Получател: _________________',
-      '',
-      'Документът е издаден съгласно ЗДДС',
-      '================================================================'
-    ].join('\n')
-
-    const blob = new Blob(['\uFEFF' + lines], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `invoice-${completedSale.invoiceNumber}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const completeSale = async () => {
     if (!registerId || cart.length === 0) return
+    if (!financeEnabled && issueInvoice && !customerId) {
+      showToast('Изберете контрагент за издаване на фактура', 'error')
+      return
+    }
+
     const currentCart = [...cart]
     const currentRegisterId = registerId
     const currentPaymentMethod = paymentMethod
@@ -309,7 +277,7 @@ export default function PosDashboard() {
     try {
       const result = await createSale.mutateAsync({
         cashRegisterId: registerId,
-        customerId: financeEnabled ? currentCustomerId : undefined,
+        customerId: currentCustomerId,
         paymentMethod,
         lines: cart.map((c) => ({
           productId: c.productId,
@@ -319,6 +287,25 @@ export default function PosDashboard() {
         }))
       })
       const sale = result.sale ?? result
+
+      let posInvoiceId: string | undefined
+      let invoiceNumber: string | undefined
+
+      if (!financeEnabled && currentIssueInvoice && currentCustomerId) {
+        const invoice = await createPosInvoice.mutateAsync({
+          saleId: sale.id,
+          customerId: currentCustomerId,
+          issueDate: new Date().toISOString().slice(0, 10),
+          dueDate,
+          taxEventDate,
+          vatRate,
+          note: invoiceNote || undefined,
+          overrideNumber: overrideNumber || undefined
+        })
+        posInvoiceId = invoice.id
+        invoiceNumber = invoice.number
+      }
+
       const registerList = (registers.data ?? []) as Array<{ id: string; name: string }>
       setCompletedSale({
         saleNo: sale.saleNo || sale.id,
@@ -334,7 +321,8 @@ export default function PosDashboard() {
         createdAt: new Date().toISOString(),
         issueReceipt: currentIssueReceipt,
         issueInvoice: financeEnabled ? Boolean(result.draftInvoiceId) : currentIssueInvoice,
-        invoiceNumber: !financeEnabled && currentIssueInvoice ? getInvoiceNumber() : undefined,
+        invoiceNumber,
+        posInvoiceId,
         draftInvoiceId: result.draftInvoiceId,
         tenant: currentTenant
       })
@@ -343,6 +331,11 @@ export default function PosDashboard() {
       setCustomerId('')
       setIssueInvoice(false)
       setIssueReceipt(true)
+      setOverrideNumber('')
+      setInvoiceNote('')
+      setTaxEventDate(new Date().toISOString().slice(0, 10))
+      setDueDate(addDays(30))
+      setVatRate(20)
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { error?: string } } }
       showToast(apiErr?.response?.data?.error ?? 'Грешка при завършване на продажбата', 'error')
@@ -440,8 +433,15 @@ export default function PosDashboard() {
               <option value="CARD">Карта</option>
               <option value="MIXED">Смесено</option>
             </select>
-            {financeEnabled ? (
-              <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} style={{ padding: 8 }}>
+            {financeEnabled || !financeEnabled ? (
+              <select
+                value={customerId}
+                onChange={(e) => {
+                  setCustomerId(e.target.value)
+                  if (!e.target.value) setIssueInvoice(false)
+                }}
+                style={{ padding: 8 }}
+              >
                 <option value="">Физическо лице</option>
                 {((customers.data ?? []) as Array<any>).map((c) => (
                   <option key={c.id} value={c.id}>
@@ -497,7 +497,7 @@ export default function PosDashboard() {
               />
               Издай стокова разписка
             </label>
-            {!financeEnabled ? (
+            {!financeEnabled && customerId ? (
               <label
                 style={{
                   display: 'flex',
@@ -517,6 +517,30 @@ export default function PosDashboard() {
                 />
                 Издай фактура
               </label>
+            ) : null}
+            {!financeEnabled && issueInvoice && customerId ? (
+              <div style={{ display: 'grid', gap: 8, marginBottom: 10, padding: 10, background: '#f9fafb', borderRadius: 8 }}>
+                <label style={{ fontSize: 12, color: '#374151' }}>
+                  Дата на данъчно събитие
+                  <input type="date" value={taxEventDate} onChange={(e) => setTaxEventDate(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }} />
+                </label>
+                <label style={{ fontSize: 12, color: '#374151' }}>
+                  Падеж
+                  <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }} />
+                </label>
+                <label style={{ fontSize: 12, color: '#374151' }}>
+                  ДДС %
+                  <input type="number" value={vatRate} onChange={(e) => setVatRate(Number(e.target.value))} style={{ width: '100%', marginTop: 4, padding: 8 }} />
+                </label>
+                <label style={{ fontSize: 12, color: '#374151' }}>
+                  Номер на фактура
+                  <input value={overrideNumber} onChange={(e) => setOverrideNumber(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }} />
+                </label>
+                <label style={{ fontSize: 12, color: '#374151' }}>
+                  Бележка
+                  <input value={invoiceNote} onChange={(e) => setInvoiceNote(e.target.value)} style={{ width: '100%', marginTop: 4, padding: 8 }} />
+                </label>
+              </div>
             ) : null}
             <Button variant="success" onClick={completeSale} disabled={createSale.isPending || !cart.length || !registerId}>
               Завърши продажба
@@ -782,14 +806,14 @@ export default function PosDashboard() {
               </div>
             )}
 
-            {completedSale.issueInvoice && !completedSale.draftInvoiceId && (
+            {completedSale.issueInvoice && completedSale.posInvoiceId && completedSale.invoiceNumber ? (
               <div style={{ padding: '12px 24px', borderTop: '1px solid #e5e7eb' }}>
                 <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
                   📄 Фактура № {completedSale.invoiceNumber}
                 </div>
                 <button
                   type="button"
-                  onClick={handleDownloadInvoice}
+                  onClick={() => downloadPosInvoicePdf(completedSale.posInvoiceId!, completedSale.invoiceNumber!)}
                   style={{
                     width: '100%',
                     display: 'flex',
@@ -807,13 +831,10 @@ export default function PosDashboard() {
                   }}
                 >
                   <Download size={15} />
-                  Свали фактура № {completedSale.invoiceNumber}
+                  Изтегли фактура (PDF)
                 </button>
-                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, textAlign: 'center' }}>
-                  Получателят ще може да се избира след добавяне на модул Счетоводство
-                </div>
               </div>
-            )}
+            ) : null}
 
             {completedSale.draftInvoiceId ? (
               <div style={{ padding: '12px 24px', borderTop: '1px solid #e5e7eb' }}>

@@ -13,7 +13,9 @@ export const posManifest: ModuleManifest = {
     { label: 'Каса', path: '/pos', icon: 'Monitor', requiredRole: ['ADMIN', 'MANAGER', 'OPERATOR'] },
     { label: 'Продажби', path: '/pos/sales', icon: 'Receipt', requiredRole: ['ADMIN', 'MANAGER', 'OPERATOR'] },
     { label: 'Каси', path: '/pos/registers', icon: 'CreditCard', requiredRole: ['ADMIN', 'MANAGER'] },
-    { label: 'Справки', path: '/pos/reports', icon: 'BarChart3', requiredRole: ['ADMIN', 'MANAGER'] }
+    { label: 'Справки', path: '/pos/reports', icon: 'BarChart3', requiredRole: ['ADMIN', 'MANAGER'] },
+    { label: 'Контрагенти', path: '/pos/counterparties', icon: 'Users', requiredRole: ['ADMIN', 'MANAGER', 'OPERATOR'] },
+    { label: 'Фактури', path: '/pos/invoices', icon: 'FileText', requiredRole: ['ADMIN', 'MANAGER', 'OPERATOR'] }
   ]
 }
 

@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Wallet,
   Calendar,
+  FileText,
   X
 } from 'lucide-react'
 import { useAuthStore } from '../../store/auth.store'
@@ -35,6 +36,7 @@ interface NavItem {
   label: string
   path: string
   permissionId?: string
+  hideWhenFinance?: boolean
 }
 interface NavGroup {
   id: string
@@ -90,7 +92,9 @@ const navGroups: NavGroup[] = [
       { label: 'Каса', path: '/pos' },
       { label: 'Продажби', path: '/pos/sales' },
       { label: 'Каси', path: '/pos/registers' },
-      { label: 'Справки', path: '/pos/reports' }
+      { label: 'Справки', path: '/pos/reports' },
+      { label: 'Контрагенти', path: '/pos/counterparties', hideWhenFinance: true },
+      { label: 'Фактури', path: '/pos/invoices', hideWhenFinance: true }
     ]
   },
   {
@@ -155,6 +159,8 @@ const itemIcons: Record<string, React.ReactNode> = {
   '/pos/sales': <ClipboardList size={13} />,
   '/pos/registers': <CreditCard size={13} />,
   '/pos/reports': <BarChart3 size={13} />,
+  '/pos/counterparties': <Users size={13} />,
+  '/pos/invoices': <FileText size={13} />,
   '/finance': <LayoutDashboard size={13} />,
   '/finance/customers': <Users size={13} />,
   '/finance/chart-of-accounts': <ListTree size={13} />,
@@ -419,6 +425,10 @@ export function Sidebar({
                 <div style={{ overflow: 'hidden' }}>
                   {group.items
                     .filter((item) => !item.permissionId || canAccessModule(user?.role, item.permissionId))
+                    .filter(
+                      (item) =>
+                        !item.hideWhenFinance || !isModuleEnabledForTenant({ enabledModules }, 'finance')
+                    )
                     .map((item) => {
                     const isActive =
                       location.pathname === item.path ||
