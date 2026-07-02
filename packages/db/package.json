@@ -5,12 +5,13 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev --name init_core_schema",
     "db:studio": "prisma studio",
     "db:seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
     "db:seed:metalkonstrukt": "dotenv -e ../../.env -- tsx prisma/seed-metalkonstrukt.ts",
+    "db:seed:stadlogistik": "ts-node prisma/seed-stadlogistik.ts",
     "db:backup-cleanup": "dotenv -e ../../.env -- tsx scripts/backup-cleanup.ts"
   },
   "prisma": {
