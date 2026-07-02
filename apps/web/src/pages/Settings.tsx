@@ -207,7 +207,6 @@ function LicenseSettings() {
 
 function CompanySettings() {
   const enabledModules = useAuthStore((s) => s.enabledModules)
-  const setEnabledModules = useAuthStore((s) => s.setEnabledModules)
   const financeEnabled = isFinanceModuleEnabledForTenant({ enabledModules })
   const [form, setForm] = useState({
     name: '',
@@ -250,11 +249,11 @@ function CompanySettings() {
           posInvoiceStartNumber: t.posInvoiceStartNumber ?? 1
         })
         if (Array.isArray(t.enabledModules)) {
-          setEnabledModules(t.enabledModules)
+          useAuthStore.getState().setEnabledModules(t.enabledModules)
         }
       })
       .catch(() => {})
-  }, [setEnabledModules])
+  }, [])
 
   const save = async () => {
     setSaving(true)

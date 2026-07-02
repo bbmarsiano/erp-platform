@@ -192,7 +192,6 @@ export function Sidebar({
   const user = useAuthStore((s) => s.user)
   const licensedFeatures = useAuthStore((s) => s.licensedFeatures)
   const enabledModules = useAuthStore((s) => s.enabledModules)
-  const setEnabledModules = useAuthStore((s) => s.setEnabledModules)
   const logout = useAuthStore((s) => s.logout)
   const [tenant, setTenant] = useState<{ name: string; logoUrl: string | null } | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -248,17 +247,24 @@ export function Sidebar({
   }
 
   useEffect(() => {
+    let cancelled = false
+
     api
       .get('/api/tenant')
       .then((r) => {
+        if (cancelled) return
         const data = r.data.data
-        setTenant(data)
+        setTenant({ name: data.name, logoUrl: data.logoUrl ?? null })
         if (Array.isArray(data.enabledModules)) {
-          setEnabledModules(data.enabledModules)
+          useAuthStore.getState().setEnabledModules(data.enabledModules)
         }
       })
       .catch(() => {})
-  }, [setEnabledModules])
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     visibleGroups.forEach((group) => {

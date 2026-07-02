@@ -68,7 +68,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       setEnabledModules: (enabledModules) => {
-        set({ enabledModules })
+        set((state) => {
+          const current = state.enabledModules
+          if (
+            current.length === enabledModules.length &&
+            current.every((moduleId, index) => moduleId === enabledModules[index])
+          ) {
+            return state
+          }
+          return { enabledModules }
+        })
       }
     }),
     {
