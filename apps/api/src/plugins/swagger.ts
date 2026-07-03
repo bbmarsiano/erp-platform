@@ -30,7 +30,15 @@ const swaggerPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   })
 
   await fastify.register(swaggerUi, {
-    routePrefix: '/docs'
+    routePrefix: '/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true
+    },
+    staticCSP: true,
+    // Default CSP includes upgrade-insecure-requests, which breaks HTTP-only deployments.
+    transformStaticCSP: (header) =>
+      String(header).replace(/upgrade-insecure-requests;?\s*/gi, '').trim()
   })
 }
 
