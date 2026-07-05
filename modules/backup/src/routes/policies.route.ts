@@ -30,11 +30,6 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       isEncrypted?: boolean
     }
     const targetType = body.targetType ?? 'LOCAL'
-    if (targetType === 'LOCAL' && !body.targetPath?.trim()) {
-      return reply.status(400).send(
-        createErrorResponse('Пътят е задължителен при LOCAL архивиране', 'TARGET_PATH_REQUIRED', 400)
-      )
-    }
 
     try {
       await validateLocalTargetPath(targetType, body.targetPath?.trim() || null)
@@ -80,12 +75,6 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     const targetType = body.targetType ?? existing.targetType
     const targetPath =
       body.targetPath !== undefined ? body.targetPath.trim() || null : existing.targetPath
-
-    if (targetType === 'LOCAL' && !targetPath) {
-      return reply.status(400).send(
-        createErrorResponse('Пътят е задължителен при LOCAL архивиране', 'TARGET_PATH_REQUIRED', 400)
-      )
-    }
 
     if (body.targetPath !== undefined || body.targetType !== undefined) {
       try {

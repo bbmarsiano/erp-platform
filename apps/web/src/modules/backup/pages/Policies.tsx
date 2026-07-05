@@ -10,7 +10,8 @@ import {
   cronLabel
 } from '../backupUi'
 
-const DEFAULT_TARGET_PATH = '/backups/dflow'
+const PATH_HINT_ABSOLUTE =
+  'Пътят трябва да е абсолютен (да започва с /). Празно поле — системна директория по подразбиране.'
 
 export default function Policies() {
   const policies = useBackupPolicies()
@@ -26,16 +27,12 @@ export default function Policies() {
     schedule: '0 2 * * *',
     retentionDays: 30,
     targetType: 'LOCAL' as 'LOCAL' | 'NETWORK' | 'S3',
-    targetPath: DEFAULT_TARGET_PATH,
+    targetPath: '',
     isEncrypted: true
   })
 
   const onCreate = async () => {
     if (!form.name || !form.schedule) return
-    if (form.targetType === 'LOCAL' && !form.targetPath.trim()) {
-      setPathError('Пътят е задължителен при LOCAL архивиране')
-      return
-    }
     setPathError(null)
     try {
       await createPolicy.mutateAsync(form)
@@ -55,7 +52,7 @@ export default function Policies() {
       schedule: '0 2 * * *',
       retentionDays: 30,
       targetType: 'LOCAL',
-      targetPath: DEFAULT_TARGET_PATH,
+      targetPath: '',
       isEncrypted: true
     })
   }
@@ -132,11 +129,7 @@ export default function Policies() {
                 value={form.targetType}
                 onChange={(e) => {
                   const targetType = e.target.value as 'LOCAL' | 'S3'
-                  setForm({
-                    ...form,
-                    targetType,
-                    targetPath: targetType === 'LOCAL' && !form.targetPath.trim() ? DEFAULT_TARGET_PATH : form.targetPath
-                  })
+                  setForm({ ...form, targetType })
                   if (targetType !== 'LOCAL') setPathError(null)
                 }}
               >
@@ -144,17 +137,19 @@ export default function Policies() {
                 <option value="S3">S3</option>
               </Select>
             </FormField>
-            <FormField label="Път" required={form.targetType === 'LOCAL'}>
+            <FormField label="Път">
               <Input
                 value={form.targetPath}
                 onChange={(e) => {
                   setForm({ ...form, targetPath: e.target.value })
                   if (pathError && e.target.value.trim()) setPathError(null)
                 }}
-                placeholder={DEFAULT_TARGET_PATH}
+                placeholder="/opt/dflow-erp/backups/dflow"
               />
               {pathError ? (
                 <div style={{ marginTop: 6, fontSize: 12, color: '#dc2626', fontWeight: 500 }}>{pathError}</div>
+              ) : form.targetType === 'LOCAL' && form.targetPath.trim() ? (
+                <div style={{ marginTop: 6, fontSize: 12, color: '#6b7280' }}>{PATH_HINT_ABSOLUTE}</div>
               ) : null}
             </FormField>
           </FormRow>

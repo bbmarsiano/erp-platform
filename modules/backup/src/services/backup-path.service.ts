@@ -1,24 +1,39 @@
 import { access, constants, mkdir, unlink, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 
 export const PRODUCTION_DEFAULT_BACKUP_DIR = '/opt/dflow-erp/backups'
+
+/** Dev fallback: apps/api/backups — anchored to module location, not process.cwd(). */
+const DEV_DEFAULT_BACKUP_DIR = join(__dirname, '../../../../../apps/api/backups')
+
+export function backupAbsolutePathError(value: string): string {
+  return `Пътят '${value}' трябва да е абсолютен (да започва с /). Относителни пътища не се поддържат.`
+}
+
+function assertAbsolutePath(value: string): void {
+  if (!isAbsolute(value)) {
+    throw new Error(backupAbsolutePathError(value))
+  }
+}
 
 export function resolveBackupTargetPath(targetPath?: string | null): string {
   const policyPath = targetPath?.trim()
   if (policyPath) {
-    return policyPath.startsWith('/') ? policyPath : resolve(process.cwd(), policyPath)
+    assertAbsolutePath(policyPath)
+    return policyPath
   }
 
   const envPath = process.env.BACKUP_STORAGE_PATH?.trim()
   if (envPath) {
-    return envPath.startsWith('/') ? envPath : resolve(process.cwd(), envPath)
+    assertAbsolutePath(envPath)
+    return envPath
   }
 
   if (process.env.NODE_ENV === 'production') {
     return PRODUCTION_DEFAULT_BACKUP_DIR
   }
 
-  return join(process.cwd(), 'backups')
+  return DEV_DEFAULT_BACKUP_DIR
 }
 
 async function prepareBackupDirectory(dir: string): Promise<void> {
