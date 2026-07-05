@@ -5,6 +5,10 @@ import { mkdir, stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { prisma } from '@dflow/db'
+import {
+  encryptBackupFile,
+  requireBackupEncryptionKey
+} from './backup-encryption.service'
 
 const execFileAsync = promisify(execFile)
 const PRODUCTION_DEFAULT_BACKUP_DIR = '/opt/dflow-erp/backups'
@@ -85,6 +89,17 @@ export function scheduleBackupJob(jobId: string, targetPath?: string | null) {
 
 async function runBackupJob(jobId: string, targetPath?: string | null) {
   try {
+    const job = await prisma.backupJob.findUnique({
+      where: { id: jobId },
+      include: { policy: true }
+    })
+    if (!job) {
+      throw new Error('Архивната задача не е намерена')
+    }
+
+    const isEncrypted = job.policy?.isEncrypted ?? true
+    requireBackupEncryptionKey(isEncrypted)
+
     const dbUrl = process.env.DATABASE_URL
     if (!dbUrl) {
       throw new Error('DATABASE_URL не е конфигуриран')
@@ -100,14 +115,20 @@ async function runBackupJob(jobId: string, targetPath?: string | null) {
     await ensureBackupDirectory(backupDir)
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const filePath = join(backupDir, `backup-${timestamp}.sql`)
+    const plaintextPath = join(backupDir, `backup-${timestamp}.sql`)
 
-    const args = ['-h', host, '-p', port, '-U', user, '-d', database, '-f', filePath, '--no-password']
+    const args = ['-h', host, '-p', port, '-U', user, '-d', database, '-f', plaintextPath, '--no-password']
     const env = password ? { ...process.env, PGPASSWORD: password } : process.env
     await execFileAsync('pg_dump', args, { env })
 
-    const fileStat = await stat(filePath)
-    const checksum = await hashFile(filePath)
+    let finalPath = plaintextPath
+    if (isEncrypted) {
+      finalPath = join(backupDir, `backup-${timestamp}.sql.enc`)
+      await encryptBackupFile(plaintextPath, finalPath)
+    }
+
+    const fileStat = await stat(finalPath)
+    const checksum = await hashFile(finalPath)
 
     await prisma.backupJob.updateMany({
       where: { id: jobId },
@@ -115,7 +136,7 @@ async function runBackupJob(jobId: string, targetPath?: string | null) {
         status: 'COMPLETED',
         completedAt: new Date(),
         sizeBytes: BigInt(fileStat.size),
-        filePath,
+        filePath: finalPath,
         checksum,
         isVerified: false,
         errorMsg: null

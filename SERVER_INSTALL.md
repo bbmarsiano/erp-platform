@@ -216,6 +216,12 @@ LICENSE_SERVER_URL="https://lvhraynmvyvancqyezef.supabase.co"
 NODE_ENV="production"
 PORT=3001
 API_HOST="0.0.0.0"
+
+# Архивиране — мастър ключ за AES-256-GCM (.sql.enc файлове)
+# Генерирай веднъж: openssl rand -hex 32
+# ВАЖНО: Не сменяйте и не губете ключа без план за миграция — съществуващите
+# криптирани архиви стават нечетими без оригиналния BACKUP_ENCRYPTION_KEY.
+BACKUP_ENCRYPTION_KEY="paste-64-hex-chars-here"
 ```
 
 Генерирай JWT секрети автоматично:
