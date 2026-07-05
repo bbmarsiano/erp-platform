@@ -1,10 +1,53 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { access, constants, mkdir, unlink, writeFile } from 'node:fs/promises'
-import { isAbsolute, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 
 export const PRODUCTION_DEFAULT_BACKUP_DIR = '/opt/dflow-erp/backups'
+const API_PACKAGE_NAME = '@dflow/api'
 
-/** Dev fallback: apps/api/backups — anchored to module location, not process.cwd(). */
-const DEV_DEFAULT_BACKUP_DIR = join(__dirname, '../../../../../apps/api/backups')
+function findApiPackageRoot(startDir: string): string {
+  let dir = startDir
+  while (true) {
+    const packageJsonPath = join(dir, 'package.json')
+    if (existsSync(packageJsonPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { name?: string }
+        if (pkg.name === API_PACKAGE_NAME) {
+          return dir
+        }
+      } catch {
+        // ignore malformed package.json
+      }
+    }
+
+    const nestedApiPkg = join(dir, 'apps', 'api', 'package.json')
+    if (existsSync(nestedApiPkg)) {
+      try {
+        const pkg = JSON.parse(readFileSync(nestedApiPkg, 'utf8')) as { name?: string }
+        if (pkg.name === API_PACKAGE_NAME) {
+          return join(dir, 'apps', 'api')
+        }
+      } catch {
+        // ignore malformed package.json
+      }
+    }
+
+    const parent = dirname(dir)
+    if (parent === dir) {
+      throw new Error('Could not locate apps/api package root')
+    }
+    dir = parent
+  }
+}
+
+let devDefaultBackupDirCache: string | undefined
+
+export function resolveDevDefaultBackupDir(): string {
+  if (!devDefaultBackupDirCache) {
+    devDefaultBackupDirCache = join(findApiPackageRoot(__dirname), 'backups')
+  }
+  return devDefaultBackupDirCache
+}
 
 export function backupAbsolutePathError(value: string): string {
   return `Пътят '${value}' трябва да е абсолютен (да започва с /). Относителни пътища не се поддържат.`
@@ -33,7 +76,7 @@ export function resolveBackupTargetPath(targetPath?: string | null): string {
     return PRODUCTION_DEFAULT_BACKUP_DIR
   }
 
-  return DEV_DEFAULT_BACKUP_DIR
+  return resolveDevDefaultBackupDir()
 }
 
 async function prepareBackupDirectory(dir: string): Promise<void> {
