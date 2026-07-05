@@ -54,7 +54,7 @@ const jobsRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     return createSuccessResponse(serializeBackupJob(updated))
   })
 
-  // internal endpoint used by Go backup daemon
+  // Optional endpoint for external backup workers
   fastify.put('/jobs/:id/status', { preHandler: [authenticate] }, async (request, reply) => {
     const params = request.params as { id: string }
     const body = request.body as {

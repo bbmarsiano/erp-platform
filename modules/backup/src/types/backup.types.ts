@@ -1,5 +1,5 @@
-// Go daemon communication interface
-export interface BackupDaemonConfig {
+// Backup agent configuration (Node.js in-process runner)
+export interface BackupAgentConfig {
   apiUrl: string
   apiKey: string
   dbConnectionString: string
@@ -7,7 +7,7 @@ export interface BackupDaemonConfig {
   encryptionKey: string
 }
 
-export interface BackupDaemonStatus {
+export interface BackupAgentStatus {
   isRunning: boolean
   lastHeartbeat: Date
   version: string

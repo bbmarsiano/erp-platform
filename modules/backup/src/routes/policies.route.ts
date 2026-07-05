@@ -1,7 +1,7 @@
 import { createErrorResponse, createSuccessResponse, authenticate } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { scheduleDevBackupSimulation } from '../services/dev-simulation.service'
+import { scheduleBackupJob } from '../services/backup-runner.service'
 import { serializeBackupJob } from '../utils/serialize-job'
 
 const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -86,7 +86,7 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         startedAt
       }
     })
-    scheduleDevBackupSimulation(job.id)
+    scheduleBackupJob(job.id, policy.targetPath)
     return createSuccessResponse(serializeBackupJob(job))
   })
 }

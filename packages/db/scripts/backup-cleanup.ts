@@ -1,6 +1,6 @@
 import { prisma } from '../src/index'
 
-const STALE_ERROR_MSG = 'Timeout — Go daemon не е свързан'
+const STALE_ERROR_MSG = 'Timeout — архивната задача не беше завършена навреме'
 
 async function main() {
   const cutoff = new Date(Date.now() - 10 * 60 * 1000)

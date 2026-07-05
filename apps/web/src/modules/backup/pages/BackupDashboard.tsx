@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Server } from 'lucide-react'
 import { Card, PageHeader, StatusBadge } from '../../../components/ui'
-import { useBackupJobs, useBackupPolicies } from '../hooks/useBackup'
+import { useBackupJobs, useBackupPolicies, useBackupStatus } from '../hooks/useBackup'
 
 function StatCard({
   title,
@@ -51,6 +51,7 @@ function StatCard({
 export default function BackupDashboard() {
   const policiesQuery = useBackupPolicies()
   const jobsQuery = useBackupJobs()
+  const statusQuery = useBackupStatus()
 
   const stats = useMemo(() => {
     const policies = (policiesQuery.data ?? []) as Array<any>
@@ -59,7 +60,8 @@ export default function BackupDashboard() {
     weekStart.setDate(weekStart.getDate() - 7)
     const completed = jobs.filter((j) => j.status === 'COMPLETED' || j.status === 'VERIFIED')
     const lastCompleted = completed.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0]
-    const agentActive = jobs.some((j) => j.status === 'RUNNING')
+    const agentRunning = jobs.some((j) => j.status === 'RUNNING')
+    const agentConnected = statusQuery.data?.connected ?? true
     return {
       activePolicies: policies.filter((p) => p.isActive).length,
       lastBackup: lastCompleted ? new Date(lastCompleted.createdAt).toLocaleString('bg-BG') : 'Няма',
@@ -67,9 +69,11 @@ export default function BackupDashboard() {
         (j) => (j.status === 'COMPLETED' || j.status === 'VERIFIED') && new Date(j.createdAt) >= weekStart
       ).length,
       failedWeek: jobs.filter((j) => j.status === 'FAILED' && new Date(j.createdAt) >= weekStart).length,
-      agentActive
+      agentConnected,
+      agentRunning,
+      agentMessage: statusQuery.data?.message ?? 'Backup агентът е готов'
     }
-  }, [jobsQuery.data, policiesQuery.data])
+  }, [jobsQuery.data, policiesQuery.data, statusQuery.data])
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 1400 }}>
@@ -101,8 +105,8 @@ export default function BackupDashboard() {
                 width: 44,
                 height: 44,
                 borderRadius: 10,
-                background: stats.agentActive ? '#f0fdf4' : '#fffbeb',
-                color: stats.agentActive ? '#16a34a' : '#d97706',
+                background: !stats.agentConnected ? '#fef2f2' : stats.agentRunning ? '#f0fdf4' : '#f0fdf4',
+                color: !stats.agentConnected ? '#dc2626' : '#16a34a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -114,16 +118,22 @@ export default function BackupDashboard() {
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Backup агент</div>
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                {stats.agentActive
-                  ? 'Агентът е свързан и изпълнява архивни задачи'
-                  : 'Конфигуриран — очаква свързване с Go daemon'}
+                {stats.agentRunning
+                  ? 'Агентът изпълнява архивни задачи'
+                  : stats.agentMessage}
               </div>
             </div>
           </div>
           <StatusBadge
-            label={stats.agentActive ? 'Активен' : 'Очаква свързване'}
-            bg={stats.agentActive ? '#dcfce7' : '#fef3c7'}
-            color={stats.agentActive ? '#166534' : '#92400e'}
+            label={
+              !stats.agentConnected
+                ? 'Недостъпен'
+                : stats.agentRunning
+                  ? 'Активен'
+                  : 'Готов'
+            }
+            bg={!stats.agentConnected ? '#fee2e2' : stats.agentRunning ? '#dcfce7' : '#dcfce7'}
+            color={!stats.agentConnected ? '#991b1b' : '#166534'}
           />
         </div>
       </Card>

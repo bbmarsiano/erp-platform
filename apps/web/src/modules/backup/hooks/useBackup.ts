@@ -7,6 +7,16 @@ export const useBackupPolicies = () =>
     queryFn: () => api.get('/api/backup/policies').then((r) => r.data.data)
   })
 
+export const useBackupStatus = () =>
+  useQuery({
+    queryKey: ['backup', 'status'],
+    queryFn: () =>
+      api.get('/api/backup/status').then(
+        (r) => r.data.data as { connected: boolean; status: string; message: string }
+      ),
+    refetchInterval: 30_000
+  })
+
 export const useCreateBackupPolicy = () => {
   const qc = useQueryClient()
   return useMutation({

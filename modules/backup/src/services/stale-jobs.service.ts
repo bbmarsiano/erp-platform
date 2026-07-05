@@ -1,7 +1,7 @@
 import { prisma } from '@dflow/db'
 
 const STALE_PENDING_MS = 10 * 60 * 1000
-const STALE_ERROR_MSG = 'Timeout — Go daemon не е свързан'
+const STALE_ERROR_MSG = 'Timeout — архивната задача не беше завършена навреме'
 
 export async function cleanupStaleBackupJobs(tenantId?: string) {
   const cutoff = new Date(Date.now() - STALE_PENDING_MS)
