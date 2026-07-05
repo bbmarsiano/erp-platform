@@ -37,7 +37,18 @@ export default function Policies() {
       return
     }
     setPathError(null)
-    await createPolicy.mutateAsync(form)
+    try {
+      await createPolicy.mutateAsync(form)
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number; data?: { error?: string } } }
+      const message = apiErr?.response?.data?.error
+      if (apiErr?.response?.status === 400 && message) {
+        setPathError(message)
+        return
+      }
+      showToast(message ?? 'Грешка при създаване на политика', 'error')
+      return
+    }
     setShowForm(false)
     setForm({
       name: '',

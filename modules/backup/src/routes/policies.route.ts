@@ -1,8 +1,14 @@
 import { createErrorResponse, createSuccessResponse, authenticate } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import { validateBackupTargetPathForPolicy } from '../services/backup-path.service'
 import { scheduleBackupJob } from '../services/backup-runner.service'
 import { serializeBackupJob } from '../utils/serialize-job'
+
+async function validateLocalTargetPath(targetType: 'LOCAL' | 'NETWORK' | 'S3', targetPath?: string | null) {
+  if (targetType !== 'LOCAL') return
+  await validateBackupTargetPathForPolicy(targetPath)
+}
 
 const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/policies', { preHandler: [authenticate], schema: { tags: ['BACKUP'] } }, async (request) => {
@@ -29,6 +35,14 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         createErrorResponse('Пътят е задължителен при LOCAL архивиране', 'TARGET_PATH_REQUIRED', 400)
       )
     }
+
+    try {
+      await validateLocalTargetPath(targetType, body.targetPath?.trim() || null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Невалиден път за архивиране'
+      return reply.status(400).send(createErrorResponse(message, 'BACKUP_TARGET_PATH_INVALID', 400))
+    }
+
     const created = await prisma.backupPolicy.create({
       data: {
         tenantId: request.user.tenantId,
@@ -55,9 +69,39 @@ const policiesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       isActive: boolean
       isEncrypted: boolean
     }>
+
+    const existing = await prisma.backupPolicy.findFirst({
+      where: { id: params.id, tenantId: request.user.tenantId }
+    })
+    if (!existing) {
+      return reply.status(404).send(createErrorResponse('Policy not found', 'POLICY_NOT_FOUND', 404))
+    }
+
+    const targetType = body.targetType ?? existing.targetType
+    const targetPath =
+      body.targetPath !== undefined ? body.targetPath.trim() || null : existing.targetPath
+
+    if (targetType === 'LOCAL' && !targetPath) {
+      return reply.status(400).send(
+        createErrorResponse('Пътят е задължителен при LOCAL архивиране', 'TARGET_PATH_REQUIRED', 400)
+      )
+    }
+
+    if (body.targetPath !== undefined || body.targetType !== undefined) {
+      try {
+        await validateLocalTargetPath(targetType, targetPath)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Невалиден път за архивиране'
+        return reply.status(400).send(createErrorResponse(message, 'BACKUP_TARGET_PATH_INVALID', 400))
+      }
+    }
+
     const updated = await prisma.backupPolicy.updateMany({
       where: { id: params.id, tenantId: request.user.tenantId },
-      data: body
+      data: {
+        ...body,
+        ...(body.targetPath !== undefined ? { targetPath } : {})
+      }
     })
     if (!updated.count) return reply.status(404).send(createErrorResponse('Policy not found', 'POLICY_NOT_FOUND', 404))
     return createSuccessResponse({ updated: true })
