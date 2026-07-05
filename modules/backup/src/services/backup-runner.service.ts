@@ -2,11 +2,44 @@ import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { createReadStream } from 'node:fs'
 import { mkdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { prisma } from '@dflow/db'
 
 const execFileAsync = promisify(execFile)
+const PRODUCTION_DEFAULT_BACKUP_DIR = '/opt/dflow-erp/backups'
+
+function resolveBackupDirectory(targetPath?: string | null): string {
+  const policyPath = targetPath?.trim()
+  if (policyPath) {
+    return policyPath.startsWith('/') ? policyPath : resolve(process.cwd(), policyPath)
+  }
+
+  const envPath = process.env.BACKUP_STORAGE_PATH?.trim()
+  if (envPath) {
+    return envPath.startsWith('/') ? envPath : resolve(process.cwd(), envPath)
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return PRODUCTION_DEFAULT_BACKUP_DIR
+  }
+
+  return join(process.cwd(), 'backups')
+}
+
+async function ensureBackupDirectory(dir: string): Promise<void> {
+  try {
+    await mkdir(dir, { recursive: true })
+  } catch (err) {
+    const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : ''
+    if (code === 'EACCES' || code === 'EPERM' || code === 'ENOENT') {
+      throw new Error(
+        `Няма права за писане в директорията за архиви: ${dir}. Провери правата на директорията.`
+      )
+    }
+    throw err
+  }
+}
 
 function parseDatabaseUrl(url: string) {
   const parsed = new URL(url)
@@ -63,8 +96,8 @@ async function runBackupJob(jobId: string, targetPath?: string | null) {
     })
 
     const { host, port, user, password, database } = parseDatabaseUrl(dbUrl)
-    const backupDir = targetPath?.trim() || process.env.BACKUP_PATH || './backups/dflow'
-    await mkdir(backupDir, { recursive: true })
+    const backupDir = resolveBackupDirectory(targetPath)
+    await ensureBackupDirectory(backupDir)
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
     const filePath = join(backupDir, `backup-${timestamp}.sql`)
