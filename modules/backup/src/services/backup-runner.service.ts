@@ -10,19 +10,9 @@ import {
   requireBackupEncryptionKey
 } from './backup-encryption.service'
 import { ensureBackupDirectory, resolveBackupTargetPath } from './backup-path.service'
+import { parseDatabaseUrl } from './database-url.service'
 
 const execFileAsync = promisify(execFile)
-
-function parseDatabaseUrl(url: string) {
-  const parsed = new URL(url)
-  return {
-    host: parsed.hostname,
-    port: parsed.port || '5432',
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database: parsed.pathname.replace(/^\//, '')
-  }
-}
 
 async function hashFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {

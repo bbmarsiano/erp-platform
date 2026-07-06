@@ -2,9 +2,9 @@ import { createErrorResponse, createSuccessResponse, authenticate } from '@dflow
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import {
-  decryptBackupToSql,
-  isEncryptedBackupPath
-} from '../services/backup-encryption.service'
+  formatRestoreTestNote,
+  runRestoreTest
+} from '../services/restore-runner.service'
 import { serializeBackupJob, serializeBackupJobs } from '../utils/serialize-job'
 
 const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
@@ -32,32 +32,22 @@ const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
         .send(createErrorResponse('Архивният файл липсва за тази задача', 'BACKUP_FILE_MISSING', 400))
     }
 
-    const shouldDecrypt =
-      isEncryptedBackupPath(source.filePath) || source.policy?.isEncrypted !== false
-
-    if (shouldDecrypt) {
-      try {
-        const sql = await decryptBackupToSql(source.filePath)
-        if (!sql.length) {
-          throw new Error('Дешифрираният архив е празен.')
-        }
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Неуспешно дешифриране на архива. Проверете BACKUP_ENCRYPTION_KEY.'
-        return reply.status(400).send(createErrorResponse(message, 'RESTORE_DECRYPT_FAILED', 400))
-      }
+    const result = await runRestoreTest(source.id)
+    if (!result.success) {
+      return reply
+        .status(400)
+        .send(createErrorResponse(result.errorMessage ?? 'Тест на възстановяване: неуспешен.', 'RESTORE_TEST_FAILED', 400))
     }
 
+    const note = body.note ?? formatRestoreTestNote(result)
     const created = await prisma.backupJob.create({
       data: {
         tenantId: request.user.tenantId,
-        policyId: source?.policyId,
+        policyId: source.policyId,
         status: 'VERIFIED',
         isVerified: true,
         completedAt: new Date(),
-        note: body.note ?? `Test restore from ${body.jobId}`
+        note
       }
     })
     return createSuccessResponse(serializeBackupJob(created))
@@ -65,4 +55,3 @@ const restoreRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
 }
 
 export default restoreRoute
-
