@@ -10,7 +10,7 @@ export default function Restore() {
   const rows = (restorePoints.data ?? []) as Array<any>
 
   const handleTestRestore = (jobId: string) => {
-    testRestore.mutate({ jobId, note: 'Ръчен тест на възстановяване от UI' })
+    testRestore.mutate({ jobId })
   }
 
   return (

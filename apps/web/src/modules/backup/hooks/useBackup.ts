@@ -63,7 +63,7 @@ export const useRestorePoints = () =>
 export const useTestRestore = () => {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { jobId: string; note?: string }) => api.post('/api/backup/restore/test', data).then((r) => r.data.data),
+    mutationFn: (data: { jobId: string }) => api.post('/api/backup/restore/test', data).then((r) => r.data.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['backup', 'restore-points'] })
       qc.invalidateQueries({ queryKey: ['backup', 'jobs'] })
