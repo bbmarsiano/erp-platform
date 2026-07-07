@@ -1,7 +1,7 @@
 {
   "name": "dflow-erp",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "scripts": {
     "dev": "concurrently \"pnpm --filter @dflow/api dev\" \"pnpm --filter @dflow/web dev\"",
     "build": "pnpm -r build",

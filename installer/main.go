@@ -18,7 +18,7 @@ import (
 	"github.com/fatih/color"
 )
 
-var VERSION = "0.7.0"
+var VERSION = "0.7.1"
 
 const LICENSE_SERVER = "https://lvhraynmvyvancqyezef.supabase.co"
 const GITHUB_REPO = "bbmarsiano/erp-platform"

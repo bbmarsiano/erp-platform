@@ -89,8 +89,6 @@ for module in wms scm mes pos backup finance; do
   fi
 done
 
-done
-
 # 10. Root config files
 cp package.json "${PACKAGE_DIR}/"
 cp pnpm-workspace.yaml "${PACKAGE_DIR}/"
