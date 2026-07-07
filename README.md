@@ -1,168 +1,82 @@
 # DFlowERP
 
-**Модулна, самостоятелно хоствана ERP платформа с български интерфейс.**
-Изградена с Node.js, React и PostgreSQL. Продавана чрез времеви лицензи.
+**Enterprise Resource Planning Platform for Bulgarian SMEs**  
+Self-hosted, modular, Bulgarian-language ERP system.
 
----
+[![Version](https://img.shields.io/badge/version-0.7.1-blue)](https://github.com/bbmarsiano/erp-platform/releases/tag/v0.7.1)
+[![License](https://img.shields.io/badge/license-BSL-green)](./LICENSE)
 
-## Какво е включено в v0.7.0
+## Модули
 
-| Модул | Статус | Описание |
-|-------|--------|----------|
-| Core / Auth | ✅ | JWT автентикация, RBAC роли, одит лог |
-| WMS — Складово стопанство | ✅ | Складове, наличности, приходи, изходи, движения, продукти с баркод |
-| SCM — Верига на доставките | ✅ | Доставчици, поръчки покупка, доставки |
-| MES — Производство | ✅ | Рецептури (BOM), производствени нареждания |
-| POS — Точка на продажба | ✅ | Касов терминал, баркод скенер, касова бележка, фактура |
-| FIN — Финанси | ✅ | Клиенти, фактури, вземания/задължения, главна книга, банково, справки, периоди |
-| Backup — Архивиране | ✅ | Политики, история, точки за възстановяване |
-| Потребители | ✅ | CRUD, роли, промяна на парола |
-| Справки | ✅ | BI табла с графики, период филтри, Excel export |
-| Баркод скенер | ✅ | USB/Bluetooth + камера, POS и WMS интеграция |
-| Help система | ✅ | Вградено ръководство BG/EN с търсене |
-| Лицензен контрол | ✅ | Модулни лицензи, lifetime/annual, grace period |
+| Модул | Описание |
+|-------|----------|
+| WMS | Складово стопанство |
+| SCM | Верига на доставките |
+| MES | Производство |
+| POS | Точка на продажба + Контрагенти + Фактури |
+| Finance | Финансово-счетоводен модул (опционален) |
+| Backup | Архивиране с AES-256-GCM криптиране |
 
----
+## Технологии
 
-## Tech Stack
+- **Backend:** Node.js v22 LTS, Fastify 4, Prisma ORM, PostgreSQL
+- **Frontend:** React, Vite, Tailwind CSS
+- **Build:** pnpm workspaces, esbuild (modules), TypeScript
+- **PDF:** pdfmake (Cyrillic support)
+- **API docs:** Swagger UI at `/docs`
 
-| Компонент | Технология |
-|-----------|-----------|
-| Backend | Node.js 22 + Fastify 4 + TypeScript |
-| Frontend | React 18 + Vite + TypeScript |
-| Database | PostgreSQL 14+ + Prisma ORM |
-| Monorepo | pnpm workspaces |
-| Installer | Go 1.22 (cross-platform binary) |
+## Изисквания
 
----
+- Ubuntu 22.04+ / macOS
+- Node.js v22 LTS
+- PostgreSQL 14+
+- pnpm 9.x
+- nginx (production)
 
-## Системни изисквания
-
-| Компонент | Версия | Бележка |
-|-----------|--------|---------|
-| Node.js | **v22 LTS** | ⚠️ v24 не се поддържа |
-| PostgreSQL | 14–16 | Поддържа портове 5432, 5433, 5434 |
-| pnpm | 9.x | `sudo npm install -g pnpm@9.15.0` |
-| Браузър | Chrome / Firefox | Safari може да не работи с localhost |
-
----
-
-## Installer (препоръчан начин)
-
-Свали installer за твоята платформа от
-[GitHub Releases — v0.7.0-installer](https://github.com/bbmarsiano/erp-platform/releases/tag/v0.7.0-installer):
-
-| Платформа | Файл |
-|-----------|------|
-| Windows 64-bit | `dflow-installer-windows-amd64.exe` |
-| Mac Apple Silicon | `dflow-installer-darwin-arm64` |
-| Mac Intel | `dflow-installer-darwin-amd64` |
-| Linux 64-bit | `dflow-installer-linux-amd64` |
+## Бърза инсталация (production)
 
 ```bash
-# Mac / Linux
-chmod +x dflow-installer-darwin-arm64
-./dflow-installer-darwin-arm64
+# 1. Клонирай репото
+git clone https://github.com/bbmarsiano/erp-platform.git dflow
+cd dflow
 
-# Windows — стартирай като Administrator
-dflow-installer-windows-amd64.exe
-```
+# 2. Конфигурирай .env
+cp .env.example .env  # редактирай с твоите стойности
 
-### Demo лиценз
-```
-DEMO-0000-0000-0000
-```
-
----
-
-## Бързо стартиране (локална разработка)
-
-```bash
-# 1. Клонирай
-git clone https://github.com/bbmarsiano/erp-platform.git
-cd erp-platform
-
-# 2. Инсталирай зависимости
+# 3. Инсталирай и build-вай
 pnpm install
-
-# 3. Конфигурирай среда
-cp .env.example .env
-# Редактирай .env — смени YOUR_USERNAME с output от: whoami
-
-# 4. Създай база данни
-createdb erp_dev
-
-# 5. Миграции
-pnpm db:generate
-pnpm db:migrate
-
-# 6. Seed данни
-cp .env packages/db/.env
-pnpm db:seed
-
-# 7. Стартирай
-pnpm dev
+cd packages/db && export DATABASE_URL="..." && npx prisma migrate deploy && cd ..
+pnpm --filter "@dflow/core" build
+# ... (виж пълната документация)
 ```
 
-| Услуга | URL |
-|--------|-----|
-| Frontend | http://localhost:5173 |
-| API | http://localhost:3001 |
-| Swagger | http://localhost:3001/docs |
+## Модулна архитектура
 
-**Demo вход:** `admin@dflowerp.com` / `admin123`
+Всеки модул е независим пакет в `modules/`:
+- Зарежда се динамично от `moduleLoader`
+- Контролира се per-tenant чрез `enabledModules`
+- Build-ва се отделно с esbuild
 
----
+## Finance модул
 
-## Deployment модел
+Опционален модул с:
+- Пълно двойно счетоводство (double-entry)
+- Фактури с ЗДДС реквизити (PDF)
+- Главна книга, Оборотна ведомост, ОПР, Баланс
+- Автоматизация от POS и SCM операции
+- Затваряне на счетоводни периоди
 
-```
-[Централен сървър]
-    ├── DFlowERP API (:3001)
-    ├── PostgreSQL
-    └── VPN достъп за служители
+## POS Фактуриране (без Finance)
 
-[Служители]
-    └── Браузър → http://[SERVER-IP]:3001
-```
+За инсталации без Finance модул:
+- Управление на Контрагенти директно в POS
+- Издаване на правно-издържани фактури с ЗДДС
+- Конфигурируема номерация
 
----
+## Changelog
 
-## Структура на проекта
+Виж [CHANGELOG.md](./CHANGELOG.md)
 
-```
-erp-platform/
-├── apps/
-│   ├── api/              # Fastify backend
-│   └── web/              # React + Vite frontend
-├── packages/
-│   ├── core/             # Споделени типове
-│   └── db/               # Prisma schema + миграции
-├── modules/              # ERP plugin модули
-│   ├── wms/              # Складово стопанство
-│   ├── scm/              # Верига на доставките
-│   ├── mes/              # Производство
-│   ├── pos/              # Точка на продажба
-│   └── backup/           # Архивиране
-├── installer/            # Go cross-platform installer
-└── scripts/              # Build скриптове
-```
+## Лиценз
 
----
-
-## Модулни интеграции
-
-- **SCM → WMS:** Потвърдена доставка автоматично създава GoodsReceipt
-- **MES → WMS:** Завършено нареждане консумира материали и добавя готова продукция
-- **POS → WMS:** Продажба намалява наличността в реално време
-
----
-
-## Документация
-
-| Файл | Описание |
-|------|---------|
-| `SERVER_INSTALL.md` | Ръчна инсталация на Linux сървър |
-| `TESTING.md` | Инструкции за тестване |
-| `docs/manual/bg/manual.md` | Ръководство за употреба (БГ) |
-| `docs/manual/en/manual.md` | User Manual (EN) |
+Business Source License (BSL) — виж [LICENSE](./LICENSE)
