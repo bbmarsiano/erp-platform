@@ -1,10 +1,16 @@
-import { createErrorResponse, createSuccessResponse, authenticate, requireRole, requireTenantModule } from '@dflow/core'
+import { createErrorResponse, createSuccessResponse, authenticate, requireRole, requireScope, requireTenantModule } from '@dflow/core'
 import { prisma } from '@dflow/db'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { listCustomers } from '../services/customer.service'
 import type { CustomerInput } from '../types/finance.types'
 
 const financeGuards = [authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), requireTenantModule('finance')]
+const financeCustomerCreateGuards = [
+  authenticate,
+  requireRole('SUPER_ADMIN', 'MANAGER', 'INTEGRATION'),
+  requireScope('module:finance'),
+  requireTenantModule('finance')
+]
 
 const customersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   fastify.get('/customers', { preHandler: financeGuards, schema: { tags: ['FINANCE'] } }, async (request) => {
@@ -17,7 +23,7 @@ const customersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     return createSuccessResponse(data)
   })
 
-  fastify.post('/customers', { preHandler: financeGuards }, async (request) => {
+  fastify.post('/customers', { preHandler: financeCustomerCreateGuards }, async (request) => {
     const body = request.body as CustomerInput
     const created = await prisma.customer.create({
       data: {

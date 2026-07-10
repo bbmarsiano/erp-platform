@@ -5,8 +5,9 @@ import { isFinanceModuleEnabledForTenant } from '../lib/tenantModules'
 import { APP_VERSION } from '../version'
 import { HelpTooltip } from '../components/ui'
 import ExportData from './settings/ExportData'
+import ApiKeysSettings from './settings/ApiKeysSettings'
 
-type SettingsTab = 'profile' | 'system' | 'license' | 'company' | 'export'
+type SettingsTab = 'profile' | 'system' | 'license' | 'company' | 'export' | 'api-keys'
 
 interface LicenseInfo {
   valid?: boolean
@@ -529,12 +530,14 @@ function CompanySettings() {
 export default function Settings() {
   const user = useAuthStore((s) => s.user)
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN'
 
   const tabs = [
     { id: 'profile' as const, label: 'Профил' },
     { id: 'system' as const, label: 'Система' },
     { id: 'license' as const, label: 'Лиценз' },
     { id: 'company' as const, label: 'Фирма' },
+    ...(isSuperAdmin ? [{ id: 'api-keys' as const, label: 'API ключове' }] : []),
     { id: 'export' as const, label: '📤 Експорт на данни' }
   ]
 
@@ -694,6 +697,8 @@ export default function Settings() {
       {activeTab === 'license' && <LicenseSettings />}
 
       {activeTab === 'company' && <CompanySettings />}
+
+      {activeTab === 'api-keys' && isSuperAdmin && <ApiKeysSettings />}
 
       {activeTab === 'export' && <ExportData />}
     </div>
