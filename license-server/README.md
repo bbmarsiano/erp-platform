@@ -1,23 +1,22 @@
-# DFlowERP License Server
+# DFlow License Server
 
-Supabase-базиран лицензен сървър за DFlowERP.
+Supabase-базиран лицензен сървър за **DFlowERP** и **DFlowCRM**.
 
 ## Архитектура
 
 ```
-[Go Installer] ──POST──▶ [validate-license Edge Function]
-[ERP Startup]  ──POST──▶ [validate-license Edge Function]
-                             │
-                             ▼
-                     [Supabase PostgreSQL]
-                     tenants + license_keys + validation_log
+[Go Installer / App Startup] ──POST──▶ [validate-license Edge Function]
+                                          │
+                                          ▼
+                                  [Supabase PostgreSQL]
+                                  tenants + license_keys (product: erp|crm) + validation_log
 ```
 
 ## Setup
 
 ### 1. SQL миграция
-Supabase Dashboard → SQL Editor → изпълни:
-`supabase/migrations/001_license_schema.sql`
+Supabase Dashboard → SQL Editor → изпълни migrations in order under
+`supabase/migrations/` (includes `006_license_product.sql` for multi-product support).
 
 ### 2. Deploy Edge Function
 ```bash
@@ -52,9 +51,19 @@ curl -X POST https://lvhraynmvyvancqyezef.supabase.co/functions/v1/validate-lice
   "expiresAt": "2027-05-08T...",
   "tenant": "Demo Client",
   "maxUsers": 10,
-  "plan": "standard"
+  "plan": "standard",
+  "product": "erp"
 }
 ```
+
+## Products
+
+| product | Modules |
+|---------|---------|
+| `erp` (default) | wms, scm, mes, pos, backup, finance |
+| `crm` | sales, service, analytics, marketing, integrations |
+
+Existing rows are backfilled as `product = 'erp'`.
 
 ## Demo данни
 
@@ -62,8 +71,9 @@ curl -X POST https://lvhraynmvyvancqyezef.supabase.co/functions/v1/validate-lice
 |------|---------|
 | Лиценз ключ | `DEMO-0000-0000-0000` |
 | Tenant | Demo Client |
+| Product | erp |
 | Изтича | 1 година от създаването |
-| Модули | Всички 5 |
+| Модули | WMS/SCM/MES/POS/Backup |
 
 ## Offline grace period
 

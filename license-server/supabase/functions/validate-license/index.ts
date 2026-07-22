@@ -90,7 +90,8 @@ serve(async (req) => {
         isTrial,
         isLifetime,
         daysRemaining,
-        allowedVersion: license.allowed_version ?? null
+        allowedVersion: license.allowed_version ?? null,
+        product: license.product ?? 'erp'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

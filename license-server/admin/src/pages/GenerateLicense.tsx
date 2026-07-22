@@ -6,6 +6,8 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 
+type ProductId = 'erp' | 'crm'
+
 function generateKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   const seg = () =>
@@ -13,20 +15,31 @@ function generateKey(): string {
   return `${seg()}-${seg()}-${seg()}-${seg()}`
 }
 
+const KEY_FORMAT = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+
 const lifetimeExpiryDate = () => {
   const d = new Date()
   d.setFullYear(d.getFullYear() + 100)
   return d
 }
 
-const allModules = [
-  { id: 'module:wms', label: '📦 WMS — Складово стопанство' },
-  { id: 'module:scm', label: '🚚 SCM — Верига на доставките' },
-  { id: 'module:mes', label: '🏭 MES — Производство' },
-  { id: 'module:pos', label: '🛒 POS — Точка на продажба' },
-  { id: 'module:backup', label: '💾 Backup — Архивиране' },
-  { id: 'module:finance', label: '💰 Finance — Финансово-счетоводен модул' }
-]
+const PRODUCT_MODULES: Record<ProductId, { id: string; label: string }[]> = {
+  erp: [
+    { id: 'module:wms', label: '📦 WMS — Складово стопанство' },
+    { id: 'module:scm', label: '🚚 SCM — Верига на доставките' },
+    { id: 'module:mes', label: '🏭 MES — Производство' },
+    { id: 'module:pos', label: '🛒 POS — Точка на продажба' },
+    { id: 'module:backup', label: '💾 Backup — Архивиране' },
+    { id: 'module:finance', label: '💰 Finance — Финансово-счетоводен модул' }
+  ],
+  crm: [
+    { id: 'module:sales', label: '📊 Sales — Продажби' },
+    { id: 'module:service', label: '🛠 Service — Сървиз' },
+    { id: 'module:analytics', label: '📈 Analytics — Анализи' },
+    { id: 'module:marketing', label: '📣 Marketing — Маркетинг' },
+    { id: 'module:integrations', label: '🔌 Integrations — Интеграции' }
+  ]
+}
 
 const fieldStyle: React.CSSProperties = {
   width: '100%',
@@ -49,15 +62,20 @@ const labelStyle: React.CSSProperties = {
 export default function GenerateLicense() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [tenantId, setTenantId] = useState('')
+  const [product, setProduct] = useState<ProductId>('erp')
+  const [customKey, setCustomKey] = useState('')
   const [expiresAt, setExpiresAt] = useState('')
   const [maxUsers, setMaxUsers] = useState(10)
   const [billingType, setBillingType] = useState<'annual' | 'lifetime'>('annual')
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
-    allModules.map((m) => m.id)
+    PRODUCT_MODULES.erp.map((m) => m.id)
   )
   const [generated, setGenerated] = useState('')
+  const [error, setError] = useState('')
   const [pricing, setPricing] = useState<PricingConfig | null>(null)
   const [maxInstalls, setMaxInstalls] = useState(3)
+
+  const allModules = PRODUCT_MODULES[product]
 
   useEffect(() => {
     const load = async () => {
@@ -80,19 +98,38 @@ export default function GenerateLicense() {
       })
   }, [])
 
-  const price = pricing ? calculateLicensePrice(pricing, billingType, maxUsers) : null
+  useEffect(() => {
+    setSelectedFeatures(PRODUCT_MODULES[product].map((m) => m.id))
+  }, [product])
+
+  const price = product === 'erp' && pricing ? calculateLicensePrice(pricing, billingType, maxUsers) : null
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    const key = generateKey()
+    setError('')
+    setGenerated('')
+
+    let key: string
+    const trimmedCustom = customKey.trim().toUpperCase()
+    if (trimmedCustom) {
+      if (!KEY_FORMAT.test(trimmedCustom)) {
+        setError('Невалиден формат. Използвайте XXXX-XXXX-XXXX-XXXX (A–Z, 0–9).')
+        return
+      }
+      key = trimmedCustom
+    } else {
+      key = generateKey()
+    }
+
     const finalExpiry =
       billingType === 'lifetime'
         ? lifetimeExpiryDate().toISOString()
         : new Date(expiresAt).toISOString()
 
-    await supabase.from('license_keys').insert({
+    const { error: insertError } = await supabase.from('license_keys').insert({
       tenant_id: tenantId,
       key,
+      product,
       features: selectedFeatures,
       max_users: maxUsers,
       expires_at: finalExpiry,
@@ -102,7 +139,18 @@ export default function GenerateLicense() {
       currency: price?.currency ?? 'EUR',
       max_installs: maxInstalls
     })
+
+    if (insertError) {
+      if (insertError.code === '23505' || insertError.message?.toLowerCase().includes('unique')) {
+        setError(`Ключът ${key} вече съществува. Изберете друг или оставете полето празно за автоматично генериране.`)
+      } else {
+        setError(insertError.message || 'Грешка при създаване на лиценз')
+      }
+      return
+    }
+
     setGenerated(key)
+    setCustomKey('')
   }
 
   return (
@@ -123,6 +171,50 @@ export default function GenerateLicense() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label style={{ ...labelStyle, marginBottom: 8 }}>Продукт</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[
+                { id: 'erp' as const, label: 'DFlowERP', desc: 'ERP платформа' },
+                { id: 'crm' as const, label: 'DFlowCRM', desc: 'CRM платформа' }
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setProduct(p.id)}
+                  style={{
+                    flex: 1,
+                    padding: '12px 16px',
+                    textAlign: 'left',
+                    border: `2px solid ${product === p.id ? '#7c3aed' : '#e5e7eb'}`,
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    background: product === p.id ? '#f5f3ff' : 'white'
+                  }}
+                >
+                  <div style={{ fontSize: 13, fontWeight: 700, color: product === p.id ? '#7c3aed' : '#374151' }}>
+                    {p.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{p.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Персонализиран ключ (опционално)</label>
+            <input
+              type="text"
+              value={customKey}
+              onChange={(e) => setCustomKey(e.target.value.toUpperCase())}
+              placeholder="XXXX-XXXX-XXXX-XXXX — празно = автогенериране"
+              style={{ ...fieldStyle, fontFamily: 'monospace', letterSpacing: 1 }}
+            />
+            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+              Ако е попълнено, използва се този ключ (нормализира се към главни букви). Иначе се генерира автоматично.
+            </div>
           </div>
 
           <div>
@@ -187,7 +279,9 @@ export default function GenerateLicense() {
           </div>
 
           <div>
-            <label style={{ ...labelStyle, marginBottom: 8 }}>Модули</label>
+            <label style={{ ...labelStyle, marginBottom: 8 }}>
+              Модули ({product === 'erp' ? 'DFlowERP' : 'DFlowCRM'})
+            </label>
             <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
               <Button type="button" size="sm" variant="secondary" onClick={() => setSelectedFeatures(allModules.map((m) => m.id))}>
                 Избери всички
@@ -243,20 +337,12 @@ export default function GenerateLicense() {
                   <span>{price.total} {price.currency}{price.suffix}</span>
                 </div>
               </div>
-              {billingType === 'annual' && pricing && (
-                <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 8 }}>
-                  💡 Lifetime еквивалент:{' '}
-                  {pricing.lifetime.base +
-                    (price.usersExtra > 0
-                      ? maxUsers > 50
-                        ? pricing.lifetime.users_51_plus
-                        : maxUsers > 25
-                          ? pricing.lifetime.users_26_50
-                          : pricing.lifetime.users_11_25
-                      : 0)}{' '}
-                  {price.currency} (изплаща се за ~3 год.)
-                </div>
-              )}
+            </div>
+          )}
+
+          {error && (
+            <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#b91c1c', fontSize: 13 }}>
+              {error}
             </div>
           )}
 
@@ -270,6 +356,7 @@ export default function GenerateLicense() {
         <Card style={{ marginTop: 20, background: '#f0fdf4', border: '1px solid #86efac' }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', marginBottom: 6 }}>✓ Лицензът е генериран</div>
           <div style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, color: '#15803d' }}>{generated}</div>
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Продукт: {product.toUpperCase()}</div>
         </Card>
       ) : null}
     </div>

@@ -20,6 +20,7 @@ export interface LicenseKey {
   id: string
   tenant_id: string
   key: string
+  product?: 'erp' | 'crm' | string
   features: string[]
   max_users: number
   expires_at: string
@@ -27,7 +28,7 @@ export interface LicenseKey {
   last_validated_at: string | null
   install_count: number
   allowed_version: string | null
-  billing_type?: 'annual' | 'lifetime'
+  billing_type?: 'annual' | 'lifetime' | 'trial'
   price_paid?: number | null
   currency?: string | null
   max_installs?: number

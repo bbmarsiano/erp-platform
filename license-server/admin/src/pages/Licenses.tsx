@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { LicenseKey, supabase } from '../lib/supabase'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Button } from '../components/ui/Button'
@@ -11,11 +11,17 @@ const MODULE_BADGES: Record<string, { label: string; bg: string; color: string }
   'module:mes': { label: 'MES', bg: '#fce7f3', color: '#9d174d' },
   'module:pos': { label: 'POS', bg: '#e0f2fe', color: '#0c4a6e' },
   'module:backup': { label: 'Backup', bg: '#dcfce7', color: '#14532d' },
-  'module:finance': { label: 'Finance', bg: '#fef3c7', color: '#92400e' }
+  'module:finance': { label: 'Finance', bg: '#fef3c7', color: '#92400e' },
+  'module:sales': { label: 'Sales', bg: '#ede9fe', color: '#5b21b6' },
+  'module:service': { label: 'Service', bg: '#cffafe', color: '#0e7490' },
+  'module:analytics': { label: 'Analytics', bg: '#fce7f3', color: '#9d174d' },
+  'module:marketing': { label: 'Marketing', bg: '#ffedd5', color: '#9a3412' },
+  'module:integrations': { label: 'Integrations', bg: '#e0e7ff', color: '#3730a3' }
 }
 
 const columns = [
   { key: 'key', label: 'Ключ' },
+  { key: 'product', label: 'Продукт' },
   { key: 'client', label: 'Клиент' },
   { key: 'expires', label: 'Изтича' },
   { key: 'validated', label: 'Последна валидация' },
@@ -29,6 +35,8 @@ const columns = [
 
 export default function Licenses() {
   const [licenses, setLicenses] = useState<LicenseKey[]>([])
+  const [productFilter, setProductFilter] = useState<'all' | 'erp' | 'crm'>('all')
+  const [search, setSearch] = useState('')
   const [editingVersion, setEditingVersion] = useState<{ id: string; value: string } | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
@@ -50,6 +58,21 @@ export default function Licenses() {
     void refetch()
   }, [refetch])
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return licenses.filter((license) => {
+      const product = license.product ?? 'erp'
+      if (productFilter !== 'all' && product !== productFilter) return false
+      if (!q) return true
+      return (
+        license.key.toLowerCase().includes(q) ||
+        (license.tenant?.name ?? '').toLowerCase().includes(q) ||
+        (license.tenant?.email ?? '').toLowerCase().includes(q) ||
+        product.includes(q)
+      )
+    })
+  }, [licenses, productFilter, search])
+
   return (
     <div>
       <PageHeader
@@ -57,8 +80,52 @@ export default function Licenses() {
         subtitle="Всички генерирани лицензни ключове"
       />
 
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Търсене по ключ / клиент..."
+          style={{
+            flex: 1,
+            minWidth: 200,
+            padding: '8px 12px',
+            border: '1.5px solid #e5e7eb',
+            borderRadius: 8,
+            fontSize: 13
+          }}
+        />
+        <div style={{ display: 'flex', gap: 6 }}>
+          {([
+            { id: 'all' as const, label: 'Всички' },
+            { id: 'erp' as const, label: 'ERP' },
+            { id: 'crm' as const, label: 'CRM' }
+          ]).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setProductFilter(opt.id)}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 8,
+                border: `1.5px solid ${productFilter === opt.id ? '#7c3aed' : '#e5e7eb'}`,
+                background: productFilter === opt.id ? '#f5f3ff' : 'white',
+                color: productFilter === opt.id ? '#7c3aed' : '#374151',
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: 'pointer'
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Table columns={columns} emptyMessage="Няма лицензи">
-        {licenses.map((license) => (
+        {filtered.map((license) => {
+          const product = license.product ?? 'erp'
+          return (
           <TableRow key={license.id}>
             <Td>
               <button
@@ -85,6 +152,13 @@ export default function Licenses() {
                   ? '✓ Копирано!'
                   : `${license.key.substring(0, 4)}-****-****-****`}
               </button>
+            </Td>
+            <Td>
+              <Badge
+                label={product === 'crm' ? 'CRM' : 'ERP'}
+                bg={product === 'crm' ? '#ede9fe' : '#e0e7ff'}
+                color={product === 'crm' ? '#5b21b6' : '#3730a3'}
+              />
             </Td>
             <Td><span style={{ fontWeight: 600 }}>{license.tenant?.name ?? '—'}</span></Td>
             <Td style={{ color: '#6b7280' }}>
@@ -242,7 +316,8 @@ export default function Licenses() {
               </button>
             </Td>
           </TableRow>
-        ))}
+          )
+        })}
       </Table>
     </div>
   )
