@@ -12,3 +12,8 @@ dist/engine/
 license-server/admin/.env
 license-server/admin/node_modules/
 license-server/admin/dist/
+license-server/supabase/.temp/
+
+apps/api/backups/
+apps/api/apps/
+backups/
