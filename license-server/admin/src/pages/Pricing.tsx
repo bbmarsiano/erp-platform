@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { invokeAdmin } from '../lib/supabase'
 import type { PricingConfig } from '../lib/pricing'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card } from '../components/ui/Card'
@@ -9,27 +9,28 @@ export default function Pricing() {
   const [config, setConfig] = useState<PricingConfig | null>(null)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase
-      .from('pricing_config')
-      .select('config')
-      .eq('id', 'default')
-      .single()
-      .then(({ data }) => {
-        if (data) setConfig(data.config as PricingConfig)
+    invokeAdmin<{ config: PricingConfig | null }>('admin-get-pricing')
+      .then((data) => {
+        if (data.config) setConfig(data.config)
       })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Load failed'))
   }, [])
 
   const save = async () => {
     if (!config) return
     setSaving(true)
-    await supabase
-      .from('pricing_config')
-      .upsert({ id: 'default', config, updated_at: new Date().toISOString() })
-    setSaved(true)
+    setError('')
+    try {
+      await invokeAdmin('admin-update-pricing', { config })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed')
+    }
     setSaving(false)
-    setTimeout(() => setSaved(false), 3000)
   }
 
   if (!config) {

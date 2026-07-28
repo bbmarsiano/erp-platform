@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
-import { supabase, Tenant } from '../lib/supabase'
+import { invokeAdmin, Tenant } from '../lib/supabase'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -38,29 +38,40 @@ const columns = [
 export default function Tenants() {
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [form, setForm] = useState(emptyTenant)
+  const [error, setError] = useState('')
 
   const loadTenants = async () => {
-    const { data } = await supabase.from('tenants').select('*').order('created_at', { ascending: false })
-    setTenants((data as Tenant[]) ?? [])
+    const data = await invokeAdmin<{ tenants: Tenant[] }>('admin-list-tenants')
+    setTenants(data.tenants ?? [])
   }
 
   useEffect(() => {
-    void loadTenants()
+    void loadTenants().catch((e) => setError(e instanceof Error ? e.message : 'Load failed'))
   }, [])
 
   const createTenant = async (e: FormEvent) => {
     e.preventDefault()
-    await supabase.from('tenants').insert({
-      ...form,
-      is_active: true
-    })
-    setForm(emptyTenant)
-    await loadTenants()
+    setError('')
+    try {
+      await invokeAdmin('admin-create-tenant', { ...form })
+      setForm(emptyTenant)
+      await loadTenants()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Create failed')
+    }
   }
 
   const toggleStatus = async (tenant: Tenant) => {
-    await supabase.from('tenants').update({ is_active: !tenant.is_active }).eq('id', tenant.id)
-    await loadTenants()
+    setError('')
+    try {
+      await invokeAdmin('admin-update-tenant', {
+        tenantId: tenant.id,
+        is_active: !tenant.is_active
+      })
+      await loadTenants()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Update failed')
+    }
   }
 
   return (
@@ -69,6 +80,10 @@ export default function Tenants() {
         title="Клиенти"
         subtitle="Управление на клиенти и абонаменти"
       />
+
+      {error && (
+        <div style={{ marginBottom: 16, color: '#b91c1c', fontSize: 13 }}>{error}</div>
+      )}
 
       <Card style={{ marginBottom: 24 }}>
         <form onSubmit={createTenant}>

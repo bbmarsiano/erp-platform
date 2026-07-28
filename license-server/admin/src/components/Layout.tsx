@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, Key, LogOut,
   Zap, DollarSign
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const navItems = [
   { path: '/dashboard',  label: 'Табло',              icon: <LayoutDashboard size={17} /> },
@@ -15,8 +16,8 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('dflow_admin_auth')
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     window.location.reload()
   }
 

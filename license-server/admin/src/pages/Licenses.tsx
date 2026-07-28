@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { LicenseKey, supabase } from '../lib/supabase'
+import { LicenseKey, invokeAdmin } from '../lib/supabase'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -47,11 +47,8 @@ export default function Licenses() {
   }
 
   const refetch = useCallback(async () => {
-    const { data } = await supabase
-      .from('license_keys')
-      .select('*, tenant:tenants(*)')
-      .order('created_at', { ascending: false })
-    if (data) setLicenses(data as LicenseKey[])
+    const data = await invokeAdmin<{ licenses: LicenseKey[] }>('admin-list-licenses')
+    setLicenses(data.licenses ?? [])
   }, [])
 
   useEffect(() => {
@@ -229,10 +226,10 @@ export default function Licenses() {
                     autoFocus
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter') {
-                        await supabase
-                          .from('license_keys')
-                          .update({ allowed_version: editingVersion.value || null })
-                          .eq('id', license.id)
+                        await invokeAdmin('admin-update-license', {
+                          licenseId: license.id,
+                          allowed_version: editingVersion.value || null
+                        })
                         setEditingVersion(null)
                         await refetch()
                       }
@@ -242,10 +239,10 @@ export default function Licenses() {
                   <Button
                     size="sm"
                     onClick={async () => {
-                      await supabase
-                        .from('license_keys')
-                        .update({ allowed_version: editingVersion.value || null })
-                        .eq('id', license.id)
+                      await invokeAdmin('admin-update-license', {
+                        licenseId: license.id,
+                        allowed_version: editingVersion.value || null
+                      })
                       setEditingVersion(null)
                       await refetch()
                     }}
@@ -256,7 +253,10 @@ export default function Licenses() {
                     size="sm"
                     variant="danger"
                     onClick={async () => {
-                      await supabase.from('license_keys').update({ allowed_version: null }).eq('id', license.id)
+                      await invokeAdmin('admin-update-license', {
+                        licenseId: license.id,
+                        allowed_version: null
+                      })
                       setEditingVersion(null)
                       await refetch()
                     }}
@@ -298,10 +298,14 @@ export default function Licenses() {
               <button
                 type="button"
                 onClick={async () => {
-                  await supabase
-                    .from('license_keys')
-                    .update({ is_active: !license.is_active })
-                    .eq('id', license.id)
+                  if (license.is_active) {
+                    await invokeAdmin('admin-revoke-license', { licenseId: license.id })
+                  } else {
+                    await invokeAdmin('admin-update-license', {
+                      licenseId: license.id,
+                      is_active: true
+                    })
+                  }
                   void refetch()
                 }}
                 style={{

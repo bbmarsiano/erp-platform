@@ -1,60 +1,89 @@
 # DFlow License Server
 
-Supabase-базиран лицензен сървър за **DFlowERP** и **DFlowCRM**.
+Supabase-based license server for **DFlowERP** and **DFlowCRM**.
 
-## Архитектура
+## Architecture
 
 ```
-[Go Installer / App Startup] ──POST──▶ [validate-license Edge Function]
-                                          │
-                                          ▼
-                                  [Supabase PostgreSQL]
-                                  tenants + license_keys (product: erp|crm) + validation_log
+[Installer / App] ──POST──▶ [validate-license Edge Function]  (secret key, no user auth)
+[Admin SPA] ──Auth JWT──▶ [admin-* Edge Functions]           (secret key + ADMIN_EMAILS)
+                                 │
+                                 ▼
+                         [Supabase PostgreSQL]
+                         tenants + license_keys + validation_log + pricing_config
+                         (RLS on; no anon/authenticated policies)
 ```
+
+## Security model (new API keys)
+
+| Key | Where | Purpose |
+|-----|-------|---------|
+| `sb_publishable_…` (`VITE_SUPABASE_PUBLISHABLE_KEY`) | Admin SPA only | Supabase Auth (`signInWithPassword`) + invoking Edge Functions |
+| `sb_secret_…` (`SUPABASE_SECRET_KEYS.default`) | Edge Functions only | Bypasses RLS for privileged DB ops |
+| User JWT | `Authorization: Bearer` | End-user session; checked against `ADMIN_EMAILS` allowlist |
+
+**Never put a secret / service_role key in Vite env vars.** Legacy `anon` / `service_role` keys should be deactivated after migration is verified.
 
 ## Setup
 
-### 1. SQL миграция
-Supabase Dashboard → SQL Editor → изпълни migrations in order under
-`supabase/migrations/` (includes `006_license_product.sql` for multi-product support).
+### 1. SQL migrations
+Run `supabase/migrations/*.sql` in order (through `007_rls_lockdown.sql`).
 
-### 2. Deploy Edge Function
+### 2. Edge Function secrets (Dashboard → Edge Functions → Secrets)
+
+| Secret | Example |
+|--------|---------|
+| `ADMIN_EMAILS` | `you@company.com,other@company.com` |
+
+`SUPABASE_URL` and `SUPABASE_SECRET_KEYS` are provided by the platform.
+
+### 3. Deploy functions
+
 ```bash
-supabase functions deploy validate-license \
-  --project-ref lvhraynmvyvancqyezef \
-  --no-verify-jwt
+supabase functions deploy validate-license --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-list-licenses --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-create-license --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-revoke-license --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-update-license --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-list-tenants --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-create-tenant --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-update-tenant --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-get-pricing --project-ref lvhraynmvyvancqyezef
+supabase functions deploy admin-update-pricing --project-ref lvhraynmvyvancqyezef
 ```
 
-### 3. Admin панел
+All admin functions set `verify_jwt = false` (new keys are not JWTs); auth is enforced in-function via `auth.getUser(token)` + `ADMIN_EMAILS`.
+
+### 4. Admin SPA
+
 ```bash
 cd admin
 cp .env.example .env
-# Попълни VITE_SUPABASE_URL и VITE_SUPABASE_SERVICE_KEY
+# Set:
+#   VITE_SUPABASE_URL=https://lvhraynmvyvancqyezef.supabase.co
+#   VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 pnpm install
 pnpm dev
-# http://localhost:5174
 ```
 
-## API
+Create a Supabase Auth user (Authentication → Users) whose email is listed in `ADMIN_EMAILS`, then sign in on the login screen.
+
+### 5. Vercel (dflow-license-admin)
+
+- Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
+- Remove `VITE_SUPABASE_SERVICE_KEY` and `VITE_ADMIN_PASSWORD`
+- Redeploy
+
+## validate-license API
 
 ```bash
-# Валидация на лиценз
 curl -X POST https://lvhraynmvyvancqyezef.supabase.co/functions/v1/validate-license \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer [ANON_KEY]" \
+  -H "apikey: sb_publishable_..." \
   -d '{"key":"DEMO-0000-0000-0000"}'
-
-# Отговор при валиден лиценз:
-{
-  "valid": true,
-  "features": ["module:wms","module:scm","module:mes","module:pos","module:backup"],
-  "expiresAt": "2027-05-08T...",
-  "tenant": "Demo Client",
-  "maxUsers": 10,
-  "plan": "standard",
-  "product": "erp"
-}
 ```
+
+Response includes `product` (`erp` | `crm`), `features`, `billingType`, etc.
 
 ## Products
 
@@ -63,19 +92,6 @@ curl -X POST https://lvhraynmvyvancqyezef.supabase.co/functions/v1/validate-lice
 | `erp` (default) | wms, scm, mes, pos, backup, finance |
 | `crm` | sales, service, analytics, marketing, integrations |
 
-Existing rows are backfilled as `product = 'erp'`.
-
-## Demo данни
-
-| Поле | Стойност |
-|------|---------|
-| Лиценз ключ | `DEMO-0000-0000-0000` |
-| Tenant | Demo Client |
-| Product | erp |
-| Изтича | 1 година от създаването |
-| Модули | WMS/SCM/MES/POS/Backup |
-
 ## Offline grace period
 
-Installer-ът кешира валиден лиценз в `~/.dflow/license_cache.json`.
-Grace period: **30 дни** без интернет.
+Installer caches a valid license in `~/.dflow/license_cache.json` (30 days).

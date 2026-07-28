@@ -1,19 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Zap } from 'lucide-react'
-import { supabase, Tenant } from '../lib/supabase'
+import { invokeAdmin, Tenant } from '../lib/supabase'
 import { calculateLicensePrice, type PricingConfig } from '../lib/pricing'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 
 type ProductId = 'erp' | 'crm'
-
-function generateKey(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const seg = () =>
-    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `${seg()}-${seg()}-${seg()}-${seg()}`
-}
 
 const KEY_FORMAT = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 
@@ -79,23 +72,20 @@ export default function GenerateLicense() {
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('tenants').select('*').eq('is_active', true).order('name')
-      const rows = (data as Tenant[]) ?? []
+      const data = await invokeAdmin<{ tenants: Tenant[] }>('admin-list-tenants')
+      const rows = (data.tenants ?? []).filter((t) => t.is_active)
       setTenants(rows)
       if (rows[0]) setTenantId(rows[0].id)
     }
-    void load()
+    void load().catch((e) => setError(e instanceof Error ? e.message : 'Load failed'))
   }, [])
 
   useEffect(() => {
-    supabase
-      .from('pricing_config')
-      .select('config')
-      .eq('id', 'default')
-      .single()
-      .then(({ data }) => {
-        if (data) setPricing(data.config as PricingConfig)
+    invokeAdmin<{ config: PricingConfig | null }>('admin-get-pricing')
+      .then((data) => {
+        if (data.config) setPricing(data.config)
       })
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {
@@ -109,16 +99,14 @@ export default function GenerateLicense() {
     setError('')
     setGenerated('')
 
-    let key: string
+    let customKeyValue: string | undefined
     const trimmedCustom = customKey.trim().toUpperCase()
     if (trimmedCustom) {
       if (!KEY_FORMAT.test(trimmedCustom)) {
         setError('Невалиден формат. Използвайте XXXX-XXXX-XXXX-XXXX (A–Z, 0–9).')
         return
       }
-      key = trimmedCustom
-    } else {
-      key = generateKey()
+      customKeyValue = trimmedCustom
     }
 
     const finalExpiry =
@@ -126,31 +114,28 @@ export default function GenerateLicense() {
         ? lifetimeExpiryDate().toISOString()
         : new Date(expiresAt).toISOString()
 
-    const { error: insertError } = await supabase.from('license_keys').insert({
-      tenant_id: tenantId,
-      key,
-      product,
-      features: selectedFeatures,
-      max_users: maxUsers,
-      expires_at: finalExpiry,
-      billing_type: billingType,
-      allowed_version: null,
-      price_paid: price?.total ?? null,
-      currency: price?.currency ?? 'EUR',
-      max_installs: maxInstalls
-    })
-
-    if (insertError) {
-      if (insertError.code === '23505' || insertError.message?.toLowerCase().includes('unique')) {
-        setError(`Ключът ${key} вече съществува. Изберете друг или оставете полето празно за автоматично генериране.`)
-      } else {
-        setError(insertError.message || 'Грешка при създаване на лиценз')
-      }
-      return
+    try {
+      const selected = tenants.find((t) => t.id === tenantId)
+      const result = await invokeAdmin<{ key: string }>('admin-create-license', {
+        tenantId,
+        tenantName: selected?.name,
+        tenantEmail: selected?.email,
+        company: selected?.company,
+        product,
+        billingType,
+        maxUsers,
+        maxInstalls,
+        features: selectedFeatures,
+        expiresAt: finalExpiry,
+        customKey: customKeyValue,
+        pricePaid: price?.total ?? null,
+        currency: price?.currency ?? 'EUR'
+      })
+      setGenerated(result.key)
+      setCustomKey('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Грешка при създаване на лиценз')
     }
-
-    setGenerated(key)
-    setCustomKey('')
   }
 
   return (

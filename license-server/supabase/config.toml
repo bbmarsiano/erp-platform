@@ -1,0 +1,32 @@
+[functions.validate-license]
+verify_jwt = false
+
+[functions.admin-list-licenses]
+verify_jwt = false
+
+[functions.admin-create-license]
+verify_jwt = false
+
+[functions.admin-revoke-license]
+verify_jwt = false
+
+[functions.admin-update-license]
+verify_jwt = false
+
+[functions.admin-list-tenants]
+verify_jwt = false
+
+[functions.admin-create-tenant]
+verify_jwt = false
+
+[functions.admin-update-tenant]
+verify_jwt = false
+
+[functions.admin-get-pricing]
+verify_jwt = false
+
+[functions.admin-update-pricing]
+verify_jwt = false
+
+[functions.generate-trial]
+verify_jwt = false

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { invokeAdmin, LicenseKey, Tenant } from '../lib/supabase'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card } from '../components/ui/Card'
 import { Users, Key, CheckCircle, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
@@ -27,9 +27,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     const load = async () => {
-      const [{ data: tenants }, { data: licenses }] = await Promise.all([
-        supabase.from('tenants').select('*'),
-        supabase.from('license_keys').select('*, tenant:tenants(name)'),
+      const [{ tenants }, { licenses }] = await Promise.all([
+        invokeAdmin<{ tenants: Tenant[] }>('admin-list-tenants'),
+        invokeAdmin<{ licenses: LicenseKey[] }>('admin-list-licenses'),
       ])
 
       const now = new Date()
