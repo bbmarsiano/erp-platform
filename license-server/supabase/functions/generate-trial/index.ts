@@ -1,8 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { defaultFeaturesForProduct } from '../_shared/license.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+}
+
+/** Short labels for email module lists (derived from license features). */
+const FEATURE_LABELS: Record<string, string> = {
+  'module:wms': 'WMS',
+  'module:scm': 'SCM',
+  'module:mes': 'MES',
+  'module:pos': 'POS',
+  'module:backup': 'Backup',
+  'module:finance': 'Finance',
+  'module:sales': 'Sales',
+  'module:service': 'Service',
+  'module:analytics': 'Analytics',
+  'module:marketing': 'Marketing',
+  'module:integrations': 'Integrations'
 }
 
 function generateKey(): string {
@@ -12,13 +28,34 @@ function generateKey(): string {
   return `TRIAL-${segment()}-${segment()}-${segment()}`
 }
 
+function formatModulesList(features: string[]): string {
+  const labels = features.map((f) => FEATURE_LABELS[f] ?? f.replace(/^module:/, ''))
+  if (labels.length === 0) return ''
+  if (labels.length === 1) return labels[0]
+  if (labels.length === 2) return `${labels[0]} и ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')} и ${labels[labels.length - 1]}`
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { email, name, company } = await req.json()
+    const body = await req.json()
+    const { email, name, company } = body ?? {}
+    const productCode =
+      typeof body?.product === 'string' && body.product.trim()
+        ? body.product.trim()
+        : 'erp'
 
     if (!email) {
       return new Response(JSON.stringify({ error: 'Email is required' }), {
@@ -32,61 +69,109 @@ Deno.serve(async (req) => {
       JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')!)['default']
     )
 
+    const { data: productRow, error: productError } = await supabase
+      .from('products')
+      .select('code, name, is_active')
+      .eq('code', productCode)
+      .maybeSingle()
+
+    if (productError) {
+      return new Response(JSON.stringify({ error: 'Failed to validate product' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    if (!productRow || !productRow.is_active) {
+      return new Response(
+        JSON.stringify({ error: `Unknown or inactive product: ${productCode}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const features = defaultFeaturesForProduct(productCode)
+    if (!features.length) {
+      return new Response(
+        JSON.stringify({ error: `No default features for product: ${productCode}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const displayName = productRow.name
+    const recipientName = name || email.split('@')[0]
+
     const { data: existingTenant } = await supabase
       .from('tenants')
       .select('id')
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     if (existingTenant) {
       const { data: existingLicense } = await supabase
         .from('license_keys')
-        .select('key')
+        .select('key, features, product')
         .eq('tenant_id', existingTenant.id)
         .eq('billing_type', 'trial')
-        .single()
+        .eq('product', productCode)
+        .maybeSingle()
 
       if (existingLicense) {
-        await sendTrialEmail(email, name, existingLicense.key)
+        await sendTrialEmail({
+          email,
+          name: recipientName,
+          key: existingLicense.key,
+          productName: displayName,
+          features: Array.isArray(existingLicense.features) ? existingLicense.features : features
+        })
         return new Response(JSON.stringify({ success: true, message: 'Trial key resent' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
     }
 
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .insert({
-        name: company || name || email.split('@')[0],
-        email,
-        company: company || null,
-        plan: 'trial',
-        is_active: true
-      })
-      .select()
-      .single()
+    let tenantId = existingTenant?.id
+    if (!tenantId) {
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert({
+          name: company || name || email.split('@')[0],
+          email,
+          company: company || null,
+          plan: 'trial',
+          is_active: true
+        })
+        .select('id')
+        .single()
 
-    if (tenantError) throw tenantError
+      if (tenantError) throw tenantError
+      tenantId = tenant.id
+    }
 
     const key = generateKey()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 14)
 
     const { error: licenseError } = await supabase.from('license_keys').insert({
-      tenant_id: tenant.id,
+      tenant_id: tenantId,
       key,
-      features: ['module:wms', 'module:scm', 'module:mes', 'module:pos', 'module:backup'],
+      product: productCode,
+      features,
       max_users: 10,
       max_installs: 1,
       expires_at: expiresAt.toISOString(),
       billing_type: 'trial',
       is_active: true,
-      notes: `Trial generated for ${email}`
+      notes: `Trial generated for ${email} (${productCode})`
     })
 
     if (licenseError) throw licenseError
 
-    await sendTrialEmail(email, name || email.split('@')[0], key)
+    await sendTrialEmail({
+      email,
+      name: recipientName,
+      key,
+      productName: displayName,
+      features
+    })
 
     return new Response(JSON.stringify({ success: true, message: 'Trial key sent to email' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -106,8 +191,21 @@ Deno.serve(async (req) => {
   }
 })
 
-async function sendTrialEmail(email: string, name: string, key: string) {
+async function sendTrialEmail(opts: {
+  email: string
+  name: string
+  key: string
+  productName: string
+  features: string[]
+}) {
   const resendKey = Deno.env.get('RESEND_API_KEY')!
+  const productName = opts.productName
+  const modulesList = formatModulesList(opts.features)
+  const safeName = escapeHtml(opts.name)
+  const safeProduct = escapeHtml(productName)
+  const safeKey = escapeHtml(opts.key)
+  const safeModules = escapeHtml(modulesList)
+  const logoMark = escapeHtml(productName.charAt(0) || 'D')
 
   const html = `
 <!DOCTYPE html>
@@ -115,7 +213,7 @@ async function sendTrialEmail(email: string, name: string, key: string) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DFlowERP Trial</title>
+  <title>${safeProduct} Trial</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -305,23 +403,23 @@ async function sendTrialEmail(email: string, name: string, key: string) {
 
     <div class="header">
       <span class="logo">
-        <span class="logo-mark">D</span>
-        <span class="logo-text">DFlowERP</span>
+        <span class="logo-mark">${logoMark}</span>
+        <span class="logo-text">${safeProduct}</span>
       </span>
     </div>
 
     <div class="body">
       <div class="badge">14-дневен безплатен trial</div>
-      <div class="greeting">Здравейте, ${name}!</div>
+      <div class="greeting">Здравейте, ${safeName}!</div>
       <p class="intro">
-        Вашият trial лиценз е готов. Имате <strong>14 дни пълен достъп</strong>
-        до всички модули — WMS, SCM, MES, POS и Backup —
+        Вашият trial лиценз за <strong>${safeProduct}</strong> е готов. Имате <strong>14 дни пълен достъп</strong>
+        до всички модули — ${safeModules} —
         без ограничения и без кредитна карта.
       </p>
 
       <div class="key-box">
         <div class="key-label">Лицензен ключ</div>
-        <div class="key-value">${key}</div>
+        <div class="key-value">${safeKey}</div>
         <div class="key-note">Валиден 14 дни от активацията</div>
       </div>
 
@@ -353,7 +451,7 @@ async function sendTrialEmail(email: string, name: string, key: string) {
         </div>
       </div>
 
-      <a href="https://dflowhub.com/download" class="btn" style="color:#ffffff !important;text-decoration:none;">Свали DFlowERP</a>
+      <a href="https://dflowhub.com/download" class="btn" style="color:#ffffff !important;text-decoration:none;">Свали ${safeProduct}</a>
 
       <p class="help">
         Въпроси? Разгледайте
@@ -364,7 +462,7 @@ async function sendTrialEmail(email: string, name: string, key: string) {
     </div>
 
     <div class="footer">
-      © 2025 DFlowERP &nbsp;·&nbsp;
+      © 2025 ${safeProduct} &nbsp;·&nbsp;
       <a href="https://dflowhub.com">dflowhub.com</a><br>
       Получавате този имейл защото поискахте безплатен trial.
     </div>
@@ -381,15 +479,15 @@ async function sendTrialEmail(email: string, name: string, key: string) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'DFlowERP <onboarding@resend.dev>',
-      to: [email],
-      subject: 'Вашият DFlowERP trial лиценз е готов',
+      from: `${productName} <onboarding@resend.dev>`,
+      to: [opts.email],
+      subject: `Вашият ${productName} trial лиценз е готов`,
       html
     })
   })
 
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Resend API error: ${res.status} ${body}`)
+    const text = await res.text()
+    throw new Error(`Resend API error: ${res.status} ${text}`)
   }
 }
