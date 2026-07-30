@@ -66,9 +66,4 @@ export async function requireAdmin(
   return { admin, user: data.user }
 }
 
-export function generateLicenseKey(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  const seg = () =>
-    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return `${seg()}-${seg()}-${seg()}-${seg()}`
-}
+export { generateLicenseKey } from './license.ts'

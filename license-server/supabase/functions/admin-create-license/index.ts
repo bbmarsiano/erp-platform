@@ -5,6 +5,7 @@ import {
   jsonResponse,
   requireAdmin
 } from '../_shared/admin.ts'
+import { findOrCreateTenant } from '../_shared/license.ts'
 
 const KEY_FORMAT = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
 
@@ -53,36 +54,15 @@ serve(async (req) => {
       if (!tenantName || typeof tenantName !== 'string') {
         return jsonResponse({ error: 'tenantName or tenantId is required' }, 400)
       }
-      const email =
-        typeof tenantEmail === 'string' && tenantEmail.includes('@')
-          ? tenantEmail.trim().toLowerCase()
-          : `${tenantName.trim().toLowerCase().replace(/\s+/g, '.')}@license.local`
-
-      const { data: existing } = await auth.admin
-        .from('tenants')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle()
-
-      if (existing?.id) {
-        resolvedTenantId = existing.id
-      } else {
-        const { data: created, error: tenantError } = await auth.admin
-          .from('tenants')
-          .insert({
-            name: tenantName.trim(),
-            email,
-            company: company ?? tenantName.trim(),
-            plan: 'standard',
-            is_active: true
-          })
-          .select('id')
-          .single()
-        if (tenantError || !created) {
-          return jsonResponse({ error: tenantError?.message || 'Failed to create tenant' }, 500)
-        }
-        resolvedTenantId = created.id
+      const tenant = await findOrCreateTenant(auth.admin, {
+        tenantName,
+        email: typeof tenantEmail === 'string' ? tenantEmail : null,
+        company: typeof company === 'string' ? company : null
+      })
+      if ('error' in tenant) {
+        return jsonResponse({ error: tenant.error }, 500)
       }
+      resolvedTenantId = tenant.id
     }
 
     let key: string
