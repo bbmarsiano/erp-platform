@@ -28,6 +28,9 @@ verify_jwt = false
 [functions.admin-update-pricing]
 verify_jwt = false
 
+[functions.admin-list-pricing]
+verify_jwt = false
+
 [functions.generate-trial]
 verify_jwt = false
 

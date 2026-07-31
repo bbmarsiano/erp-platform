@@ -1,19 +1,18 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Stripe from 'https://esm.sh/stripe@17?target=deno'
+import {
+  STRIPE_BILLING_SUFFIX,
+  createStripeClient,
+  stripeLookupKey,
+  type StripeBillingType,
+} from '../_shared/stripe.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const STRIPE_BILLING_SUFFIX: Record<string, string> = {
-  monthly: 'month',
-  annual: 'yearly',
-  lifetime: 'perpetual',
-}
-
-const ALLOWED_BILLING = new Set(['monthly', 'annual', 'lifetime'])
+const ALLOWED_BILLING = new Set<string>(Object.keys(STRIPE_BILLING_SUFFIX))
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -64,7 +63,7 @@ serve(async (req) => {
     }
 
     const productCode = product.trim()
-    const billing = billingType as 'monthly' | 'annual' | 'lifetime'
+    const billing = billingType as StripeBillingType
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -90,21 +89,8 @@ serve(async (req) => {
       })
     }
 
-    const secretKey = Deno.env.get('STRIPE_SECRET_KEY')
-    if (!secretKey) {
-      return new Response(JSON.stringify({ error: 'Stripe is not configured' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-06-20',
-      httpClient: Stripe.createFetchHttpClient(),
-    })
-
-    const suffix = STRIPE_BILLING_SUFFIX[billing]
-    const lookupKey = `${productCode}_${suffix}`
+    const stripe = createStripeClient()
+    const lookupKey = stripeLookupKey(productCode, billing)
 
     const prices = await stripe.prices.list({
       lookup_keys: [lookupKey],
