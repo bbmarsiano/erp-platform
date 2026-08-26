@@ -113,6 +113,31 @@ export const useCreateInvoice = () => {
   })
 }
 
+export const useImportInvoice = () => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      docType: 'INVOICE_OUT' | 'INVOICE_IN'
+      number: string
+      issueDate: string
+      dueDate?: string
+      customerId?: string
+      supplierId?: string
+      currency: string
+      vatRate: number
+      note?: string
+      status: 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED'
+      amountPaid?: number
+      lines: InvoiceLineInput[]
+    }) => api.post('/api/finance/invoices/import', data).then((r) => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance', 'invoices'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'receivables'] })
+      qc.invalidateQueries({ queryKey: ['finance', 'payables'] })
+    }
+  })
+}
+
 export const useUpdateInvoice = () => {
   const qc = useQueryClient()
   return useMutation({
