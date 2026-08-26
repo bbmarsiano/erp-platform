@@ -2,6 +2,7 @@ import { createErrorResponse, createSuccessResponse, authenticate, requireRole, 
 import { prisma } from '@dflow/db'
 import { Decimal } from '@prisma/client/runtime/library'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import { z } from 'zod'
 import { getNextDocumentNumber } from '../services/document-numbering.service'
 import { calculateInvoiceTotals, type InvoiceLineInput } from '../services/invoice-calc.service'
 import { buildInvoicePdf } from '../services/invoice-pdf.service'
@@ -9,6 +10,28 @@ import { assertPeriodOpen, PeriodClosedError } from '../services/period.service'
 import { serializeInvoice } from '../utils/serialize-decimal'
 
 const financeGuards = [authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), requireTenantModule('finance')]
+
+const invoiceImportLineSchema = z.object({
+  description: z.string().min(1),
+  quantity: z.number().positive(),
+  unitPrice: z.number().nonnegative(),
+  vatRate: z.number().min(0).max(100).optional()
+})
+
+const invoiceImportBodySchema = z.object({
+  docType: z.enum(['INVOICE_OUT', 'INVOICE_IN']),
+  number: z.string().min(1),
+  issueDate: z.string().min(1),
+  dueDate: z.string().min(1).optional(),
+  customerId: z.string().min(1).optional(),
+  supplierId: z.string().min(1).optional(),
+  currency: z.string().min(1),
+  vatRate: z.number().min(0).max(100),
+  note: z.string().optional(),
+  status: z.enum(['ISSUED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED']),
+  amountPaid: z.number().nonnegative().optional(),
+  lines: z.array(invoiceImportLineSchema).min(1)
+})
 
 const invoiceInclude = {
   lines: true,
@@ -136,6 +159,164 @@ const invoicesRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
     })
 
     return createSuccessResponse(serializeInvoice(created))
+  })
+
+  fastify.post('/invoices/import', { preHandler: financeGuards }, async (request, reply) => {
+    const parsed = invoiceImportBodySchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Невалидни данни за импорт.',
+        details: parsed.error.flatten()
+      })
+    }
+
+    const body = parsed.data
+
+    if (body.docType === 'INVOICE_OUT' && !body.customerId) {
+      return reply.status(400).send(createErrorResponse('Customer is required', 'CUSTOMER_REQUIRED', 400))
+    }
+    if (body.docType === 'INVOICE_IN' && !body.supplierId) {
+      return reply.status(400).send(createErrorResponse('Supplier is required', 'SUPPLIER_REQUIRED', 400))
+    }
+
+    try {
+      await assertPeriodOpen(request.user.tenantId, new Date(body.issueDate))
+    } catch (error) {
+      if (error instanceof PeriodClosedError) {
+        return reply.status(400).send(createErrorResponse(error.userMessage, 'PERIOD_CLOSED', 400))
+      }
+      throw error
+    }
+
+    const number = body.number.trim()
+    const totals = calculateInvoiceTotals(body.lines, body.vatRate)
+
+    if (body.status === 'PARTIALLY_PAID') {
+      if (body.amountPaid === undefined) {
+        return reply
+          .status(400)
+          .send(
+            createErrorResponse(
+              'amountPaid is required when status is PARTIALLY_PAID',
+              'AMOUNT_PAID_REQUIRED',
+              400
+            )
+          )
+      }
+      if (!new Decimal(body.amountPaid).lt(totals.totalAmount)) {
+        return reply
+          .status(400)
+          .send(
+            createErrorResponse(
+              'amountPaid must be less than totalAmount when status is PARTIALLY_PAID',
+              'AMOUNT_PAID_INVALID',
+              400
+            )
+          )
+      }
+    }
+
+    const dueDate = body.dueDate ? new Date(body.dueDate) : new Date(body.issueDate)
+
+    let arApAmountPaid = new Decimal(0)
+    let arApStatus = 'OPEN'
+    if (body.status === 'PAID') {
+      arApAmountPaid = totals.totalAmount
+      arApStatus = 'PAID'
+    } else if (body.status === 'PARTIALLY_PAID') {
+      arApAmountPaid = new Decimal(body.amountPaid!)
+      arApStatus = 'PARTIALLY_PAID'
+    }
+
+    try {
+      const created = await prisma.$transaction(async (tx) => {
+        const invoice = await tx.invoice.create({
+          data: {
+            tenantId: request.user.tenantId,
+            docType: body.docType,
+            number,
+            issueDate: new Date(body.issueDate),
+            dueDate: body.dueDate ? new Date(body.dueDate) : null,
+            customerId: body.customerId ?? null,
+            supplierId: body.supplierId ?? null,
+            currency: body.currency,
+            subtotal: totals.subtotal,
+            vatAmount: totals.vatAmount,
+            totalAmount: totals.totalAmount,
+            vatRate: totals.vatRate,
+            status: body.status,
+            source: 'IMPORT',
+            note: body.note,
+            createdBy: request.user.id,
+            lines: {
+              create: totals.lines.map((l) => ({
+                productId: null,
+                description: l.description,
+                quantity: l.quantity,
+                unitPrice: l.unitPrice,
+                vatRate: l.vatRate,
+                lineTotal: l.lineTotal
+              }))
+            }
+          }
+        })
+
+        if (body.status !== 'CANCELLED') {
+          if (body.docType === 'INVOICE_OUT' && body.customerId) {
+            await tx.receivable.create({
+              data: {
+                tenantId: request.user.tenantId,
+                invoiceId: invoice.id,
+                customerId: body.customerId,
+                amountDue: totals.totalAmount,
+                amountPaid: arApAmountPaid,
+                dueDate,
+                status: arApStatus
+              }
+            })
+          }
+          if (body.docType === 'INVOICE_IN' && body.supplierId) {
+            await tx.payable.create({
+              data: {
+                tenantId: request.user.tenantId,
+                invoiceId: invoice.id,
+                supplierId: body.supplierId,
+                amountDue: totals.totalAmount,
+                amountPaid: arApAmountPaid,
+                dueDate,
+                status: arApStatus
+              }
+            })
+          }
+        }
+
+        return tx.invoice.findFirst({
+          where: { id: invoice.id },
+          include: invoiceInclude
+        })
+      })
+
+      return createSuccessResponse(serializeInvoice(created!))
+    } catch (error: unknown) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        (error as { code: string }).code === 'P2002'
+      ) {
+        return reply
+          .status(409)
+          .send(
+            createErrorResponse(
+              `Фактура с номер ${number} вече съществува.`,
+              'DUPLICATE_INVOICE_NUMBER',
+              409
+            )
+          )
+      }
+      throw error
+    }
   })
 
   fastify.put('/invoices/:id', { preHandler: financeGuards }, async (request, reply) => {
