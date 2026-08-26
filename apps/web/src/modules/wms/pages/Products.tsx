@@ -46,6 +46,7 @@ export default function Products() {
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'active' | 'archived' | 'all'>('active')
   const [scannerOpen, setScannerOpen] = useState(false)
   const [scannerTarget, setScannerTarget] = useState<'form' | 'search'>('search')
 
@@ -67,12 +68,17 @@ export default function Products() {
     setForm((prev) => ({ ...prev, warehouseId, locationId: '' }))
   }
 
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.code.toLowerCase().includes(search.toLowerCase()) ||
+  const filtered = products.filter((p) => {
+    if (statusFilter === 'active' && !p.isActive) return false
+    if (statusFilter === 'archived' && p.isActive) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.code.toLowerCase().includes(q) ||
       (p.barcode || '').includes(search)
-  )
+    )
+  })
 
   const createMutation = useMutation({
     mutationFn: (data: typeof emptyForm) =>
@@ -589,44 +595,84 @@ export default function Products() {
         </Card>
       )}
 
-      <div style={{ marginBottom: 16, position: 'relative', maxWidth: 400 }}>
-        <Search
-          size={14}
-          style={{
-            position: 'absolute',
-            left: 12,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#9ca3af'
-          }}
-        />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Търси по код, наименование или баркод..."
-          style={{ ...inputStyle, paddingLeft: 36, paddingRight: search ? 36 : 12 }}
-          onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
-          onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            type="button"
+      <div
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          gap: 12,
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}
+      >
+        <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 400 }}>
+          <Search
+            size={14}
             style={{
               position: 'absolute',
-              right: 10,
+              left: 12,
               top: '50%',
               transform: 'translateY(-50%)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#9ca3af',
-              padding: 2
+              color: '#9ca3af'
             }}
-          >
-            <X size={14} />
-          </button>
-        )}
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Търси по код, наименование или баркод..."
+            style={{ ...inputStyle, paddingLeft: 36, paddingRight: search ? 36 : 12 }}
+            onFocus={(e) => (e.target.style.borderColor = '#7c3aed')}
+            onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              type="button"
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#9ca3af',
+                padding: 2
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(
+            [
+              { id: 'active' as const, label: 'Активни' },
+              { id: 'archived' as const, label: 'Архивирани' },
+              { id: 'all' as const, label: 'Всички' }
+            ] as const
+          ).map((opt) => {
+            const active = statusFilter === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setStatusFilter(opt.id)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 8,
+                  border: `1.5px solid ${active ? '#7c3aed' : '#e5e7eb'}`,
+                  background: active ? '#f5f3ff' : 'white',
+                  color: active ? '#7c3aed' : '#374151',
+                  fontWeight: 600,
+                  fontSize: 12,
+                  cursor: 'pointer'
+                }}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {isLoading ? (
@@ -665,7 +711,13 @@ export default function Products() {
               {!filtered.length ? (
                 <tr>
                   <td colSpan={9} style={{ padding: 48, textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
-                    {search ? `Няма продукти за "${search}"` : 'Няма добавени продукти'}
+                    {search
+                      ? `Няма продукти за "${search}"`
+                      : statusFilter === 'archived'
+                        ? 'Няма архивирани продукти'
+                        : statusFilter === 'active'
+                          ? 'Няма активни продукти'
+                          : 'Няма добавени продукти'}
                   </td>
                 </tr>
               ) : (
@@ -745,7 +797,7 @@ export default function Products() {
                             color: p.isActive ? '#166534' : '#991b1b'
                           }}
                         >
-                          {p.isActive ? 'Активен' : 'Неактивен'}
+                          {p.isActive ? 'Активен' : 'Архивиран'}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
@@ -769,7 +821,7 @@ export default function Products() {
                           </button>
                           <button
                             onClick={() => toggleMutation.mutate({ id: p.id, isActive: p.isActive })}
-                            title={p.isActive ? 'Деактивирай' : 'Активирай'}
+                            title={p.isActive ? 'Архивирай' : 'Върни от архив'}
                             type="button"
                             style={{
                               padding: '5px 8px',
@@ -801,6 +853,11 @@ export default function Products() {
             }}
           >
             {filtered.length} от {products.length} продукта
+            {statusFilter === 'active'
+              ? ' (активни)'
+              : statusFilter === 'archived'
+                ? ' (архивирани)'
+                : ''}
           </div>
         </div>
       )}
