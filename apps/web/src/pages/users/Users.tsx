@@ -45,6 +45,7 @@ export default function Users() {
   })
   const [formError, setFormError] = useState('')
   const [editForm, setEditForm] = useState({
+    email: '',
     firstName: '',
     lastName: '',
     role: '',
@@ -80,6 +81,7 @@ export default function Users() {
   const updateMutation = useMutation({
     mutationFn: (data: {
       id: string
+      email: string
       firstName: string
       lastName: string
       role: string
@@ -107,6 +109,7 @@ export default function Users() {
 
     setSelectedUser(user)
     setEditForm({
+      email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
@@ -386,10 +389,37 @@ export default function Users() {
                       <td colSpan={6} style={{ padding: 0, background: '#f8fafc' }}>
                         <div style={{ padding: '20px 16px', borderBottom: '1px solid #e5e7eb' }}>
                           <h4 style={{ fontSize: 14, fontWeight: 600, margin: '0 0 16px', color: '#374151' }}>
-                            Редактиране: {user.email}
+                            Редактиране на потребител
                           </h4>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 12 }}>
+                            <div>
+                              <label
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  color: '#6b7280',
+                                  display: 'block',
+                                  marginBottom: 4
+                                }}
+                              >
+                                Имейл
+                              </label>
+                              <input
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+
                             <div>
                               <label
                                 style={{
@@ -506,6 +536,7 @@ export default function Users() {
                               onClick={() =>
                                 updateMutation.mutate({
                                   id: user.id,
+                                  email: editForm.email,
                                   firstName: editForm.firstName,
                                   lastName: editForm.lastName,
                                   role: editForm.role,

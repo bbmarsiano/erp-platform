@@ -123,12 +123,22 @@ const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       }
       const { id } = request.params as { id: string }
       const body = request.body as Partial<{
+        email: string
         firstName: string
         lastName: string
         role: string
         isActive: boolean
         newPassword: string
       }>
+
+      if (body.email) {
+        const existing = await prisma.user.findUnique({ where: { email: body.email } })
+        if (existing && existing.id !== id) {
+          return reply
+            .status(409)
+            .send({ success: false, error: 'Потребител с този имейл вече съществува.' })
+        }
+      }
 
       let hashedPassword: string | undefined
       if (body.newPassword && body.newPassword.length >= 8) {
@@ -137,6 +147,7 @@ const usersRoute: FastifyPluginAsync = async (fastify: FastifyInstance) => {
       const user = await prisma.user.update({
         where: { id, tenantId: request.user.tenantId },
         data: {
+          ...(body.email && { email: body.email }),
           ...(body.firstName && { firstName: body.firstName }),
           ...(body.lastName && { lastName: body.lastName }),
           ...(body.role && { role: body.role as 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'READONLY' }),
